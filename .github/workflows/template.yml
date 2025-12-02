@@ -6,7 +6,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-permissions: write-all
+permissions:
+  contents: write
+  pull-requests: write
 env:
   DEBIAN_FRONTEND: noninteractive
   LC_ALL: C
@@ -24,7 +26,7 @@ jobs:
           sudo rm -f /var/lib/man-db/auto-update
           sudo rm -rf "/var/lib/apt/lists/"* /opt/ghc /usr/local/.ghcup /usr/local/lib/android /usr/share/dotnet
           echo "force-unsafe-io" | sudo tee -a /etc/dpkg/dpkg.cfg.d/force-unsafe-io
-          INITRAMFS_CONF="/etc/initramfs-tools/update-initramfs.conf"; DPKG _TRIGGERS="/var/lib/dpkg/triggers/File"
+          INITRAMFS_CONF="/etc/initramfs-tools/update-initramfs.conf"; DPKG_TRIGGERS="/var/lib/dpkg/triggers/File"
           [[ -e /etc/initramfs-tools/update-initramfs.conf ]] && sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
           if [[ -e $DPKG_TRIGGERS ]]; then
             sudo sed '/fontconfig/d' -i $DPKG_TRIGGERS; sudo sed '/install-info/d' -i $DPKG_TRIGGERS
@@ -32,7 +34,7 @@ jobs:
           fi
           echo -e "\nFree space:"; df -h
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           fetch-depth: 1

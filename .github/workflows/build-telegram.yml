@@ -51,11 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Delete all releases
         run: |
-          gh release list --limit 1000 | awk '{print $1}' | while read tag; do
+          gh release list --limit 1000 | awk '{print $1}' | while read -r tag; do
             echo "Deleting release: $tag"
             gh release delete "$tag" -y || true
           done
@@ -65,7 +67,7 @@ jobs:
       - name: Delete all tags
         run: |
           git fetch --tags
-          git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||' | while read tag; do
+          git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||' | while read -r tag; do
             echo "Deleting tag: $tag"
             git push origin --delete "$tag" || true
           done
@@ -85,15 +87,29 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 1
 
       - name: Set up Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
+          distribution: 'temurin'
           java-version: '21'
+
+      - name: Cache AAPT tool
+        id: cache-aapt
+        uses: actions/cache@v4
+        with:
+          path: build-tools
+          key: aapt-r33.0.2
+
+      - name: Download AAPT Tool
+        if: steps.cache-aapt.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL https://dl.google.com/android/repository/build-tools_r33.0.2-linux.zip -o build-tools.zip
+          unzip -q build-tools.zip -d build-tools
 
       - name: Create module list
         id: create_module_list
@@ -166,10 +182,10 @@ jobs:
 
       - name: Download and Patch Telegram Client
         run: |
-          #Download APK
-          curl -L -o telegram.apk https://telegram.org/dl/android/apk
-
-          #Patch Telegram Client With Modules
+          # Download APK
+          curl -sSL -o telegram.apk https://telegram.org/dl/android/apk
+          # Patch Telegram Client With Modules
+          # shellcheck disable=SC2046
           java -jar *.jar -l 2 telegram.apk $(cat module_list.txt)
         shell: bash
 
@@ -180,9 +196,9 @@ jobs:
           repository: forkgram/TelegramAndroid
           latest: true
 
-      
       - name: Patch ForkGram Client With Modules
         run: |
+          # shellcheck disable=SC2046
           java -jar *.jar -l 2 ForkClient*.apk $(cat module_list.txt)
         shell: bash
 
@@ -195,43 +211,45 @@ jobs:
 
       - name: Patch TelegramFOSS Client With Modules
         run: |
+          # shellcheck disable=SC2046
           java -jar *.jar -l 2 TF*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Create Release Info
         run: |
-          curl -sSL https://dl.google.com/android/repository/build-tools_r33.0.2-linux.zip -o build-tools.zip
-          unzip -q build-tools.zip -d build-tools
           AAPT=build-tools/android-13/aapt
-
           chmod +x "$AAPT"
 
-          TG_INFO=$("$AAPT" dump badging telegram*.apk | grep versionName)
-          TG_VersionName=$(echo "$TG_INFO" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
-          TG_VersionCode=$(echo "$TG_INFO" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
-          TG_Version="$TG_VersionName $TG_VersionCode"
+          # Function to extract version from APK (reduces code duplication)
+          get_apk_version() {
+            local apk="$1"
+            local info
+            info=$("$AAPT" dump badging "$apk" 2>/dev/null | grep -E "versionName|versionCode" | head -1)
+            local ver_name ver_code
+            ver_name=$(echo "$info" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+            ver_code=$(echo "$info" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
+            echo "$ver_name $ver_code"
+          }
 
-          FORK_INFO=$("$AAPT" dump badging ForkClient*.apk | grep versionName)
-          FORK_VersionName=$(echo "$FORK_INFO" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
-          FORK_VersionCode=$(echo "$FORK_INFO" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
-          FORK_Version="$FORK_VersionName $FORK_VersionCode"
+          TG_Version=$(get_apk_version "telegram.apk")
+          # shellcheck disable=SC2086
+          FORK_Version=$(get_apk_version ForkClient*.apk)
+          # shellcheck disable=SC2086
+          TGFOSS_Version=$(get_apk_version TF*.apk)
 
-          TGFOSS_INFO=$("$AAPT" dump badging TF*.apk | grep versionName)
-          TGFOSS_VersionName=$(echo "$TGFOSS_INFO" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
-          TGFOSS_VersionCode=$(echo "$TGFOSS_INFO" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
-          TGFOSS_Version="$TGFOSS_VersionName $TGFOSS_VersionCode"
-
-          echo "Clients:" >> release_body.txt
-          echo "- Telegram - $TG_Version" >> release_body.txt
-          echo "- ForkGram - $FORK_Version" >> release_body.txt
-          echo "- TelegramFOSS - $TGFOSS_Version" >> release_body.txt
-          echo "" >> release_body.txt
-          echo "Patched at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> release_body.txt
+          {
+            echo "Clients:"
+            echo "- Telegram - $TG_Version"
+            echo "- ForkGram - $FORK_Version"
+            echo "- TelegramFOSS - $TGFOSS_Version"
+            echo ""
+            echo "Patched at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          } >> release_body.txt
         shell: bash
 
       - name: Upload Release
         id: upload_release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             *-lspatched.apk

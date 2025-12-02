@@ -12,10 +12,14 @@ on:
 jobs:
   build:
     name: stellasoftio/image-optimizer-action
-    permissions: write-all
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       # Cache Image Optimizer dependencies
       - name: Cache Image Optimizer dependencies
         id: cache-image-optimizer
@@ -50,4 +54,3 @@ jobs:
           branch-suffix: timestamp
           commit-message: Compressed Images
           body: ${{ steps.compress-images.outputs.markdown_report }}
-      

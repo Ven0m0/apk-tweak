@@ -8,7 +8,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-permissions: write-all
+permissions:
+  contents: write
+  pull-requests: write
 env:
   DEBIAN_FRONTEND: noninteractive
   LC_ALL: C
@@ -17,20 +19,27 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with: 
           fetch-depth: 1
+      - name: Cache shell tools
+        id: cache-shell-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin
+          key: shell-tools-${{ runner.os }}-v1
       - name: Install tools
-        env:
-          DEBIAN_FRONTEND: noninteractive
+        if: steps.cache-shell-tools.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -yqq
           sudo apt-get install -y shellcheck shfmt
-          curl -sL https://github.com/anordal/shellharden/releases/latest/download/shellharden-x86_64-unknown-linux-musl.tar.gz | tar xz
-          sudo mv shellharden /usr/local/bin/
+          mkdir -p ~/.local/bin
+          curl -sSL https://github.com/anordal/shellharden/releases/latest/download/shellharden-x86_64-unknown-linux-musl.tar.gz | tar xz
+          mv shellharden ~/.local/bin/
       - name: Find & fix shell files
         env:
           SHELLCHECK_OPTS: "--shell=bash --source-path=SCRIPTDIR --external-sources --check-sourced"
+          PATH: "$HOME/.local/bin:$PATH"
         run: |
           {
             find . -name '*.sh' -o -name '*.bash' || :
