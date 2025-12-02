@@ -9,14 +9,18 @@ from . import plugins as plugins_pkg
 
 EngineFn = Callable[[Context], None]
 
+# Module-level constant: engine registry (avoids dict creation per call)
+_ENGINES: Dict[str, EngineFn] = {
+    "revanced": revanced.run,
+    "magisk": magisk.run,
+    "lspatch": lspatch.run,
+    "dtlx": dtlx.run,
+}
+
 
 def get_engines() -> Dict[str, EngineFn]:
-    return {
-        "revanced": revanced.run,
-        "magisk": magisk.run,
-        "lspatch": lspatch.run,
-        "dtlx": dtlx.run,
-    }
+    """Return the registered engines dictionary."""
+    return _ENGINES
 
 
 def load_plugins() -> List[Callable[[Context, str], None]]:

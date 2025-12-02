@@ -12,27 +12,13 @@ jobs:
     name: Linters
     runs-on: ubuntu-latest
     steps:
-      # Checkout repository
+      # Checkout repository - shallow clone is sufficient for linting
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      # --- Dynamic ShellCheck cache ---
-      - name: Get ShellCheck version
-        id: shellcheck-version
-        run: |
-          version=$(reviewdog/action-shellcheck@v1.32.0 --version 2>&1 | head -n1 | awk '{print $2}')
-          echo "shellcheck_version=$version" >> $GITHUB_OUTPUT
-      - name: Cache ShellCheck
-        id: cache-shellcheck
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/shellcheck
-          key: ${{ runner.os }}-shellcheck-${{ steps.shellcheck-version.outputs.shellcheck_version }}
-          restore-keys: |
-            ${{ runner.os }}-shellcheck-
+          fetch-depth: 1
 
-      # Run ShellCheck via Reviewdog
+      # Run ShellCheck via Reviewdog (action handles caching internally)
       - name: Run ShellCheck via Reviewdog
         uses: reviewdog/action-shellcheck@v1.32.0
         with:
@@ -50,21 +36,6 @@ jobs:
             ./Linux-Settings
           check_all_files_with_shebangs: "true"
           shellcheck_flags: "-x -s bash"
-
-      # --- Dynamic Super-Linter cache ---
-      - name: Get Super-Linter version
-        id: sl-version
-        run: |
-          version=$(echo "v8.1.0" | sed 's/^v//') 
-          echo "super_linter_version=$version" >> $GITHUB_OUTPUT
-      - name: Cache Super-Linter
-        id: cache-super-linter
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/super-linter
-          key: ${{ runner.os }}-super-linter-${{ steps.sl-version.outputs.super_linter_version }}
-          restore-keys: |
-            ${{ runner.os }}-super-linter-
 
       - name: Run Super-Linter
         uses: super-linter/super-linter@v8.3.0

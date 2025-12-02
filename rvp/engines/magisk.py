@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pathlib import Path
+import shutil
 from ..context import Context
 
 
@@ -25,6 +25,7 @@ def run(ctx: Context) -> None:
         encoding="utf-8",
     )
 
-    (module_dir / apk.name).write_bytes(apk.read_bytes())
+    # Using shutil.copy2 for efficient file copying with metadata preservation.
+    shutil.copy2(apk, module_dir / apk.name)
     ctx.log(f"magisk: wrote stub module at {module_dir}")
     ctx.metadata.setdefault("magisk", {})["module_dir"] = str(module_dir)
