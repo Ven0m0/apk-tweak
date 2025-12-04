@@ -1,14 +1,11 @@
-#!/usr/bin/env bash
-set -euo pipefail; shopt -s nullglob globstar
-IFS=$'\n\t'; export LC_ALL=C LANG=C
+#!/bin/bash
+set -euo pipefail; shopt -s nullglob
+LC_ALL=C
 
 main(){
-  if ! command -v python3 >/dev/null 2>&1; then
-    printf 'Error: python3 is required.\n' >&2; exit 1
-  fi
+  command -v python3 &>/dev/null || exit 1
   # Resolve project root (supports running from git checkout)
   local src_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-  PYTHONPATH="${src_root}${PYTHONPATH:+:${PYTHONPATH}}" \
-    python3 -m rvp.cli "$@"
+  PYTHONPATH="${src_root}${PYTHONPATH:+:${PYTHONPATH}}" python3 -m rvp.cli "$@"
 }
 main "$@"
