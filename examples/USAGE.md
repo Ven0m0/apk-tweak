@@ -9,6 +9,7 @@ rvp youtube.apk -c examples/basic-config.json
 ```
 
 **Config** (`basic-config.json`):
+
 ```json
 {
   "input_apk": "youtube.apk",
@@ -29,6 +30,7 @@ rvp youtube.apk -c examples/advanced-revanced-config.json
 ```
 
 **Expected Output:**
+
 ```
 [12:00:00] [INFO] rvp.core: Starting pipeline for: youtube.apk
 [12:00:00] [INFO] rvp.context: Current APK updated: youtube.apk
@@ -49,6 +51,7 @@ rvp youtube.apk -c examples/advanced-revanced-config.json
 ```
 
 **Results:**
+
 - Original: 150MB
 - Patched: 150MB
 - Optimized: 98MB (35% reduction)
@@ -62,6 +65,7 @@ rvp youtube.apk -c examples/full-pipeline-config.json
 ```
 
 **Config** (`full-pipeline-config.json`):
+
 ```json
 {
   "input_apk": "youtube.apk",
@@ -74,6 +78,7 @@ rvp youtube.apk -c examples/full-pipeline-config.json
 ```
 
 **Output:**
+
 - `output/youtube.revanced.apk` - Optimized APK
 - `output/revanced_youtube-magisk.zip` - Magisk module
 
@@ -134,10 +139,7 @@ Apply only specific patches:
     "return-youtube-dislike",
     "custom-branding"
   ],
-  "revanced_exclude_patches": [
-    "premium-heading",
-    "swipe-controls"
-  ]
+  "revanced_exclude_patches": ["premium-heading", "swipe-controls"]
 }
 ```
 
@@ -155,6 +157,7 @@ Skip optimization for faster testing:
 ```
 
 **Speed Comparison:**
+
 - With optimization: 3-4 minutes
 - Without optimization: 30-60 seconds
 
@@ -167,7 +170,7 @@ Full-featured config for production use:
   "input_apk": "youtube-v18.apk",
   "output_dir": "release",
   "engines": ["revanced"],
-  
+
   "revanced_cli_path": "tools/revanced-cli-latest.jar",
   "revanced_patch_bundles": [
     "tools/revanced-patches-official-v2.1.jar",
@@ -175,11 +178,11 @@ Full-featured config for production use:
     "tools/custom-youtube-patches.jar"
   ],
   "revanced_integrations_path": "tools/revanced-integrations-latest.apk",
-  
+
   "revanced_optimize": true,
   "revanced_debloat": true,
   "revanced_minify": true,
-  
+
   "revanced_include_patches": [
     "hide-ads",
     "hide-shorts-button",
@@ -189,13 +192,13 @@ Full-featured config for production use:
     "premium-heading",
     "enable-debugging"
   ],
-  
+
   "revanced_exclude_patches": [
     "swipe-controls",
     "tablet-layout",
     "hdr-brightness"
   ],
-  
+
   "debloat_patterns": [
     "**/admob",
     "**/google/ads",
@@ -207,7 +210,7 @@ Full-featured config for production use:
     "com/google/android/gms/ads/**",
     "com/google/firebase/analytics/**"
   ],
-  
+
   "minify_patterns": [
     "res/drawable-xxxhdpi/*",
     "res/drawable-xxhdpi/*",
@@ -215,7 +218,7 @@ Full-featured config for production use:
     "res/raw/*.ogg",
     "assets/unused_*"
   ],
-  
+
   "apktool_path": "tools/apktool-2.9.3.jar",
   "zipalign_path": "/usr/local/bin/zipalign"
 }
@@ -293,24 +296,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install RVP
         run: pip install -e .
-      
+
       - name: Download Tools
         run: |
           mkdir tools
           wget https://github.com/revanced/revanced-cli/releases/latest/download/revanced-cli.jar -O tools/revanced-cli.jar
           wget https://github.com/revanced/revanced-patches/releases/latest/download/revanced-patches.jar -O tools/patches.jar
-      
+
       - name: Build APK
         run: rvp input.apk -c config.json
-      
+
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:

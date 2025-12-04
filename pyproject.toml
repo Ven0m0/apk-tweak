@@ -61,12 +61,62 @@ extend-exclude = [
   "vendor",
 ]
 
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "DTZ", # flake8-datetimez
+  "T10", # flake8-debugger
+  "EM",  # flake8-errmsg
+  "ISC", # flake8-implicit-str-concat
+  "ICN", # flake8-import-conventions
+  "PIE", # flake8-pie
+  "PT",  # flake8-pytest-style
+  "RSE", # flake8-raise
+  "RET", # flake8-return
+  "SIM", # flake8-simplify
+  "PTH", # flake8-use-pathlib
+  "PL",  # pylint
+  "RUF", # ruff-specific rules
+]
+ignore = [
+  "E501",    # line too long (handled by formatter)
+  "PLR0913", # too many arguments
+  "PLR2004", # magic value comparison
+  "PLR0912", # too many branches
+  "PLR0915", # too many statements
+  "PLC0415", # import should be at top-level (allow lazy imports)
+  "EM101",   # exception must not use string literal
+  "EM102",   # exception must not use f-string literal
+  "PTH123",  # open() should be replaced by Path.open()
+  "PLW0603", # global statement discouraged (needed for singletons)
+  "RUF005",  # iterable unpacking instead of concatenation
+  "RET504",  # unnecessary assignment before return
+  "PT015",   # assertion always fails (use pytest.raises)
+  "B011",    # do not assert False
+]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 skip-magic-trailing-comma = false
 docstring-code-format = true
+docstring-code-line-length = 100
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+known-first-party = ["rvp"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "S101"]  # Allow magic values and asserts in tests
 
 [tool.black]
 line-length = 120
