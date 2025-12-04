@@ -19,8 +19,17 @@ class Config:
       dtlx_analyze: Enable DTL-X analysis mode.
       dtlx_optimize: Enable DTL-X optimization mode.
       revanced_cli_path: Path to revanced-cli.jar.
-      revanced_patches_path: Path to patches.jar.
+      revanced_patch_bundles: List of patch bundle paths (supports multiple).
       revanced_integrations_path: Path to integrations.apk.
+      revanced_optimize: Enable APK optimization (debloat, minify, zipalign).
+      revanced_debloat: Enable debloating (requires optimize).
+      revanced_minify: Enable resource minification (requires optimize).
+      revanced_include_patches: List of patch names to include.
+      revanced_exclude_patches: List of patch names to exclude.
+      debloat_patterns: File patterns to remove during debloat.
+      minify_patterns: Resource patterns to remove during minification.
+      apktool_path: Path to apktool executable/jar.
+      zipalign_path: Path to zipalign executable.
   """
 
   input_apk: str | None = None
@@ -31,10 +40,40 @@ class Config:
   dtlx_analyze: bool = False
   dtlx_optimize: bool = False
 
-  # Tool paths (can be set via config file)
+  # ReVanced configuration
   revanced_cli_path: str = "revanced-cli.jar"
-  revanced_patches_path: str = "patches.jar"
+  revanced_patch_bundles: list[str] = field(default_factory=list)
   revanced_integrations_path: str = "integrations.apk"
+  revanced_optimize: bool = True
+  revanced_debloat: bool = True
+  revanced_minify: bool = True
+  revanced_include_patches: list[str] = field(default_factory=list)
+  revanced_exclude_patches: list[str] = field(default_factory=list)
+
+  # Optimization configuration
+  debloat_patterns: list[str] = field(
+    default_factory=lambda: [
+      "*/admob/*",
+      "*/google/ads/*",
+      "*/facebook/ads/*",
+      "*/analytics/*",
+      "*/crashlytics/*",
+    ]
+  )
+  minify_patterns: list[str] = field(
+    default_factory=lambda: [
+      "res/drawable-xxxhdpi/*",
+      "res/raw/*.mp3",
+      "res/raw/*.wav",
+    ]
+  )
+
+  # Tool paths
+  apktool_path: str = "apktool"
+  zipalign_path: str = "zipalign"
+
+  # Legacy support (backward compatibility)
+  revanced_patches_path: str = "patches.jar"
 
   @classmethod
   def load_from_file(cls, path: Path) -> Config:

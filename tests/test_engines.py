@@ -98,3 +98,58 @@ def test_magisk_engine(tmp_path: Path) -> None:
   module_path = Path(ctx.metadata["magisk_module"])
   assert module_path.exists()
   assert module_path.name.endswith("-magisk.zip")
+
+
+def test_revanced_engine_multi_patch(tmp_path: Path) -> None:
+  """Test ReVanced engine with multiple patch bundles."""
+  input_apk = tmp_path / "input.apk"
+  input_apk.write_text("fake_apk_data" * 100, encoding="utf-8")
+  output_dir = tmp_path / "out"
+  work_dir = tmp_path / "work"
+
+  # Create fake patch bundles
+  patches1 = tmp_path / "patches1.jar"
+  patches2 = tmp_path / "patches2.jar"
+  patches1.write_text("fake_patch", encoding="utf-8")
+  patches2.write_text("fake_patch", encoding="utf-8")
+
+  ctx = Context(
+    work_dir=work_dir,
+    input_apk=input_apk,
+    output_dir=output_dir,
+    engines=["revanced"],
+    options={
+      "revanced_patch_bundles": [str(patches1), str(patches2)],
+      "revanced_optimize": False,  # Disable optimization for stub test
+    },
+  )
+
+  revanced.run(ctx)
+
+  # Check that output APK was created (stub mode)
+  assert ctx.current_apk is not None
+  assert ctx.current_apk.exists()
+  assert "revanced" in ctx.metadata
+
+
+def test_revanced_engine_with_optimization_disabled(tmp_path: Path) -> None:
+  """Test ReVanced engine with optimization disabled."""
+  input_apk = tmp_path / "input.apk"
+  input_apk.write_text("fake_apk_data" * 50, encoding="utf-8")
+  output_dir = tmp_path / "out"
+  work_dir = tmp_path / "work"
+
+  ctx = Context(
+    work_dir=work_dir,
+    input_apk=input_apk,
+    output_dir=output_dir,
+    engines=["revanced"],
+    options={"revanced_optimize": False},
+  )
+
+  revanced.run(ctx)
+
+  # Check that output APK was created
+  assert ctx.current_apk is not None
+  assert ctx.current_apk.exists()
+  assert ctx.metadata.get("revanced", {}).get("optimized") is False

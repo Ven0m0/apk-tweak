@@ -101,6 +101,22 @@ def main(argv: list[str] | None = None) -> int:
     options["dtlx_analyze"] = cfg.dtlx_analyze
     options["dtlx_optimize"] = cfg.dtlx_optimize
 
+    # ReVanced options
+    options["revanced_patch_bundles"] = cfg.revanced_patch_bundles
+    options["revanced_optimize"] = cfg.revanced_optimize
+    options["revanced_debloat"] = cfg.revanced_debloat
+    options["revanced_minify"] = cfg.revanced_minify
+    options["revanced_include_patches"] = cfg.revanced_include_patches
+    options["revanced_exclude_patches"] = cfg.revanced_exclude_patches
+
+    # Optimization options
+    options["debloat_patterns"] = cfg.debloat_patterns
+    options["minify_patterns"] = cfg.minify_patterns
+
+    # Tool paths
+    options["apktool_path"] = cfg.apktool_path
+    options["zipalign_path"] = cfg.zipalign_path
+
   # Flags override config
   if args.dtlx_analyze:
     options["dtlx_analyze"] = True
@@ -112,6 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     options["tools"] = {
       "revanced_cli": cfg.revanced_cli_path,
       "patches": cfg.revanced_patches_path,
+      "revanced_integrations": cfg.revanced_integrations_path,
     }
 
   try:
