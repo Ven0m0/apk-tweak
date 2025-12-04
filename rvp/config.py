@@ -24,6 +24,7 @@ class Config:
       revanced_optimize: Enable APK optimization (debloat, minify, zipalign).
       revanced_debloat: Enable debloating (requires optimize).
       revanced_minify: Enable resource minification (requires optimize).
+      revanced_patch_ads: Enable regex-based ad patching (requires optimize).
       revanced_include_patches: List of patch names to include.
       revanced_exclude_patches: List of patch names to exclude.
       debloat_patterns: File patterns to remove during debloat.
@@ -47,6 +48,7 @@ class Config:
   revanced_optimize: bool = True
   revanced_debloat: bool = True
   revanced_minify: bool = True
+  revanced_patch_ads: bool = False
   revanced_include_patches: list[str] = field(default_factory=list)
   revanced_exclude_patches: list[str] = field(default_factory=list)
 
