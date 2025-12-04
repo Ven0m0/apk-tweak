@@ -39,6 +39,24 @@ ignore_missing_imports = true
 line-length = 120
 target-version = "py310"
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.git
+  | \.cache
+  | \.var
+  | node_modules
+)/
+'''
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
