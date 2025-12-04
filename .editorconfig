@@ -14,6 +14,16 @@ indent_style = space
 indent_size = 2
 tab_width = 2
 max_line_length = 120
+spaces_around_operators = true
+spaces_around_brackets = false
+quote_type = auto
+spelling_language = en
+shell_variant = auto
+keep_padding = false
+space_redirects = false
+switch_case_indent = false
+function_next_line = false
+binary_next_line = true
 
 # =============================================================================
 # Shell Scripts
@@ -82,11 +92,11 @@ max_line_length = 100
 indent_style = space
 indent_size = 4
 
-# Python
+# Python (2-space indent per project standard)
 [**.{py,pyw,pyi}]
 indent_style = space
-indent_size = 4
-max_line_length = 88
+indent_size = 2
+max_line_length = 120
 quote_type = double
 
 # Ruby
@@ -154,8 +164,8 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
-# INI and Properties files
-[**.{ini,cfg,conf,desktop,properties}]
+# INI files
+[**.{ini,cfg,conf,desktop}]
 indent_style = space
 indent_size = 2
 
@@ -211,7 +221,7 @@ indent_size = 2
 
 [{poetry.lock,pyproject.toml,setup.py,setup.cfg}]
 indent_style = space
-indent_size = 4
+indent_size = 2
 
 # =============================================================================
 # Git & Version Control
@@ -220,9 +230,9 @@ indent_size = 4
 indent_style = space
 indent_size = 2
 
-[.gitconfig]
-indent_style = tab
-tab_width = 8
+[config,.gitconfig]
+indent_style = space
+indent_size = 2
 
 # =============================================================================
 # Editor/IDE Configs
@@ -238,6 +248,10 @@ indent_size = 2
 [**.el]
 indent_style = space
 indent_size = 2
+
+[*.{kt,kts}]
+ktlint_code_style = intellij_idea
+ktlint_standard_no-wildcard-imports = disabled
 
 # =============================================================================
 # Special Cases
