@@ -1,14 +1,10 @@
 """APK optimization utilities using apktool, zipalign, and aapt2."""
 
 from __future__ import annotations
-
 import shutil
 from pathlib import Path
-
 from .context import Context
 from .utils import run_command
-
-
 def decompile_apk(apk: Path, output_dir: Path, ctx: Context) -> Path:
   """
   Decompile APK using apktool.
@@ -22,17 +18,11 @@ def decompile_apk(apk: Path, output_dir: Path, ctx: Context) -> Path:
       Path: Directory containing decompiled APK.
   """
   decompiled_dir = output_dir / f"{apk.stem}_decompiled"
-
   apktool = ctx.options.get("apktool_path", "apktool")
-
   cmd = [str(apktool), "d", str(apk), "-o", str(decompiled_dir), "-f"]
-
   ctx.log(f"optimizer: Decompiling {apk.name}")
   run_command(cmd, ctx)
-
   return decompiled_dir
-
-
 def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   """
   Remove bloatware from decompiled APK.
@@ -42,16 +32,12 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
       ctx: Pipeline context for logging and options.
   """
   ctx.log("optimizer: Starting debloat process")
-
   # Get debloat patterns from options
   debloat_patterns = ctx.options.get("debloat_patterns", [])
-
   if not debloat_patterns:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
-
   removed_count = 0
-
   # Remove files matching debloat patterns (O(n*m) where n=files, m=patterns)
   for pattern in debloat_patterns:
     matches = list(decompiled_dir.rglob(pattern))
@@ -64,10 +50,7 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
         ctx.log(f"optimizer: Removing directory {match.relative_to(decompiled_dir)}")
         shutil.rmtree(match)
         removed_count += 1
-
   ctx.log(f"optimizer: Debloat complete - removed {removed_count} items")
-
-
 def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   """
   Minify APK resources (remove unused resources).
@@ -77,7 +60,6 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
       ctx: Pipeline context for logging.
   """
   ctx.log("optimizer: Starting resource minification")
-
   # Remove unused resource files
   # Common unused resources: drawable-xxxhdpi, raw audio, etc.
   minify_patterns = ctx.options.get(
@@ -89,10 +71,8 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
       "assets/unused/*",  # Unused assets
     ],
   )
-
   removed_count = 0
   removed_size = 0
-
   for pattern in minify_patterns:
     matches = list(decompiled_dir.rglob(pattern))
     for match in matches:
@@ -102,9 +82,7 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
         match.unlink()
         removed_count += 1
         removed_size += size
-
   ctx.log(f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)")
-
 
 def recompile_apk(decompiled_dir: Path, output_apk: Path, ctx: Context) -> None:
   """
@@ -116,12 +94,9 @@ def recompile_apk(decompiled_dir: Path, output_apk: Path, ctx: Context) -> None:
       ctx: Pipeline context for logging.
   """
   apktool = ctx.options.get("apktool_path", "apktool")
-
   cmd = [str(apktool), "b", str(decompiled_dir), "-o", str(output_apk)]
-
   ctx.log(f"optimizer: Recompiling APK to {output_apk.name}")
   run_command(cmd, ctx)
-
 
 def zipalign_apk(input_apk: Path, output_apk: Path, ctx: Context) -> None:
   """
@@ -133,13 +108,10 @@ def zipalign_apk(input_apk: Path, output_apk: Path, ctx: Context) -> None:
       ctx: Pipeline context for logging.
   """
   zipalign = ctx.options.get("zipalign_path", "zipalign")
-
   # -f = force overwrite, -v = verbose, 4 = alignment in bytes
   cmd = [str(zipalign), "-f", "-v", "4", str(input_apk), str(output_apk)]
-
   ctx.log(f"optimizer: Running zipalign on {input_apk.name}")
   run_command(cmd, ctx)
-
 
 def optimize_apk(input_apk: Path, output_apk: Path, ctx: Context, debloat: bool = True, minify: bool = True) -> None:
   """
@@ -153,26 +125,19 @@ def optimize_apk(input_apk: Path, output_apk: Path, ctx: Context, debloat: bool 
       minify: Enable resource minification.
   """
   ctx.log("optimizer: Starting optimization pipeline")
-
   work_dir = ctx.work_dir / "optimizer"
   work_dir.mkdir(parents=True, exist_ok=True)
-
   # Step 1: Decompile
   decompiled_dir = decompile_apk(input_apk, work_dir, ctx)
-
   # Step 2: Debloat (if enabled)
   if debloat:
     debloat_apk(decompiled_dir, ctx)
-
   # Step 3: Minify resources (if enabled)
   if minify:
     minify_resources(decompiled_dir, ctx)
-
   # Step 4: Recompile
   temp_apk = work_dir / f"{input_apk.stem}_recompiled.apk"
   recompile_apk(decompiled_dir, temp_apk, ctx)
-
   # Step 5: Zipalign
   zipalign_apk(temp_apk, output_apk, ctx)
-
   ctx.log(f"optimizer: Optimization complete - {output_apk}")
