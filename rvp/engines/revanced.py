@@ -1,4 +1,5 @@
 """ReVanced patching engine."""
+
 from __future__ import annotations
 
 import shutil

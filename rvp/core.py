@@ -8,9 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
-from .context import Context
 from . import engines as engines_pkg
 from . import plugins as plugins_pkg
+from .context import Context
+from .validators import validate_apk_path, validate_output_dir
 
 EngineFn = Callable[[Context], None]
 PluginHandler = Callable[[Context, str], None]
@@ -110,9 +111,13 @@ def run_pipeline(
       Context: Final pipeline context with results.
 
   Raises:
-      FileNotFoundError: If input APK doesn't exist.
+      ValidationError: If input validation fails.
       ValueError: If required engine is unknown.
   """
+  # Validate inputs
+  validate_apk_path(input_apk)
+  validate_output_dir(output_dir)
+
   options = options or {}
   work_dir = output_dir / "tmp"
   work_dir.mkdir(parents=True, exist_ok=True)
