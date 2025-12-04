@@ -1,13 +1,44 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "revanced-pipeline"
-version = "0.0.1"
+version = "0.1.0"
 description = "Extensible pipeline for ReVanced, Magisk modules, LSPatch, and DTL-X"
+readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+authors = [
+  { name = "ven0m0", email = "dev@example.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests>=2.31.0",  # Future downloading capability
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "mypy>=1.5.0",
+    "ruff>=0.0.285",
+    "black>=23.7.0",
+    "types-requests",
+]
 
 [project.scripts]
 rvp = "rvp.cli:main"
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
