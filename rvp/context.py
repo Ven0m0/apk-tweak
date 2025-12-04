@@ -1,8 +1,11 @@
 from __future__ import annotations
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Any, List
 
+# Configure default logger
+logger = logging.getLogger("rvp")
 
 @dataclass
 class Context:
@@ -12,27 +15,25 @@ class Context:
     engines: List[str]
     options: Dict[str, Any] = field(default_factory=dict)
 
-    # populated as we go
+    # State
     current_apk: Path | None = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    logs: List[str] = field(default_factory=list)
-    # Performance: Control log storage to avoid memory overhead
-    store_logs: bool = False
+    
+    def __post_init__(self) -> None:
+        """Initialize defaults."""
+        self.current_apk = self.input_apk
+        # Ensure directories exist
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def log(self, msg: str) -> None:
-        """
-        Log a message with [rvp] prefix.
-
-        Performance optimization: Only stores logs in memory if store_logs=True,
-        avoiding redundant string operations and memory usage.
-        """
-        line = f"[rvp] {msg}"
-        print(line)
-        # Only store logs if explicitly requested (performance optimization)
-        if self.store_logs:
-            self.logs.append(line)
+    def log(self, msg: str, level: int = logging.INFO) -> None:
+        """Log a message using standard logging."""
+        logger.log(level, msg)
 
     def set_current_apk(self, apk: Path) -> None:
-        """Set the current APK being processed."""
+        """Set the current APK and validate existence."""
+        if not apk.exists():
+            logger.error(f"Attempted to set missing APK: {apk}")
+            raise FileNotFoundError(f"APK not found: {apk}")
         self.current_apk = apk
-        self.log(f"Current APK set to: {apk}")
+        self.log(f"Current APK updated: {apk.name}")
