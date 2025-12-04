@@ -1,9 +1,11 @@
 # Gemini Instructions
 
 ## Primary Directive
+
 Execute autonomously. Minimize confirmations. Maximize token efficiency. Focus: Bash scripting & system configuration.
 
 ## Core Principles
+
 1. **Immediate Execution** — Modify existing files without hesitation
 2. **Selective Confirmation** — Only for wide-impact architectural changes
 3. **Quality Assurance** — Validate thoroughly, verify facts, follow best practices
@@ -12,17 +14,20 @@ Execute autonomously. Minimize confirmations. Maximize token efficiency. Focus: 
 6. **Efficient Workflow** — Draft approach before complex implementation
 
 ## Communication Standards
+
 - **Language**: Technical English
 - **Style**: Professional, concise, advanced level
 - **Emojis**: Minimal usage only
 - **Naming**: Short, clear identifiers
 
 ## Abbreviation Dictionary
+
 Quick responses: `y`=Yes `n`=No `c`=Continue `r`=Review `u`=Undo
 
 Common terms: cfg=config | impl=implementation | arch=architecture | deps=dependencies | val=validation | sec=security | err=error | opt=optimization | Δ=change | mgr=manager | fn=function | mod=modify | rm=remove | w/=with | dup=duplicate
 
 **Performance Guidelines**:
+
 - Batch operations whenever possible
 - Minimize subprocess spawning
 - Use process substitution over pipes for complex chains
@@ -30,6 +35,7 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 ## Development Methodology
 
 ### Test-Driven Development Cycle
+
 1. **Red Phase**: Write failing test
 2. **Green Phase**: Implement minimal code to pass
 3. **Refactor Phase**: Improve code quality while maintaining passing tests
@@ -37,11 +43,13 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 ### Change Type Separation
 
 **Structural Changes**:
+
 - Code organization
 - Formatting adjustments
 - No behavioral modifications
 
 **Behavioral Changes**:
+
 - Function addition
 - Logic modification
 - Feature deletion
@@ -51,17 +59,20 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 ### Commit Standards
 
 **Prerequisites** (all required):
+
 - ✅ All tests passing
 - ✅ Zero warnings
 - ✅ Single logical unit of work
 - ✅ Clear, descriptive commit message
 
 **Best Practices**:
+
 - Prefer small commits over large ones
 - Commit frequently
 - Ensure each commit is independent and atomic
 
 ### Code Quality Checklist
+
 - [ ] Single responsibility principle per function/module
 - [ ] Loose coupling through interface design
 - [ ] Early returns for improved readability
@@ -71,6 +82,7 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 - [ ] Small, focused, single-responsibility functions
 
 ### Anti-Patterns (Prohibited)
+
 1. ❌ **Hardcoded Values**: Use constants, configuration files, or environment variables
 2. ❌ **Repetitive Code**: Extract into reusable functions
 3. ❌ **Common Error Handling**: Unify error patterns
@@ -79,6 +91,7 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 ## Symbol System
 
 ### Flow Indicators
+
 - `→` leads to
 - `⇒` converts to
 - `←` rollback
@@ -90,6 +103,7 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 - `∵` because
 
 ### Status Markers
+
 - ✅ completed
 - ❌ failed
 - ⚠️ warning
@@ -98,6 +112,7 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 - 🚨 critical issue
 
 ### Domain Categories
+
 - ⚡ performance
 - 🔍 code analysis
 - 🔧 configuration
@@ -111,4 +126,4 @@ Common terms: cfg=config | impl=implementation | arch=architecture | deps=depend
 
 ---
 
-*Optimized for Gemini's multimodal capabilities and structured reasoning*
+_Optimized for Gemini's multimodal capabilities and structured reasoning_

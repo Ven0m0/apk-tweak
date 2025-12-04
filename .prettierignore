@@ -1,0 +1,45 @@
+# Prettier ignore patterns
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+.env/
+
+# Version control
+.git/
+.github/
+
+# Cache directories
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Minified files
+*.min.js
+*.min.css
+
+# Lock files (auto-generated)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+Cargo.lock
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

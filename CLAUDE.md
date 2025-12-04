@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-**apk-tweak** is an extensible pipeline system for Android APK modification and packaging. It provides a modular framework for integrating multiple APK patching and packaging engines:
+**apk-tweak** is an extensible pipeline system for Android APK modification and
+packaging. It provides a modular framework for integrating multiple APK patching
+and packaging engines:
 
 - **ReVanced**: YouTube/app patching via ReVanced CLI
 - **LSPatch**: LSPosed module integration
@@ -39,16 +41,20 @@ apk-tweak/
 ### Core Design Patterns
 
 1. **Pipeline Architecture**: Chain multiple engines sequentially
-2. **Context Object**: Shared state (`Context` dataclass) passed through pipeline
-3. **Plugin Hooks**: Event-driven hooks (`pre_pipeline`, `pre_engine:*`, `post_engine:*`, `post_pipeline`)
+2. **Context Object**: Shared state (`Context` dataclass) passed through
+   pipeline
+3. **Plugin Hooks**: Event-driven hooks (`pre_pipeline`, `pre_engine:*`,
+   `post_engine:*`, `post_pipeline`)
 4. **Engine Registry**: Modular engine registration in `core.py:_ENGINES`
-5. **Stub Implementations**: Current engines are stubs ready for real integrations
+5. **Stub Implementations**: Current engines are stubs ready for real
+   integrations
 
 ---
 
 ## Core Directives
 
-Autonomous execution. Minimal confirmations. Token-efficient responses. Dual focus: **Bash scripts** for tooling & **Python** for core pipeline.
+Autonomous execution. Minimal confirmations. Token-efficient responses. Dual
+focus: **Bash scripts** for tooling & **Python** for core pipeline.
 
 ## Operating Principles
 
@@ -61,11 +67,15 @@ Autonomous execution. Minimal confirmations. Token-efficient responses. Dual foc
 
 ### Communication Style
 
-Language: Technical English | Tone: Professional, concise | Complexity: Advanced | Emojis: Minimal usage | Naming: Brief, clear
+Language: Technical English | Tone: Professional, concise | Complexity: Advanced
+| Emojis: Minimal usage | Naming: Brief, clear
 
 ### Abbreviations Reference
 
-y=Yes n=No c=Continue r=Review u=Undo | cfg=config impl=implementation arch=architecture deps=dependencies val=validation sec=security err=error opt=optimization Δ=change mgr=manager fn=function mod=modify rm=remove w/=with dup=duplicate
+y=Yes n=No c=Continue r=Review u=Undo | cfg=config impl=implementation
+arch=architecture deps=dependencies val=validation sec=security err=error
+opt=optimization Δ=change mgr=manager fn=function mod=modify rm=remove w/=with
+dup=duplicate
 
 ---
 
@@ -168,14 +178,17 @@ trap 'echo "Error at line $LINENO" >&2' ERR
 
 #### Package Management
 
-- **Detection Chain**: `paru` → `yay` → `pacman` (Arch-based) | `apt`/`dpkg` (Debian-based)
-- **Pre-Installation Checks**: `pacman -Q pkg` | `flatpak list` | `cargo install --list`
+- **Detection Chain**: `paru` → `yay` → `pacman` (Arch-based) | `apt`/`dpkg`
+  (Debian-based)
+- **Pre-Installation Checks**: `pacman -Q pkg` | `flatpak list` |
+  `cargo install --list`
 - **Distro-Specific Hints**: Include installation commands for both ecosystems
   - Example: `(Arch: pacman -S tool)` `(Debian: apt-get install -y tool)`
 
 #### Data Handling & Performance
 
-- **Array Population**: `mapfile -t arr < <(command)` — avoids subshell performance penalties
+- **Array Population**: `mapfile -t arr < <(command)` — avoids subshell
+  performance penalties
 - **Prohibitions**: Never parse `ls` output
 - **Associative Arrays**: `declare -A cfg=([dry_run]=0 [debug]=0 [verbose]=0)`
 - **Modern Tool Preferences**:
@@ -192,7 +205,8 @@ trap 'echo "Error at line $LINENO" >&2' ERR
 
 - **Fuzzy Finder Integration**: Use fzf for path selection when args missing
 - **Fallback Pattern**: `has fd && fd -t f | fzf || find . -type f | fzf`
-- **AUR Helper Flags**: `--needed --noconfirm --removemake --cleanafter --sudoloop --skipreview --batchinstall`
+- **AUR Helper Flags**:
+  `--needed --noconfirm --removemake --cleanafter --sudoloop --skipreview --batchinstall`
 
 #### Network Operations
 
@@ -206,6 +220,7 @@ trap 'echo "Error at line $LINENO" >&2' ERR
 ### Code Quality Pipeline
 
 **Python**:
+
 ```bash
 # Format with black
 black rvp/
@@ -218,6 +233,7 @@ ruff check rvp/
 ```
 
 **Bash**:
+
 ```bash
 shfmt -i 2 -ln bash -bn -s file.sh && \
 shellcheck -f diff file.sh | patch -Np1 && \
@@ -246,7 +262,8 @@ shellharden --replace file.sh
 
 ### Test-Driven Development
 
-Process: Write failing test (Red) → Implement minimal passing code (Green) → Refactor for quality
+Process: Write failing test (Red) → Implement minimal passing code (Green) →
+Refactor for quality
 
 ### Change Classification
 
@@ -256,8 +273,8 @@ Process: Write failing test (Red) → Implement minimal passing code (Green) →
 
 ### Commit Requirements
 
-All must be true: Tests pass | Zero warnings | Single logical unit | Clear message
-Preference: Small, frequent, independent commits
+All must be true: Tests pass | Zero warnings | Single logical unit | Clear
+message Preference: Small, frequent, independent commits
 
 ### Code Quality Standards
 
@@ -271,10 +288,9 @@ Preference: Small, frequent, independent commits
 
 ### Prohibited Patterns
 
-❌ Hardcoded values (use constants/config/environment)
-❌ Repetitive code blocks (create functions)
-❌ Duplicated error handling (unify patterns)
-❌ Replicated logic (abstract appropriately)
+❌ Hardcoded values (use constants/config/environment) ❌ Repetitive code blocks
+(create functions) ❌ Duplicated error handling (unify patterns) ❌ Replicated
+logic (abstract appropriately)
 
 ---
 
@@ -284,6 +300,7 @@ Preference: Small, frequent, independent commits
 
 1. **Create engine file**: `rvp/engines/yourengine.py`
 2. **Implement `run(ctx: Context) -> None`**:
+
    ```python
    from __future__ import annotations
    from ..context import Context
@@ -299,7 +316,9 @@ Preference: Small, frequent, independent commits
        ctx.log(f"yourengine: output -> {output_apk}")
        ctx.set_current_apk(output_apk)
    ```
+
 3. **Register in `core.py`**:
+
    ```python
    from .engines import revanced, magisk, lspatch, dtlx, yourengine
 
@@ -311,11 +330,13 @@ Preference: Small, frequent, independent commits
        "yourengine": yourengine.run,
    }
    ```
+
 4. **Update CLI help**: Add to `cli.py` engine description
 
 ### Creating Plugins
 
-Plugins hook into pipeline stages via the `handle_hook(ctx: Context, stage: str)` pattern:
+Plugins hook into pipeline stages via the
+`handle_hook(ctx: Context, stage: str)` pattern:
 
 ```python
 def handle_hook(ctx: Context, stage: str) -> None:
@@ -330,6 +351,7 @@ def handle_hook(ctx: Context, stage: str) -> None:
 ```
 
 **Available Stages**:
+
 - `pre_pipeline` / `post_pipeline`
 - `pre_engine:{name}` / `post_engine:{name}` (e.g., `pre_engine:revanced`)
 
@@ -383,34 +405,38 @@ Activate: `/mode [mode-name]`
 ### CI/CD Pipelines
 
 **MegaLinter** (`.github/workflows/mega-linter.yml`):
+
 - Runs on all pushes/PRs
 - Auto-applies formatting fixes
 - Generates reports as artifacts
 
 **Build Telegram** (`.github/workflows/build-telegram.yml`):
+
 - APK building/patching workflow
 - Telegram integration for notifications
 
 **Validate Configs** (`.github/workflows/validate-configs.yml`):
+
 - YAML/JSON schema validation
 
 **Image Optimizer** (`.github/workflows/image-optimizer.yml`):
+
 - Optimizes images in PRs
 
 ---
 
 ## Configuration Files Reference
 
-| File | Purpose |
-|------|---------|
-| `.editorconfig` | Cross-editor formatting rules |
-| `.megalinter.yml` | Linter/formatter configuration |
-| `.prettierrc.yml` | YAML/JSON formatting |
-| `.yamllint.yml` | YAML linting rules |
-| `.shellcheckrc` | Bash linting configuration |
-| `pyproject.toml` | Python package metadata |
-| `gradle.properties` | Android/Gradle JVM settings |
-| `.gitignore` | VCS ignore patterns |
+| File                | Purpose                        |
+| ------------------- | ------------------------------ |
+| `.editorconfig`     | Cross-editor formatting rules  |
+| `.megalinter.yml`   | Linter/formatter configuration |
+| `.prettierrc.yml`   | YAML/JSON formatting           |
+| `.yamllint.yml`     | YAML linting rules             |
+| `.shellcheckrc`     | Bash linting configuration     |
+| `pyproject.toml`    | Python package metadata        |
+| `gradle.properties` | Android/Gradle JVM settings    |
+| `.gitignore`        | VCS ignore patterns            |
 
 ---
 
@@ -432,7 +458,8 @@ Activate: `/mode [mode-name]`
 - [ ] Real ReVanced CLI integration (`revanced.py`)
 - [ ] LSPatch implementation (`lspatch.py`)
 - [ ] Magisk module layout (`magisk.py`)
-- [x] DTL-X analyzer/optimizer (`dtlx.py`) — ✅ Integrated with subprocess CLI calls
+- [x] DTL-X analyzer/optimizer (`dtlx.py`) — ✅ Integrated with subprocess CLI
+      calls
 - [ ] Plugin discovery system (filesystem/config-based)
 - [ ] Unit test suite (pytest)
 - [ ] Integration tests
@@ -443,10 +470,10 @@ Activate: `/mode [mode-name]`
 
 ## Token Efficiency Symbols
 
-**Flow**: → leads, ⇒ converts, ← rollback, ⇄ bidirectional, » then, ∴ therefore, ∵ because
-**Status**: ✅ done, ❌ fail, ⚠️ warn, 🔄 active, ⏳ pending, 🚨 critical
-**Domains**: ⚡ perf, 🔍 analysis, 🔧 cfg, 🛡️ sec, 📦 deploy, 🎨 UI, 🏗️ arch, 🗄️ DB, ⚙️ backend, 🧪 test
-**Operators**: & and, | or
+**Flow**: → leads, ⇒ converts, ← rollback, ⇄ bidirectional, » then, ∴ therefore,
+∵ because **Status**: ✅ done, ❌ fail, ⚠️ warn, 🔄 active, ⏳ pending, 🚨
+critical **Domains**: ⚡ perf, 🔍 analysis, 🔧 cfg, 🛡️ sec, 📦 deploy, 🎨 UI, 🏗️
+arch, 🗄️ DB, ⚙️ backend, 🧪 test **Operators**: & and, | or
 
 ---
 
@@ -508,5 +535,5 @@ mypy rvp/
 
 ---
 
-*Optimized for Claude's context window and reasoning capabilities*
-*Last updated: 2025-12-04*
+_Optimized for Claude's context window and reasoning capabilities_ _Last
+updated: 2025-12-04_

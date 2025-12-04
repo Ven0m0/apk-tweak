@@ -1,0 +1,557 @@
+#!/usr/bin/env bash
+export LC_ALL=C LANG=C
+
+# Color definitions
+BLK=$'\e[30m' RED=$'\e[31m' GRN=$'\e[32m' YLW=$'\e[33m'
+BLU=$'\e[34m' MGN=$'\e[35m' CYN=$'\e[36m' WHT=$'\e[37m'
+LBLU=$'\e[38;5;117m' PNK=$'\e[38;5;218m' BWHT=$'\e[97m'
+DEF=$'\e[0m' BLD=$'\e[1m'
+
+# Utility functions
+has() { command -v "$1" &>/dev/null; }
+
+# Script safety
+set -Eeuo pipefail
+shopt -s nullglob globstar
+IFS=$'\n\t'
+
+# Globals
+declare -i TOTAL_FILES=0 MODIFIED_FILES=0 ERROR_COUNT=0
+declare -A TOOL_STATUS=()
+declare -a MISSING_TOOLS=()
+declare -a COMMANDS=()
+declare -a ERROR_FILES=()
+
+# Cleanup trap
+cleanup() {
+  set +e
+  [[ -d ${WORKDIR:-} ]] && rm -rf "${WORKDIR}" || :
+}
+trap cleanup EXIT
+trap 'echo "${RED}Error at line $LINENO${DEF}" >&2; exit 1' ERR
+
+# ============================================================================
+# Tool Detection & Validation
+# ============================================================================
+
+check_tools() {
+  local -a required_tools=(
+    "rg:text search (fallback: grep)"
+  )
+
+  local -a optional_tools=(
+    "fd:file finding (faster than find)"
+    "yamlfmt:YAML formatting"
+    "yamllint:YAML linting"
+    "prettier:JSON/CSS/JS/HTML formatting"
+    "biome:Modern web formatter"
+    "eslint:JavaScript linting"
+    "shfmt:Shell script formatting"
+    "shellcheck:Shell script linting"
+    "shellharden:Shell script hardening"
+    "fish_indent:Fish shell formatting"
+    "taplo:TOML formatting"
+    "tombi:TOML linting"
+    "mdformat:Markdown formatting"
+    "markdownlint:Markdown linting"
+    "actionlint:GitHub Actions linting"
+    "ruff:Python linting/formatting"
+    "black:Python formatting"
+    "stylua:Lua formatting"
+    "selene:Lua linting"
+  )
+
+  echo "${LBLU}${BLD}=== Tool Detection ===${DEF}"
+  for tool_desc in "${required_tools[@]}"; do
+    local tool="${tool_desc%%:*}"
+    local desc="${tool_desc#*:}"
+    if has "$tool"; then
+      echo "${GRN}✓${DEF} ${tool} ${WHT}(${desc})${DEF}"
+      TOOL_STATUS[$tool]=1
+    else
+      echo "${RED}✗${DEF} ${tool} ${WHT}(${desc})${DEF}"
+      MISSING_TOOLS+=("$tool")
+    fi
+  done
+
+  for tool_desc in "${optional_tools[@]}"; do
+    local tool="${tool_desc%%:*}"
+    local desc="${tool_desc#*:}"
+    if has "$tool"; then
+      echo "${GRN}✓${DEF} ${tool} ${WHT}(${desc})${DEF}"
+      TOOL_STATUS[$tool]=1
+    else
+      echo "${YLW}○${DEF} ${tool} ${WHT}(${desc} - optional)${DEF}"
+      TOOL_STATUS[$tool]=0
+    fi
+  done
+
+  if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
+    echo "${RED}Missing required tools: ${MISSING_TOOLS[*]}${DEF}" >&2
+    exit 1
+  fi
+  echo
+}
+
+# ============================================================================
+# File Discovery
+# ============================================================================
+
+find_files() {
+  local pattern="$1"
+  local -a files=()
+
+  if has fd; then
+    mapfile -t files < <(fd -tf -u -E .git -E node_modules -E __pycache__ -E .venv -E venv -E dist -E build -E '*.egg-info' -e "$pattern" 2>/dev/null || true)
+  else
+    mapfile -t files < <(find . -type f -name "*.$pattern" ! -path '*/.git/*' ! -path '*/node_modules/*' ! -path '*/__pycache__/*' ! -path '*/.venv/*' ! -path '*/venv/*' ! -path '*/dist/*' ! -path '*/build/*' 2>/dev/null || true)
+  fi
+
+  printf '%s\n' "${files[@]}"
+}
+
+find_files_multi() {
+  local -a exts=("$@")
+  local -a all_files=()
+
+  for ext in "${exts[@]}"; do
+    mapfile -t -O "${#all_files[@]}" all_files < <(find_files "$ext")
+  done
+
+  printf '%s\n' "${all_files[@]}" | sort -u
+}
+
+# ============================================================================
+# Format & Lint Functions
+# ============================================================================
+
+format_yaml() {
+  local -a files=()
+  mapfile -t files < <(find_files_multi yml yaml)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No YAML files found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== YAML: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with yamlfmt
+  if [[ ${TOOL_STATUS[yamlfmt]:-0} -eq 1 ]]; then
+    local -i modified=0
+    for f in "${files[@]}"; do
+      local before=$(md5sum "$f" | cut -d' ' -f1)
+      yamlfmt -formatter indent=2,max_line_length=120,retain_line_breaks=true "$f" 2>/dev/null || {
+        echo "${RED}  ✗ yamlfmt failed: $f${DEF}"
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("$f (yamlfmt)")
+        continue
+      }
+      local after=$(md5sum "$f" | cut -d' ' -f1)
+      if [[ "$before" != "$after" ]]; then
+        echo "${GRN}  ✓ formatted: $f${DEF}"
+        ((modified++))
+        ((MODIFIED_FILES++))
+      fi
+    done
+    COMMANDS+=("yamlfmt -formatter indent=2,max_line_length=120,retain_line_breaks=true *.{yml,yaml}")
+    [[ $modified -gt 0 ]] && echo "${GRN}  Formatted: $modified files${DEF}"
+  fi
+
+  # Lint with yamllint
+  if [[ ${TOOL_STATUS[yamllint]:-0} -eq 1 ]]; then
+    local -i errors=0
+    local output
+    if output=$(yamllint -f parsable "${files[@]}" 2>&1); then
+      echo "${GRN}  ✓ yamllint: no errors${DEF}"
+    else
+      echo "${RED}  ✗ yamllint errors:${DEF}"
+      echo "$output" | head -20
+      errors=$(echo "$output" | wc -l)
+      ((ERROR_COUNT += errors))
+      ERROR_FILES+=("${files[@]/#/yamllint: }")
+    fi
+    COMMANDS+=("yamllint -f parsable *.{yml,yaml}")
+  fi
+
+  echo
+}
+
+format_json() {
+  local -a files=()
+  mapfile -t files < <(find_files_multi json json5 jsonc)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No JSON files found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== JSON: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Try biome first, fallback to prettier
+  local formatter=""
+  if [[ ${TOOL_STATUS[biome]:-0} -eq 1 ]]; then
+    formatter="biome"
+  elif [[ ${TOOL_STATUS[prettier]:-0} -eq 1 ]]; then
+    formatter="prettier"
+  fi
+
+  if [[ -n "$formatter" ]]; then
+    local -i modified=0
+    for f in "${files[@]}"; do
+      [[ ! -f "$f" ]] && continue
+      local before=$(md5sum "$f" 2>/dev/null | cut -d' ' -f1)
+      [[ -z "$before" ]] && continue
+
+      if [[ "$formatter" == "biome" ]]; then
+        biome format --write "$f" 2>/dev/null || {
+          echo "${RED}  ✗ biome failed: $f${DEF}"
+          ((ERROR_COUNT++))
+          ERROR_FILES+=("$f (biome)")
+          continue
+        }
+      else
+        prettier --write "$f" 2>/dev/null || {
+          echo "${RED}  ✗ prettier failed: $f${DEF}"
+          ((ERROR_COUNT++))
+          ERROR_FILES+=("$f (prettier)")
+          continue
+        }
+      fi
+
+      local after=$(md5sum "$f" 2>/dev/null | cut -d' ' -f1)
+      if [[ "$before" != "$after" ]]; then
+        echo "${GRN}  ✓ formatted: $f${DEF}"
+        ((modified++))
+        ((MODIFIED_FILES++))
+      fi
+    done
+    COMMANDS+=("$formatter format --write *.{json,json5,jsonc}")
+    [[ $modified -gt 0 ]] && echo "${GRN}  Formatted: $modified files${DEF}"
+  fi
+
+  echo
+}
+
+format_shell() {
+  local -a files=()
+  mapfile -t files < <(find_files_multi sh bash)
+  # Also find files without extension but with shebang
+  if has fd; then
+    mapfile -t -O "${#files[@]}" files < <(fd -tf -u -E .git -E node_modules -x grep -l '^#!/.*sh' {} \; 2>/dev/null | grep -v '\.' || true)
+  fi
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No shell scripts found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== Shell Scripts: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with shfmt
+  if [[ ${TOOL_STATUS[shfmt]:-0} -eq 1 ]]; then
+    local -i modified=0
+    for f in "${files[@]}"; do
+      local before=$(md5sum "$f" | cut -d' ' -f1)
+      shfmt -w -i 2 -ln bash -bn -s "$f" 2>/dev/null || {
+        echo "${RED}  ✗ shfmt failed: $f${DEF}"
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("$f (shfmt)")
+        continue
+      }
+      local after=$(md5sum "$f" | cut -d' ' -f1)
+      if [[ "$before" != "$after" ]]; then
+        echo "${GRN}  ✓ formatted: $f${DEF}"
+        ((modified++))
+        ((MODIFIED_FILES++))
+      fi
+    done
+    COMMANDS+=("shfmt -w -i 2 -ln bash -bn -s *.sh")
+    [[ $modified -gt 0 ]] && echo "${GRN}  Formatted: $modified files${DEF}"
+  fi
+
+  # Lint with shellcheck
+  if [[ ${TOOL_STATUS[shellcheck]:-0} -eq 1 ]]; then
+    local -i errors=0
+    for f in "${files[@]}"; do
+      local output
+      if output=$(shellcheck -f gcc "$f" 2>&1); then
+        : # no errors
+      else
+        echo "${RED}  ✗ shellcheck: $f${DEF}"
+        echo "$output" | head -10
+        ((errors++))
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("$f (shellcheck)")
+      fi
+    done
+    COMMANDS+=("shellcheck -f gcc *.sh")
+    [[ $errors -eq 0 ]] && echo "${GRN}  ✓ shellcheck: no errors${DEF}"
+  fi
+
+  echo
+}
+
+format_python() {
+  local -a files=()
+  mapfile -t files < <(find_files_multi py pyw pyi)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No Python files found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== Python: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with ruff (fast) - use directory mode
+  if [[ ${TOOL_STATUS[ruff]:-0} -eq 1 ]] && [[ ${#files[@]} -gt 0 ]]; then
+    local -i modified=0
+    local output
+
+    # Format - use directories instead of file lists
+    output=$(ruff format . 2>&1 || true)
+    if echo "$output" | grep -q "reformatted"; then
+      modified=$(echo "$output" | grep -c "reformatted" || echo 0)
+      echo "${GRN}  ✓ ruff format: $modified files reformatted${DEF}"
+      ((MODIFIED_FILES += modified))
+    fi
+    COMMANDS+=("ruff format .")
+
+    # Fix with ruff
+    output=$(ruff check --fix . 2>&1 || true)
+    if echo "$output" | grep -qE "(Fixed|errors)"; then
+      echo "${GRN}  ✓ ruff check --fix applied${DEF}"
+    fi
+    COMMANDS+=("ruff check --fix .")
+
+    # Check for remaining errors
+    local err_output
+    if err_output=$(ruff check . 2>&1); then
+      echo "${GRN}  ✓ ruff check: no errors${DEF}"
+    else
+      local err_count=$(echo "$err_output" | grep -cE "Found [0-9]+ error" || echo 0)
+      if [[ $err_count -gt 0 ]] || echo "$err_output" | grep -q "error:"; then
+        echo "${RED}  ✗ ruff check: errors found${DEF}"
+        echo "$err_output" | head -20
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("Python files (ruff)")
+      fi
+    fi
+  fi
+
+  # Optional: black for additional formatting
+  if [[ ${TOOL_STATUS[black]:-0} -eq 1 ]] && [[ ${#files[@]} -gt 0 ]]; then
+    local output
+    output=$(black --quiet . 2>&1 || true)
+    if echo "$output" | grep -q "reformatted"; then
+      local modified=$(echo "$output" | grep -c "reformatted" || echo 0)
+      echo "${GRN}  ✓ black: $modified files reformatted${DEF}"
+      ((MODIFIED_FILES += modified))
+    fi
+    COMMANDS+=("black .")
+  fi
+
+  echo
+}
+
+format_markdown() {
+  local -a files=()
+  mapfile -t files < <(find_files_multi md markdown)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No Markdown files found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== Markdown: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with mdformat
+  if [[ ${TOOL_STATUS[mdformat]:-0} -eq 1 ]]; then
+    local -i modified=0
+    for f in "${files[@]}"; do
+      local before=$(md5sum "$f" | cut -d' ' -f1)
+      mdformat --wrap 80 "$f" 2>/dev/null || {
+        echo "${RED}  ✗ mdformat failed: $f${DEF}"
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("$f (mdformat)")
+        continue
+      }
+      local after=$(md5sum "$f" | cut -d' ' -f1)
+      if [[ "$before" != "$after" ]]; then
+        echo "${GRN}  ✓ formatted: $f${DEF}"
+        ((modified++))
+        ((MODIFIED_FILES++))
+      fi
+    done
+    COMMANDS+=("mdformat --wrap 80 *.md")
+    [[ $modified -gt 0 ]] && echo "${GRN}  Formatted: $modified files${DEF}"
+  fi
+
+  # Lint with markdownlint
+  if [[ ${TOOL_STATUS[markdownlint]:-0} -eq 1 ]]; then
+    local -i errors=0
+    local output
+    if output=$(markdownlint --fix "${files[@]}" 2>&1); then
+      echo "${GRN}  ✓ markdownlint: no errors${DEF}"
+    else
+      echo "${RED}  ✗ markdownlint errors:${DEF}"
+      echo "$output" | head -20
+      errors=$(echo "$output" | grep -c ":" || echo 0)
+      ((ERROR_COUNT += errors))
+      ERROR_FILES+=("${files[@]/#/markdownlint: }")
+    fi
+    COMMANDS+=("markdownlint --fix *.md")
+  fi
+
+  echo
+}
+
+format_toml() {
+  local -a files=()
+  mapfile -t files < <(find_files toml)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No TOML files found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== TOML: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with taplo
+  if [[ ${TOOL_STATUS[taplo]:-0} -eq 1 ]]; then
+    local -i modified=0
+    for f in "${files[@]}"; do
+      local before=$(md5sum "$f" | cut -d' ' -f1)
+      taplo format "$f" 2>/dev/null || {
+        echo "${RED}  ✗ taplo failed: $f${DEF}"
+        ((ERROR_COUNT++))
+        ERROR_FILES+=("$f (taplo)")
+        continue
+      }
+      local after=$(md5sum "$f" | cut -d' ' -f1)
+      if [[ "$before" != "$after" ]]; then
+        echo "${GRN}  ✓ formatted: $f${DEF}"
+        ((modified++))
+        ((MODIFIED_FILES++))
+      fi
+    done
+    COMMANDS+=("taplo format *.toml")
+    [[ $modified -gt 0 ]] && echo "${GRN}  Formatted: $modified files${DEF}"
+  fi
+
+  echo
+}
+
+format_actions() {
+  local -a files=()
+  mapfile -t files < <(find .github/workflows -type f -name "*.yml" -o -name "*.yaml" 2>/dev/null || true)
+
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "${YLW}No GitHub Actions workflows found${DEF}"
+    return 0
+  fi
+
+  echo "${LBLU}${BLD}=== GitHub Actions: ${#files[@]} files ===${DEF}"
+  ((TOTAL_FILES += ${#files[@]}))
+
+  # Format with yamlfmt first
+  if [[ ${TOOL_STATUS[yamlfmt]:-0} -eq 1 ]]; then
+    for f in "${files[@]}"; do
+      yamlfmt -formatter indent=2 "$f" 2>/dev/null || true
+    done
+  fi
+
+  # Lint with actionlint
+  if [[ ${TOOL_STATUS[actionlint]:-0} -eq 1 ]]; then
+    local -i errors=0
+    local output
+    if output=$(actionlint "${files[@]}" 2>&1); then
+      echo "${GRN}  ✓ actionlint: no errors${DEF}"
+    else
+      echo "${RED}  ✗ actionlint errors:${DEF}"
+      echo "$output" | head -20
+      errors=$(echo "$output" | grep -c ":" || echo 0)
+      ((ERROR_COUNT += errors))
+      ERROR_FILES+=("${files[@]/#/actionlint: }")
+    fi
+    COMMANDS+=("actionlint .github/workflows/*.yml")
+  fi
+
+  echo
+}
+
+# ============================================================================
+# Main Execution
+# ============================================================================
+
+main() {
+  local project_root
+  project_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  cd "$project_root" || exit 1
+
+  echo "${BWHT}${BLD}"
+  echo "╔════════════════════════════════════════════════════════════════╗"
+  echo "║         APK-TWEAK: Comprehensive Lint & Format Pipeline       ║"
+  echo "╚════════════════════════════════════════════════════════════════╝"
+  echo "${DEF}"
+
+  check_tools
+
+  # Run formatters & linters in order
+  format_yaml
+  format_json
+  format_toml
+  format_shell
+  format_python
+  format_markdown
+  format_actions
+
+  # ============================================================================
+  # Summary Report
+  # ============================================================================
+  echo "${BWHT}${BLD}╔════════════════════════════════════════════════════════════════╗${DEF}"
+  echo "${BWHT}${BLD}║                         SUMMARY REPORT                         ║${DEF}"
+  echo "${BWHT}${BLD}╚════════════════════════════════════════════════════════════════╝${DEF}"
+  echo
+
+  echo "${LBLU}${BLD}Files Processed:${DEF} $TOTAL_FILES"
+  echo "${GRN}${BLD}Files Modified:${DEF}  $MODIFIED_FILES"
+  echo "${RED}${BLD}Total Errors:${DEF}    $ERROR_COUNT"
+  echo
+
+  if [[ ${#COMMANDS[@]} -gt 0 ]]; then
+    echo "${LBLU}${BLD}Commands to Reproduce:${DEF}"
+    printf '%s\n' "${COMMANDS[@]}" | sort -u | while IFS= read -r cmd; do
+      echo "  ${WHT}$cmd${DEF}"
+    done
+    echo
+  fi
+
+  if [[ ${#ERROR_FILES[@]} -gt 0 ]]; then
+    echo "${RED}${BLD}Files with Errors:${DEF}"
+    printf '%s\n' "${ERROR_FILES[@]}" | sort -u | head -20 | while IFS= read -r f; do
+      echo "  ${RED}✗${DEF} $f"
+    done
+    if [[ ${#ERROR_FILES[@]} -gt 20 ]]; then
+      echo "  ${YLW}... and $((${#ERROR_FILES[@]} - 20)) more${DEF}"
+    fi
+    echo
+  fi
+
+  # Exit code
+  if [[ $ERROR_COUNT -gt 0 ]]; then
+    echo "${RED}${BLD}❌ FAILED: $ERROR_COUNT errors remain${DEF}"
+    exit 1
+  else
+    echo "${GRN}${BLD}✅ SUCCESS: All files formatted and validated${DEF}"
+    exit 0
+  fi
+}
+
+main "$@"
