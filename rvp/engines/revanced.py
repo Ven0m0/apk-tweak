@@ -1,41 +1,51 @@
+"""ReVanced patching engine."""
 from __future__ import annotations
+
 import shutil
-from pathlib import Path
+
 from ..context import Context
-from ..utils import run_command
+
 
 def run(ctx: Context) -> None:
-    """ReVanced patch engine."""
-    ctx.log("revanced: starting patch")
+  """
+  Execute ReVanced patch engine.
 
-    input_apk = ctx.current_apk or ctx.input_apk
-    if not input_apk:
-        raise ValueError("No input APK found in context")
+  Args:
+      ctx: Pipeline context.
 
-    out_apk = ctx.output_dir / f"{input_apk.stem}.revanced.apk"
-    
-    # Retrieve tool paths from options (populated by Config)
-    tools = ctx.options.get("tools", {})
-    cli_jar = Path(tools.get("revanced_cli", "revanced-cli.jar"))
-    patches_jar = Path(tools.get("patches", "patches.jar"))
+  Raises:
+      ValueError: If no input APK is available.
+  """
+  ctx.log("revanced: starting patch")
 
-    # Check if tools exist (Simulated for this example)
-    # In production, check: if not cli_jar.exists(): ...
+  input_apk = ctx.current_apk or ctx.input_apk
+  if not input_apk:
+    raise ValueError("No input APK found in context")
 
-    # 🔧 Example of constructing the real command
-    # cmd = [
-    #     "java", "-jar", str(cli_jar),
-    #     "patch",
-    #     "--patch-bundle", str(patches_jar),
-    #     "--out", str(out_apk),
-    #     str(input_apk)
-    # ]
-    
-    # For now, we still copy, but we log like a real command execution
-    # run_command(cmd, ctx) 
-    
-    # Stub fallback
-    shutil.copy2(input_apk, out_apk)
+  out_apk = ctx.output_dir / f"{input_apk.stem}.revanced.apk"
 
-    ctx.log(f"revanced: wrote patched apk to {out_apk}")
-    ctx.set_current_apk(out_apk)
+  # 🔧 Example of constructing the real command (for production use):
+  # Retrieve tool paths from options (populated by Config)
+  # tools = ctx.options.get("tools", {})
+  # cli_jar = Path(tools.get("revanced_cli", "revanced-cli.jar"))
+  # patches_jar = Path(tools.get("patches", "patches.jar"))
+  #
+  # Verify paths exist:
+  # if not cli_jar.exists():
+  #     raise FileNotFoundError(f"ReVanced CLI not found: {cli_jar}")
+  #
+  # from ..utils import run_command
+  # cmd = [
+  #     "java", "-jar", str(cli_jar),
+  #     "patch",
+  #     "--patch-bundle", str(patches_jar),
+  #     "--out", str(out_apk),
+  #     str(input_apk)
+  # ]
+  # run_command(cmd, ctx)
+
+  # Stub fallback: Copy APK to simulate patching
+  shutil.copy2(input_apk, out_apk)
+
+  ctx.log(f"revanced: wrote patched apk to {out_apk}")
+  ctx.set_current_apk(out_apk)
