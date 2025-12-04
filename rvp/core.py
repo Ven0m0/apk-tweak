@@ -1,13 +1,11 @@
 """Core pipeline orchestration and dynamic module discovery."""
 
 from __future__ import annotations
-
 import importlib
 import pkgutil
 import sys
 from pathlib import Path
 from typing import Any, Callable
-
 from . import engines as engines_pkg
 from . import plugins as plugins_pkg
 from .context import Context
@@ -15,11 +13,9 @@ from .validators import validate_apk_path, validate_output_dir
 
 EngineFn = Callable[[Context], None]
 PluginHandler = Callable[[Context, str], None]
-
 # Cache for discovered modules
 _ENGINES: dict[str, EngineFn] | None = None
 _PLUGIN_HANDLERS: list[PluginHandler] | None = None
-
 
 def get_engines() -> dict[str, EngineFn]:
   """
@@ -48,7 +44,6 @@ def get_engines() -> dict[str, EngineFn]:
   _ENGINES = engines
   return engines
 
-
 def load_plugins() -> list[PluginHandler]:
   """
   Dynamically discover and load plugins from rvp.plugins package.
@@ -59,9 +54,7 @@ def load_plugins() -> list[PluginHandler]:
   global _PLUGIN_HANDLERS
   if _PLUGIN_HANDLERS is not None:
     return _PLUGIN_HANDLERS
-
   hook_funcs: list[PluginHandler] = []
-
   if hasattr(plugins_pkg, "__path__"):
     for _, name, _ in pkgutil.iter_modules(plugins_pkg.__path__):
       try:
@@ -74,7 +67,6 @@ def load_plugins() -> list[PluginHandler]:
 
   _PLUGIN_HANDLERS = hook_funcs
   return hook_funcs
-
 
 def dispatch_hooks(ctx: Context, stage: str, handlers: list[PluginHandler]) -> None:
   """
@@ -90,7 +82,6 @@ def dispatch_hooks(ctx: Context, stage: str, handlers: list[PluginHandler]) -> N
       handler(ctx, stage)
     except Exception as e:
       ctx.log(f"Plugin hook error at '{stage}': {e}", level=40)  # ERROR level
-
 
 def run_pipeline(
   input_apk: Path,
@@ -117,12 +108,10 @@ def run_pipeline(
   # Validate inputs
   validate_apk_path(input_apk)
   validate_output_dir(output_dir)
-
   options = options or {}
   work_dir = output_dir / "tmp"
   work_dir.mkdir(parents=True, exist_ok=True)
   output_dir.mkdir(parents=True, exist_ok=True)
-
   ctx = Context(
     work_dir=work_dir,
     input_apk=input_apk,
@@ -133,29 +122,21 @@ def run_pipeline(
 
   ctx.log(f"Starting pipeline for: {input_apk}")
   ctx.set_current_apk(input_apk)
-
   all_engines = get_engines()  # Dynamic discovery
   plugin_handlers = load_plugins()
-
   dispatch_hooks(ctx, "pre_pipeline", plugin_handlers)
-
   for name in engines:
     if name not in all_engines:
       ctx.log(f"⚠️ Skipping unknown engine: {name}")
       continue
-
     dispatch_hooks(ctx, f"pre_engine:{name}", plugin_handlers)
-
     ctx.log(f"Running engine: {name}")
     try:
       all_engines[name](ctx)
     except Exception as e:
       ctx.log(f"❌ Engine {name} failed: {e}")
       raise
-
     dispatch_hooks(ctx, f"post_engine:{name}", plugin_handlers)
-
   dispatch_hooks(ctx, "post_pipeline", plugin_handlers)
   ctx.log(f"Pipeline finished. Final APK: {ctx.current_apk}")
-
   return ctx
