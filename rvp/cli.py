@@ -45,6 +45,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
   p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
   p.add_argument("--dtlx-analyze", action="store_true", help="Enable DTL-X analysis")
   p.add_argument("--dtlx-optimize", action="store_true", help="Enable DTL-X optimization")
+  p.add_argument("--patch-ads", action="store_true", help="Enable regex-based ad patching")
   return p.parse_args(argv)
 
 
@@ -106,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
     options["revanced_optimize"] = cfg.revanced_optimize
     options["revanced_debloat"] = cfg.revanced_debloat
     options["revanced_minify"] = cfg.revanced_minify
+    options["revanced_patch_ads"] = cfg.revanced_patch_ads
     options["revanced_include_patches"] = cfg.revanced_include_patches
     options["revanced_exclude_patches"] = cfg.revanced_exclude_patches
 
@@ -122,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
     options["dtlx_analyze"] = True
   if args.dtlx_optimize:
     options["dtlx_optimize"] = True
+  if args.patch_ads:
+    options["revanced_patch_ads"] = True
 
   # Pass tools config
   if cfg:
