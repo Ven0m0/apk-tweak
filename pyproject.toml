@@ -12,20 +12,20 @@ authors = [
   { name = "ven0m0", email = "dev@example.com" },
 ]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
-    "requests>=2.31.0",  # Future downloading capability
+  "requests>=2.31.0",  # Future downloading capability
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "mypy>=1.5.0",
-    "ruff>=0.0.285",
-    "black>=23.7.0",
-    "types-requests",
+  "pytest>=7.4.0",
+  "mypy>=1.5.0",
+  "ruff>=0.0.285",
+  "black>=23.7.0",
+  "types-requests",
 ]
 
 [project.scripts]
