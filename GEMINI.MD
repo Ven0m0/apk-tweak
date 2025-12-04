@@ -1,4 +1,4 @@
-# Gemini Instructions: Linux-OS
+# Gemini Instructions
 
 ## Primary Directive
 Execute autonomously. Minimize confirmations. Maximize token efficiency. Focus: Bash scripting & system configuration.
@@ -22,109 +22,10 @@ Quick responses: `y`=Yes `n`=No `c`=Continue `r`=Review `u`=Undo
 
 Common terms: cfg=config | impl=implementation | arch=architecture | deps=dependencies | val=validation | sec=security | err=error | opt=optimization | Δ=change | mgr=manager | fn=function | mod=modify | rm=remove | w/=with | dup=duplicate
 
-## Bash Scripting Standards
-
-### Standard Script Header
-```bash
-#!/usr/bin/env bash
-export LC_ALL=C LANG=C
-
-# Terminal colors and formatting
-BLK=$'\e[30m' RED=$'\e[31m' GRN=$'\e[32m' YLW=$'\e[33m'
-BLU=$'\e[34m' MGN=$'\e[35m' CYN=$'\e[36m' WHT=$'\e[37m'
-LBLU=$'\e[38;5;117m' PNK=$'\e[38;5;218m' BWHT=$'\e[97m'
-DEF=$'\e[0m' BLD=$'\e[1m'
-
-# Core utility function
-has() { command -v "$1" &>/dev/null; }
-```
-
-## Implementation Patterns
-
-### Package Management
-
-**Detection Priority**:
-- Arch ecosystem: `paru` → `yay` → `pacman`
-- Debian ecosystem: `apt` → `dpkg`
-- Store in `pkgmgr` array for multi-distro support
-
-**Pre-Installation Verification**:
-- Pacman packages: `pacman -Q package_name`
-- Flatpak apps: `flatpak list`
-- Cargo binaries: `cargo install --list`
-
-**Documentation Format**:
-Include distro-specific installation hints:
-- `(Arch: pacman -S package_name)`
-- `(Debian: apt-get install -y package_name)`
-
-### Data Handling & Optimization
-
-**Efficient Array Population**:
-```bash
-mapfile -t array < <(command)  # Avoids subshell overhead
-```
-
-**Critical Rules**:
-- ❌ Never parse `ls` output
-- ✅ Use associative arrays for configuration: `declare -A cfg=([key]=value)`
-
-**Tool Preference Hierarchy**:
-| Task | Primary | Fallback 1 | Fallback 2 |
-|------|---------|------------|------------|
-| File search | `fd` | `find` | - |
-| Text search | `rg` | `grep` | - |
-| File display | `bat` | `cat` | - |
-| Text replacement | `sd` | `sed` | - |
-| Download | `aria2` | `curl` | `wget` |
-| JSON processing | `jaq` | `jq` | - |
-| Fuzzy finding | `sk` | `fzf` | - |
-
 **Performance Guidelines**:
 - Batch operations whenever possible
 - Minimize subprocess spawning
 - Use process substitution over pipes for complex chains
-
-### Interactive Features
-
-**Fuzzy Finder Integration**:
-- Trigger when required arguments (paths) are missing
-- Fallback pattern:
-  ```bash
-  has fd && fd -t f | fzf || find . -type f | fzf
-  ```
-
-**AUR Helper Configuration**:
-Standard flags: `--needed --noconfirm --removemake --cleanafter --sudoloop --skipreview --batchinstall`
-
-### Network Operations
-
-**Standard cURL Configuration**:
-```bash
-curl -fsL --http2 <url>
-```
-
-**Maintenance Requirement**:
-Update README curl snippets when modifying entrypoint scripts
-
-## Quality Assurance Tools
-
-### Code Formatting & Validation Pipeline
-```bash
-# Format with shfmt
-shfmt -i 2 -ln bash -bn -s file.sh && \
-
-# Lint with shellcheck (apply suggestions)
-shellcheck -f diff file.sh | patch -Np1 && \
-
-# Harden with shellharden
-shellharden --replace file.sh
-```
-
-### Modern Tool Fallback Matrix
-- **File discovery**: `fdf` → `fd` → `find` (note: prefer `find` for `-exec` operations)
-- **Download operations**: `aria2` → `curl` → `wget2` → `wget` (exclude aria2 for piped operations)
-- **Parallel execution**: `rust-parallel` → `parallel` → `xargs`
 
 ## Development Methodology
 
