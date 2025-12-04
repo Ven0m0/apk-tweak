@@ -17,6 +17,9 @@ _ENGINES: Dict[str, EngineFn] = {
     "dtlx": dtlx.run,
 }
 
+# Performance: Cache loaded plugins at module level to avoid repeated loading
+_PLUGIN_HANDLERS: List[Callable[[Context, str], None]] | None = None
+
 
 def get_engines() -> Dict[str, EngineFn]:
     """Return the registered engines dictionary."""
@@ -27,17 +30,58 @@ def load_plugins() -> List[Callable[[Context, str], None]]:
     """
     Returns a list of plugin hook dispatchers.
     For now, only built-in example_plugin; later, discover from fs/config.
+
+    Performance optimization: Plugins are cached at module level after first load,
+    avoiding repeated hasattr checks and list reconstruction.
+
+    Note: The cache is module-level for performance. For testing scenarios where
+    plugins need to be reloaded, call clear_plugin_cache() first.
     """
+    global _PLUGIN_HANDLERS
+
+    # Return cached handlers if already loaded
+    if _PLUGIN_HANDLERS is not None:
+        return _PLUGIN_HANDLERS
+
     hook_funcs: List[Callable[[Context, str], None]] = []
 
-    # Example: a very simple plugin that just logs hook stages
-    if hasattr(plugins_pkg.example_plugin, "handle_hook"):
-        hook_funcs.append(plugins_pkg.example_plugin.handle_hook)
+    # Performance: Direct attribute access is faster than hasattr
+    # which internally catches AttributeError
+    try:
+        handle_hook = plugins_pkg.example_plugin.handle_hook
+        if callable(handle_hook):
+            hook_funcs.append(handle_hook)
+    except AttributeError:
+        pass  # Plugin doesn't have handle_hook, skip it
 
+    # Cache for future calls
+    _PLUGIN_HANDLERS = hook_funcs
     return hook_funcs
 
 
-def dispatch_hooks(ctx: Context, stage: str, plugin_handlers: List[Callable[[Context, str], None]]) -> None:
+def clear_plugin_cache() -> None:
+    """
+    Clear the plugin cache. Useful for testing scenarios.
+
+    In production use, plugins are loaded once and cached for performance.
+    This function allows tests to reload plugins if needed.
+    """
+    global _PLUGIN_HANDLERS
+    _PLUGIN_HANDLERS = None
+
+
+def dispatch_hooks(
+    ctx: Context, stage: str, plugin_handlers: List[Callable[[Context, str], None]]
+) -> None:
+    """
+    Dispatch hooks to all registered plugin handlers.
+
+    Performance optimization: Early return if no handlers to avoid unnecessary calls.
+    """
+    # Performance: Skip dispatch if no handlers registered
+    if not plugin_handlers:
+        return
+
     for handler in plugin_handlers:
         handler(ctx, stage)
 
@@ -48,6 +92,20 @@ def run_pipeline(
     engines: List[str],
     options: Dict[str, object] | None = None,
 ) -> Context:
+    """
+    Run the pipeline with the specified engines.
+
+    Args:
+        input_apk: Input APK path (should be resolved for optimal performance)
+        output_dir: Output directory path (should be resolved for optimal performance)
+        engines: List of engine names to run
+        options: Optional configuration dict
+
+    Returns:
+        Context object with pipeline state and results
+
+    Note: For best performance, resolve input_apk and output_dir paths before calling.
+    """
     options = options or {}
     work_dir = output_dir / "tmp"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -62,7 +120,8 @@ def run_pipeline(
     )
 
     ctx.log(f"Starting pipeline for: {input_apk}")
-    ctx.set_current_apk(input_apk.resolve())
+    # Performance: Avoid redundant resolve() - paths should be pre-resolved by caller
+    ctx.set_current_apk(input_apk)
 
     all_engines = get_engines()
     plugin_handlers = load_plugins()

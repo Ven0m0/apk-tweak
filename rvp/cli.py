@@ -13,12 +13,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("apk", help="Input APK path")
     p.add_argument(
-        "-o", "--out",
+        "-o",
+        "--out",
         default="out",
         help="Output directory (default: out)",
     )
     p.add_argument(
-        "-e", "--engine",
+        "-e",
+        "--engine",
         action="append",
         default=[],
         help="Engine to run (revanced, magisk, lspatch, dtlx). Can be given multiple times.",
@@ -39,12 +41,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
-    apk = Path(args.apk)
+    # Performance: Resolve paths once upfront instead of multiple times
+    apk = Path(args.apk).resolve()
     if not apk.is_file():
         print(f"Error: APK not found: {apk}", file=sys.stderr)
         return 1
 
-    out_dir = Path(args.out)
+    out_dir = Path(args.out).resolve()
 
     engines = args.engine or ["revanced"]  # default flow
 
