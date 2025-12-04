@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# APK Tweak specific
+# Ignore APK files and output directories (but keep example configs)
+*.apk
+*.jar
+out/
+output/
+tools/

@@ -1,0 +1,11 @@
+{
+  "input_apk": "youtube.apk",
+  "output_dir": "output",
+  "engines": ["revanced", "dtlx", "magisk"],
+  "dtlx_analyze": true,
+  "dtlx_optimize": true,
+  "magisk_id": "revanced_youtube",
+  "revanced_cli_path": "tools/revanced-cli.jar",
+  "revanced_patches_path": "tools/revanced-patches.jar",
+  "revanced_integrations_path": "tools/revanced-integrations.apk"
+}

@@ -1,0 +1,47 @@
+{
+  "input_apk": "youtube.apk",
+  "output_dir": "output",
+  "engines": ["revanced"],
+  
+  "revanced_cli_path": "tools/revanced-cli.jar",
+  "revanced_patch_bundles": [
+    "tools/revanced-patches-official.jar",
+    "tools/revanced-patches-extended.jar",
+    "tools/custom-patches.jar"
+  ],
+  "revanced_integrations_path": "tools/revanced-integrations.apk",
+  
+  "revanced_optimize": true,
+  "revanced_debloat": true,
+  "revanced_minify": true,
+  
+  "revanced_include_patches": [
+    "hide-ads",
+    "custom-branding",
+    "premium-heading"
+  ],
+  "revanced_exclude_patches": [
+    "swipe-controls"
+  ],
+  
+  "debloat_patterns": [
+    "*/admob/*",
+    "*/google/ads/*",
+    "*/facebook/ads/*",
+    "*/analytics/*",
+    "*/crashlytics/*",
+    "*/firebase/analytics/*",
+    "assets/unused_*"
+  ],
+  
+  "minify_patterns": [
+    "res/drawable-xxxhdpi/*",
+    "res/drawable-xxhdpi/*",
+    "res/raw/*.mp3",
+    "res/raw/*.wav",
+    "res/raw/*.ogg"
+  ],
+  
+  "apktool_path": "tools/apktool.jar",
+  "zipalign_path": "tools/zipalign"
+}

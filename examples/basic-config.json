@@ -1,0 +1,8 @@
+{
+  "input_apk": "app.apk",
+  "output_dir": "output",
+  "engines": ["revanced"],
+  "revanced_cli_path": "tools/revanced-cli.jar",
+  "revanced_patches_path": "tools/patches.jar",
+  "revanced_integrations_path": "tools/integrations.apk"
+}
