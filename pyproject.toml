@@ -37,23 +37,47 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+indent-width = 2
+target-version = "py311"
+extend-exclude = [
+  ".git",
+  "__pycache__",
+  ".venv",
+  "venv",
+  ".env",
+  "dist",
+  "build",
+  "*.egg-info",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".ruff_cache",
+  "node_modules",
+  "vendor",
+]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+skip-magic-trailing-comma = false
+docstring-code-format = true
 
 [tool.black]
 line-length = 120
-target-version = ['py310']
+target-version = ['py311']
+skip-string-normalization = false
 include = '\.pyi?$'
 extend-exclude = '''
 /(
   \.git
-  | \.cache
-  | \.var
+  | \.venv
+  | venv
+  | \.env
+  | dist
+  | build
+  | __pycache__
   | node_modules
+  | vendor
 )/
 '''
 
