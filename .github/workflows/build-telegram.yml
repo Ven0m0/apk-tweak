@@ -1,4 +1,6 @@
 name: Download and Patch Modules
+permissions:
+  contents: read
 
 on:
   workflow_call:
