@@ -28,4 +28,8 @@ def run(ctx: Context) -> None:
     # Using shutil.copy2 for efficient file copying with metadata preservation.
     shutil.copy2(apk, module_dir / apk.name)
     ctx.log(f"magisk: wrote stub module at {module_dir}")
-    ctx.metadata.setdefault("magisk", {})["module_dir"] = str(module_dir)
+
+    # Performance: Use direct dict access pattern instead of setdefault
+    if "magisk" not in ctx.metadata:
+        ctx.metadata["magisk"] = {}
+    ctx.metadata["magisk"]["module_dir"] = str(module_dir)
