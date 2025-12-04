@@ -33,6 +33,9 @@ def load_plugins() -> List[Callable[[Context, str], None]]:
 
     Performance optimization: Plugins are cached at module level after first load,
     avoiding repeated hasattr checks and list reconstruction.
+
+    Note: The cache is module-level for performance. For testing scenarios where
+    plugins need to be reloaded, call clear_plugin_cache() first.
     """
     global _PLUGIN_HANDLERS
 
@@ -54,6 +57,17 @@ def load_plugins() -> List[Callable[[Context, str], None]]:
     # Cache for future calls
     _PLUGIN_HANDLERS = hook_funcs
     return hook_funcs
+
+
+def clear_plugin_cache() -> None:
+    """
+    Clear the plugin cache. Useful for testing scenarios.
+
+    In production use, plugins are loaded once and cached for performance.
+    This function allows tests to reload plugins if needed.
+    """
+    global _PLUGIN_HANDLERS
+    _PLUGIN_HANDLERS = None
 
 
 def dispatch_hooks(
@@ -78,6 +92,20 @@ def run_pipeline(
     engines: List[str],
     options: Dict[str, object] | None = None,
 ) -> Context:
+    """
+    Run the pipeline with the specified engines.
+
+    Args:
+        input_apk: Input APK path (should be resolved for optimal performance)
+        output_dir: Output directory path (should be resolved for optimal performance)
+        engines: List of engine names to run
+        options: Optional configuration dict
+
+    Returns:
+        Context object with pipeline state and results
+
+    Note: For best performance, resolve input_apk and output_dir paths before calling.
+    """
     options = options or {}
     work_dir = output_dir / "tmp"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -92,7 +120,7 @@ def run_pipeline(
     )
 
     ctx.log(f"Starting pipeline for: {input_apk}")
-    # Performance: Avoid redundant resolve() - assume paths are already resolved
+    # Performance: Avoid redundant resolve() - paths should be pre-resolved by caller
     ctx.set_current_apk(input_apk)
 
     all_engines = get_engines()
