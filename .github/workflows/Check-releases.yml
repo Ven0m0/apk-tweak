@@ -112,10 +112,13 @@ jobs:
           MODULE_REPOS="Xposed-Modules-Repo/com.my.televip araafroyall/Telegram-Speed-Hook JeelsBoobz/Killergram Xposed-Modules-Repo/com.alex193a.tguseridviewer JingMatrix/LSPatch"
 
           for REPO in $MODULE_REPOS; do
-            LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" -H "Accept: application/vnd.github.v3+json")
-            if [[ $LATEST_RELEASE == *"message"* ]]; then
-              echo "Error checking releases for $REPO"
-              continue
+            # 🛡️ Sec: Add Auth Header to prevent rate limiting
+            LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}")
+              
+            if [[ $LATEST_RELEASE == *"Bad credentials"* ]] || [[ $LATEST_RELEASE == *"message"* ]]; then
+              echo "Error checking releases for $REPO"; continue
             fi
             TAG_NAME=$(echo "$LATEST_RELEASE" | jq -r '.tag_name // empty')
             REPO_NAME="${REPO##*/}"
