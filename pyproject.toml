@@ -23,11 +23,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=7.4.0",
-  "mypy>=1.5.0",
-  "ruff>=0.0.285",
-  "black>=23.7.0",
+  "mypy",
+  "ruff",
+  "black",
   "types-requests",
 ]
+fast = ["orjson"]
 
 [project.scripts]
 rvp = "rvp.cli:main"
@@ -40,7 +41,6 @@ ignore_missing_imports = true
 warn_unused_configs = true
 warn_return_any = true
 disallow_untyped_defs = true
-
 
 [tool.ruff]
 line-length = 120
@@ -141,3 +141,17 @@ extend-exclude = '''
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/test_*.py", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
