@@ -31,6 +31,11 @@ class Config:
         minify_patterns: Resource patterns to remove during minification.
         apktool_path: Path to apktool executable/jar.
         zipalign_path: Path to zipalign executable.
+        rkpairip_apktool_mode: Use ApkTool mode for RKPairip decompilation.
+        rkpairip_merge_skip: Enable merge skip mode for separate DEX handling.
+        rkpairip_dex_repair: Enable DEX repair after string modifications.
+        rkpairip_corex_hook: Enable CoreX hook for Unity/Flutter/crashed APKs.
+        rkpairip_anti_split: Enable anti-split merge for split APK files.
     """
 
     input_apk: str | None = None
@@ -73,6 +78,13 @@ class Config:
     # Tool paths
     apktool_path: str = "apktool"
     zipalign_path: str = "zipalign"
+
+    # RKPairip configuration
+    rkpairip_apktool_mode: bool = False
+    rkpairip_merge_skip: bool = False
+    rkpairip_dex_repair: bool = False
+    rkpairip_corex_hook: bool = False
+    rkpairip_anti_split: bool = False
 
     # Legacy support (backward compatibility)
     revanced_patches_path: str = "patches.jar"
