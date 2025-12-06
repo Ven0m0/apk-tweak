@@ -118,12 +118,19 @@ find_files_multi() {
     mapfile -t -O "${#all_files[@]}" all_files < <(find_files "$ext")
   done
 
-  printf '%s\n' "${all_files[@]}" | sort -u
+  [[ ${#all_files[@]} -gt 0 ]] && printf '%s\n' "${all_files[@]}" | sort -u
 }
 
 # ============================================================================
 # Format & Lint Functions
 # ============================================================================
+
+# Helper: Check if file was modified
+file_modified() {
+  local file="$1"
+  local before="$2"
+  [[ -f "$file" ]] && [[ "$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)" != "$before" ]]
+}
 
 format_yaml() {
   local -a files=()
@@ -141,15 +148,15 @@ format_yaml() {
   if [[ ${TOOL_STATUS[yamlfmt]:-0} -eq 1 ]]; then
     local -i modified=0
     for f in "${files[@]}"; do
-      local before=$(md5sum "$f" | cut -d' ' -f1)
+      local mtime_before
+      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
       yamlfmt -formatter indent=2,max_line_length=120,retain_line_breaks=true "$f" 2>/dev/null || {
         echo "${RED}  ✗ yamlfmt failed: $f${DEF}"
         ((ERROR_COUNT++))
         ERROR_FILES+=("$f (yamlfmt)")
         continue
       }
-      local after=$(md5sum "$f" | cut -d' ' -f1)
-      if [[ "$before" != "$after" ]]; then
+      if file_modified "$f" "$mtime_before"; then
         echo "${GRN}  ✓ formatted: $f${DEF}"
         ((modified++))
         ((MODIFIED_FILES++))
@@ -202,8 +209,8 @@ format_json() {
     local -i modified=0
     for f in "${files[@]}"; do
       [[ ! -f "$f" ]] && continue
-      local before=$(md5sum "$f" 2>/dev/null | cut -d' ' -f1)
-      [[ -z "$before" ]] && continue
+      local mtime_before
+      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null) || continue
 
       if [[ "$formatter" == "biome" ]]; then
         biome format --write "$f" 2>/dev/null || {
@@ -221,8 +228,7 @@ format_json() {
         }
       fi
 
-      local after=$(md5sum "$f" 2>/dev/null | cut -d' ' -f1)
-      if [[ "$before" != "$after" ]]; then
+      if file_modified "$f" "$mtime_before"; then
         echo "${GRN}  ✓ formatted: $f${DEF}"
         ((modified++))
         ((MODIFIED_FILES++))
@@ -255,15 +261,15 @@ format_shell() {
   if [[ ${TOOL_STATUS[shfmt]:-0} -eq 1 ]]; then
     local -i modified=0
     for f in "${files[@]}"; do
-      local before=$(md5sum "$f" | cut -d' ' -f1)
+      local mtime_before
+      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
       shfmt -w -i 2 -ln bash -bn -s "$f" 2>/dev/null || {
         echo "${RED}  ✗ shfmt failed: $f${DEF}"
         ((ERROR_COUNT++))
         ERROR_FILES+=("$f (shfmt)")
         continue
       }
-      local after=$(md5sum "$f" | cut -d' ' -f1)
-      if [[ "$before" != "$after" ]]; then
+      if file_modified "$f" "$mtime_before"; then
         echo "${GRN}  ✓ formatted: $f${DEF}"
         ((modified++))
         ((MODIFIED_FILES++))
@@ -374,15 +380,15 @@ format_markdown() {
   if [[ ${TOOL_STATUS[mdformat]:-0} -eq 1 ]]; then
     local -i modified=0
     for f in "${files[@]}"; do
-      local before=$(md5sum "$f" | cut -d' ' -f1)
+      local mtime_before
+      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
       mdformat --wrap 80 "$f" 2>/dev/null || {
         echo "${RED}  ✗ mdformat failed: $f${DEF}"
         ((ERROR_COUNT++))
         ERROR_FILES+=("$f (mdformat)")
         continue
       }
-      local after=$(md5sum "$f" | cut -d' ' -f1)
-      if [[ "$before" != "$after" ]]; then
+      if file_modified "$f" "$mtime_before"; then
         echo "${GRN}  ✓ formatted: $f${DEF}"
         ((modified++))
         ((MODIFIED_FILES++))
@@ -427,15 +433,15 @@ format_toml() {
   if [[ ${TOOL_STATUS[taplo]:-0} -eq 1 ]]; then
     local -i modified=0
     for f in "${files[@]}"; do
-      local before=$(md5sum "$f" | cut -d' ' -f1)
+      local mtime_before
+      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
       taplo format "$f" 2>/dev/null || {
         echo "${RED}  ✗ taplo failed: $f${DEF}"
         ((ERROR_COUNT++))
         ERROR_FILES+=("$f (taplo)")
         continue
       }
-      local after=$(md5sum "$f" | cut -d' ' -f1)
-      if [[ "$before" != "$after" ]]; then
+      if file_modified "$f" "$mtime_before"; then
         echo "${GRN}  ✓ formatted: $f${DEF}"
         ((modified++))
         ((MODIFIED_FILES++))
