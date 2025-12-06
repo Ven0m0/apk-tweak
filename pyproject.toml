@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
   "requests>=2.31.0",  # Future downloading capability
+  "Pairip>=1.0.0",  # RKPairip APK decompilation/rebuilding
 ]
 
 [project.optional-dependencies]

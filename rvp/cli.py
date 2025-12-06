@@ -6,6 +6,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from .config import Config
 from .core import run_pipeline
@@ -46,6 +47,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--dtlx-analyze", action="store_true", help="Enable DTL-X analysis")
     p.add_argument("--dtlx-optimize", action="store_true", help="Enable DTL-X optimization")
     p.add_argument("--patch-ads", action="store_true", help="Enable regex-based ad patching")
+
+    # RKPairip options
+    p.add_argument("--rkpairip-apktool", action="store_true", help="RKPairip: Use ApkTool mode")
+    p.add_argument("--rkpairip-merge-skip", action="store_true", help="RKPairip: Enable merge skip mode")
+    p.add_argument("--rkpairip-dex-repair", action="store_true", help="RKPairip: Enable DEX repair")
+    p.add_argument("--rkpairip-corex", action="store_true", help="RKPairip: Enable CoreX hook (Unity/Flutter)")
+    p.add_argument("--rkpairip-anti-split", action="store_true", help="RKPairip: Enable anti-split merge")
+
     return p.parse_args(argv)
 
 
@@ -96,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Resolve Options
     # Merge cfg options with flag overrides
-    options: dict[str, object] = {}
+    options: dict[str, Any] = {}
 
     if cfg:
         options["dtlx_analyze"] = cfg.dtlx_analyze
@@ -119,6 +128,24 @@ def main(argv: list[str] | None = None) -> int:
         options["apktool_path"] = cfg.apktool_path
         options["zipalign_path"] = cfg.zipalign_path
 
+        # RKPairip options from config
+        options["rkpairip"] = {
+            "apktool_mode": cfg.rkpairip_apktool_mode,
+            "merge_skip": cfg.rkpairip_merge_skip,
+            "dex_repair": cfg.rkpairip_dex_repair,
+            "corex_hook": cfg.rkpairip_corex_hook,
+            "anti_split": cfg.rkpairip_anti_split,
+        }
+    else:
+        # Default RKPairip options if no config
+        options["rkpairip"] = {
+            "apktool_mode": False,
+            "merge_skip": False,
+            "dex_repair": False,
+            "corex_hook": False,
+            "anti_split": False,
+        }
+
     # Flags override config
     if args.dtlx_analyze:
         options["dtlx_analyze"] = True
@@ -126,6 +153,18 @@ def main(argv: list[str] | None = None) -> int:
         options["dtlx_optimize"] = True
     if args.patch_ads:
         options["revanced_patch_ads"] = True
+
+    # RKPairip flags override config
+    if args.rkpairip_apktool:
+        options["rkpairip"]["apktool_mode"] = True
+    if args.rkpairip_merge_skip:
+        options["rkpairip"]["merge_skip"] = True
+    if args.rkpairip_dex_repair:
+        options["rkpairip"]["dex_repair"] = True
+    if args.rkpairip_corex:
+        options["rkpairip"]["corex_hook"] = True
+    if args.rkpairip_anti_split:
+        options["rkpairip"]["anti_split"] = True
 
     # Pass tools config
     if cfg:
