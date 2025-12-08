@@ -125,11 +125,17 @@ find_files_multi() {
 # Format & Lint Functions
 # ============================================================================
 
+# Helper: Get file modification time (cross-platform)
+get_mtime() {
+  local file="$1"
+  stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null || echo 0
+}
+
 # Helper: Check if file was modified
 file_modified() {
   local file="$1"
   local before="$2"
-  [[ -f "$file" ]] && [[ "$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)" != "$before" ]]
+  [[ -f "$file" ]] && [[ "$(get_mtime "$file")" != "$before" ]]
 }
 
 format_yaml() {
@@ -149,7 +155,7 @@ format_yaml() {
     local -i modified=0
     for f in "${files[@]}"; do
       local mtime_before
-      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
+      mtime_before=$(get_mtime "$f")
       yamlfmt -formatter indent=2,max_line_length=120,retain_line_breaks=true "$f" 2>/dev/null || {
         echo "${RED}  ✗ yamlfmt failed: $f${DEF}"
         ((ERROR_COUNT++))
@@ -168,14 +174,14 @@ format_yaml() {
 
   # Lint with yamllint
   if [[ ${TOOL_STATUS[yamllint]:-0} -eq 1 ]]; then
-    local -i errors=0
     local output
     if output=$(yamllint -f parsable "${files[@]}" 2>&1); then
       echo "${GRN}  ✓ yamllint: no errors${DEF}"
     else
       echo "${RED}  ✗ yamllint errors:${DEF}"
       echo "$output" | head -20
-      errors=$(echo "$output" | wc -l)
+      local -i errors
+      errors=$(printf '%s\n' "$output" | wc -l)
       ((ERROR_COUNT += errors))
       ERROR_FILES+=("${files[@]/#/yamllint: }")
     fi
@@ -210,7 +216,7 @@ format_json() {
     for f in "${files[@]}"; do
       [[ ! -f "$f" ]] && continue
       local mtime_before
-      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null) || continue
+      mtime_before=$(get_mtime "$f")
 
       if [[ "$formatter" == "biome" ]]; then
         biome format --write "$f" 2>/dev/null || {
@@ -262,7 +268,7 @@ format_shell() {
     local -i modified=0
     for f in "${files[@]}"; do
       local mtime_before
-      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
+      mtime_before=$(get_mtime "$f")
       shfmt -w -i 2 -ln bash -bn -s "$f" 2>/dev/null || {
         echo "${RED}  ✗ shfmt failed: $f${DEF}"
         ((ERROR_COUNT++))
@@ -315,13 +321,15 @@ format_python() {
 
   # Format with ruff (fast) - use directory mode
   if [[ ${TOOL_STATUS[ruff]:-0} -eq 1 ]] && [[ ${#files[@]} -gt 0 ]]; then
-    local -i modified=0
     local output
 
     # Format - use directories instead of file lists
     output=$(ruff format . 2>&1 || true)
-    if echo "$output" | grep -q "reformatted"; then
-      modified=$(echo "$output" | grep -c "reformatted" || echo 0)
+    if [[ "$output" =~ reformatted ]]; then
+      local -i modified=0
+      while IFS= read -r line; do
+        [[ "$line" =~ reformatted ]] && ((modified++))
+      done <<<"$output"
       echo "${GRN}  ✓ ruff format: $modified files reformatted${DEF}"
       ((MODIFIED_FILES += modified))
     fi
@@ -329,7 +337,7 @@ format_python() {
 
     # Fix with ruff
     output=$(ruff check --fix . 2>&1 || true)
-    if echo "$output" | grep -qE "(Fixed|errors)"; then
+    if [[ "$output" =~ (Fixed|errors) ]]; then
       echo "${GRN}  ✓ ruff check --fix applied${DEF}"
     fi
     COMMANDS+=("ruff check --fix .")
@@ -339,8 +347,7 @@ format_python() {
     if err_output=$(ruff check . 2>&1); then
       echo "${GRN}  ✓ ruff check: no errors${DEF}"
     else
-      local err_count=$(echo "$err_output" | grep -cE "Found [0-9]+ error" || echo 0)
-      if [[ $err_count -gt 0 ]] || echo "$err_output" | grep -q "error:"; then
+      if [[ "$err_output" =~ (Found\ [0-9]+\ error|error:) ]]; then
         echo "${RED}  ✗ ruff check: errors found${DEF}"
         echo "$err_output" | head -20
         ((ERROR_COUNT++))
@@ -353,8 +360,11 @@ format_python() {
   if [[ ${TOOL_STATUS[black]:-0} -eq 1 ]] && [[ ${#files[@]} -gt 0 ]]; then
     local output
     output=$(black --quiet . 2>&1 || true)
-    if echo "$output" | grep -q "reformatted"; then
-      local modified=$(echo "$output" | grep -c "reformatted" || echo 0)
+    if [[ "$output" =~ reformatted ]]; then
+      local -i modified=0
+      while IFS= read -r line; do
+        [[ "$line" =~ reformatted ]] && ((modified++))
+      done <<<"$output"
       echo "${GRN}  ✓ black: $modified files reformatted${DEF}"
       ((MODIFIED_FILES += modified))
     fi
@@ -381,7 +391,7 @@ format_markdown() {
     local -i modified=0
     for f in "${files[@]}"; do
       local mtime_before
-      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
+      mtime_before=$(get_mtime "$f")
       mdformat --wrap 80 "$f" 2>/dev/null || {
         echo "${RED}  ✗ mdformat failed: $f${DEF}"
         ((ERROR_COUNT++))
@@ -400,14 +410,16 @@ format_markdown() {
 
   # Lint with markdownlint
   if [[ ${TOOL_STATUS[markdownlint]:-0} -eq 1 ]]; then
-    local -i errors=0
     local output
     if output=$(markdownlint --fix "${files[@]}" 2>&1); then
       echo "${GRN}  ✓ markdownlint: no errors${DEF}"
     else
       echo "${RED}  ✗ markdownlint errors:${DEF}"
       echo "$output" | head -20
-      errors=$(echo "$output" | grep -c ":" || echo 0)
+      local -i errors=0
+      while IFS= read -r line; do
+        [[ "$line" =~ : ]] && ((errors++))
+      done <<<"$output"
       ((ERROR_COUNT += errors))
       ERROR_FILES+=("${files[@]/#/markdownlint: }")
     fi
@@ -434,7 +446,7 @@ format_toml() {
     local -i modified=0
     for f in "${files[@]}"; do
       local mtime_before
-      mtime_before=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null)
+      mtime_before=$(get_mtime "$f")
       taplo format "$f" 2>/dev/null || {
         echo "${RED}  ✗ taplo failed: $f${DEF}"
         ((ERROR_COUNT++))
@@ -475,14 +487,16 @@ format_actions() {
 
   # Lint with actionlint
   if [[ ${TOOL_STATUS[actionlint]:-0} -eq 1 ]]; then
-    local -i errors=0
     local output
     if output=$(actionlint "${files[@]}" 2>&1); then
       echo "${GRN}  ✓ actionlint: no errors${DEF}"
     else
       echo "${RED}  ✗ actionlint errors:${DEF}"
       echo "$output" | head -20
-      errors=$(echo "$output" | grep -c ":" || echo 0)
+      local -i errors=0
+      while IFS= read -r line; do
+        [[ "$line" =~ : ]] && ((errors++))
+      done <<<"$output"
       ((ERROR_COUNT += errors))
       ERROR_FILES+=("${files[@]/#/actionlint: }")
     fi
