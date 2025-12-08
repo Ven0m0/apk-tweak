@@ -17,7 +17,7 @@ classifiers = [
 ]
 dependencies = [
   "requests>=2.31.0",  # Future downloading capability
-  "Pairip>=1.0.0",  # RKPairip APK decompilation/rebuilding
+  # "Pairip>=1.0.0",  # RKPairip APK decompilation/rebuilding
 ]
 
 [project.optional-dependencies]
@@ -43,7 +43,7 @@ warn_return_any = true
 disallow_untyped_defs = true
 
 [tool.ruff]
-line-length = 120
+line-length = 80
 indent-width = 2
 target-version = "py311"
 extend-exclude = [
@@ -120,7 +120,7 @@ known-first-party = ["rvp"]
 "tests/*" = ["PLR2004", "S101"]  # Allow magic values and asserts in tests
 
 [tool.black]
-line-length = 120
+line-length = 80
 target-version = ['py311']
 skip-string-normalization = false
 include = '\.pyi?$'
