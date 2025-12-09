@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from ..context import Context
+from ..utils import check_dependencies, clone_repository
 
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
@@ -18,62 +18,6 @@ WHATSAPP_FEATURES = [
   "Disable read receipts",
   "Save view once media",
 ]
-
-
-def _check_java() -> bool:
-  """
-  Check if Java runtime is available.
-
-  Returns:
-      True if java is in PATH, False otherwise.
-  """
-  return shutil.which("java") is not None
-
-
-def _clone_patcher(target_dir: Path, ctx: Context) -> bool:
-  """
-  Clone WhatsAppPatcher repository.
-
-  Args:
-      target_dir: Directory to clone into.
-      ctx: Pipeline context.
-
-  Returns:
-      True if successful, False otherwise.
-  """
-  if target_dir.exists():
-    ctx.log("whatsapp: patcher already cloned, using existing")
-    return True
-
-  ctx.log(f"whatsapp: cloning patcher from {WHATSAPP_PATCHER_REPO}")
-  try:
-    subprocess.run(
-      ["git", "clone", WHATSAPP_PATCHER_REPO, str(target_dir)],
-      capture_output=True,
-      text=True,
-      timeout=120,
-      check=True,
-    )
-
-    # Install Python dependencies
-    req_file = target_dir / "requirements.txt"
-    if req_file.exists():
-      ctx.log("whatsapp: installing Python dependencies")
-      subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
-        check=False,
-      )
-
-    return True
-  except subprocess.TimeoutExpired:
-    ctx.log("whatsapp: clone timed out")
-    return False
-  except subprocess.CalledProcessError as e:
-    ctx.log(f"whatsapp: clone failed: {e.stderr}")
-    return False
-  except Exception as e:
-    ctx.log(f"whatsapp: clone error: {e}")
-    return False
 
 
 def run(ctx: Context) -> None:
@@ -106,7 +50,8 @@ def run(ctx: Context) -> None:
   input_apk = ctx.current_apk or ctx.input_apk
 
   # Check Java dependency
-  if not _check_java():
+  deps_ok, _ = check_dependencies(["java"])
+  if not deps_ok:
     ctx.log("whatsapp: ERROR - Java runtime not found")
     ctx.log(
       "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
@@ -119,9 +64,18 @@ def run(ctx: Context) -> None:
     patcher_dir = Path(str(patcher_path))
   else:
     patcher_dir = ctx.work_dir / "whatsapp-patcher"
-    if not _clone_patcher(patcher_dir, ctx):
+    if not clone_repository(WHATSAPP_PATCHER_REPO, patcher_dir, ctx):
       ctx.log("whatsapp: failed to obtain patcher")
       return
+
+    # Install Python dependencies
+    req_file = patcher_dir / "requirements.txt"
+    if req_file.exists():
+      ctx.log("whatsapp: installing Python dependencies")
+      subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
+        check=False,
+      )
 
   # Prepare output
   output_apk = ctx.output_dir / f"{input_apk.stem}.whatsapp-patched.apk"
