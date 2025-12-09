@@ -134,6 +134,15 @@ def _apply_flag_overrides(
   if args.whatsapp_timeout:
     opts["whatsapp_timeout"] = args.whatsapp_timeout
 
+  # Android Builder overrides
+  opts.setdefault("android_builder", {})
+  if args.android_source_dir:
+    opts["android_builder"]["android_source_dir"] = args.android_source_dir
+  if args.android_build_task:
+    opts["android_builder"]["android_build_task"] = args.android_build_task
+  if args.android_output_pattern:
+    opts["android_builder"]["android_output_pattern"] = args.android_output_pattern
+  
   # Media optimizer overrides
   if args.optimize_images:
     opts["optimize_images"] = True
