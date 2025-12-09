@@ -117,15 +117,13 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
     if args.discord_patches:
         options["discord_patches"] = args.discord_patches
 
-    # Luniume overrides
-    if args.luniume_method:
-        options["luniume_method"] = args.luniume_method
-    if args.luniume_patches:
-        options["luniume_patches"] = args.luniume_patches
-    if args.luniume_modules:
-        options["luniume_modules"] = args.luniume_modules
-    if args.luniume_exclusive:
-        options["luniume_exclusive"] = True
+    # Legacy luniume option mapping (merged into revanced/lspatch)
+    if hasattr(args, "luniume_patches") and args.luniume_patches:
+        options["revanced_patches"] = args.luniume_patches
+    if hasattr(args, "luniume_modules") and args.luniume_modules:
+        options["lspatch_modules"] = args.luniume_modules
+    if hasattr(args, "luniume_exclusive") and args.luniume_exclusive:
+        options["revanced_exclusive"] = True
 
     # WhatsApp patcher overrides
     if hasattr(args, "whatsapp_ab_tests"):
@@ -234,26 +232,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Discord: Custom patches to apply",
     )
 
-    # Luniume options
-    p.add_argument(
-        "--luniume-method",
-        choices=["revanced", "lspatch"],
-        help="Luniume: Patching method (revanced or lspatch)",
-    )
+    # Legacy luniume options (now merged into revanced/lspatch engines)
+    # Kept for backward compatibility - mapped to revanced/lspatch options
     p.add_argument(
         "--luniume-patches",
         nargs="+",
-        help="Luniume: Patches to apply (for ReVanced)",
+        help="[DEPRECATED] Use revanced engine with --revanced-patches instead",
     )
     p.add_argument(
         "--luniume-modules",
         nargs="+",
-        help="Luniume: LSPatch modules to embed",
+        help="[DEPRECATED] Use lspatch engine with --lspatch-modules instead",
     )
     p.add_argument(
         "--luniume-exclusive",
         action="store_true",
-        help="Luniume: Enable exclusive patching mode (ReVanced)",
+        help="[DEPRECATED] Use revanced engine with --revanced-exclusive instead",
     )
 
     # WhatsApp patcher options
