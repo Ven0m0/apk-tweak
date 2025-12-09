@@ -1,6 +1,0 @@
-{
-  "input_apk": "patched-app.apk",
-  "output_dir": "magisk-modules",
-  "engines": ["magisk"],
-  "magisk_id": "custom_app_module"
-}
