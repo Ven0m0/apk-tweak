@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
   from pathlib import Path
@@ -47,7 +47,7 @@ class PipelineOptions(TypedDict, total=False):
   revanced_include_patches: list[str]
   revanced_exclude_patches: list[str]
   revanced_exclusive: bool
-  revanced_patches: str
+  revanced_patches: list[str | dict[str, Any]]
 
   # LSPatch options
   lspatch_modules: list[str]
