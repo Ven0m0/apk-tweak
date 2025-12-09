@@ -42,12 +42,12 @@ apk-tweak/
 
 1. **Pipeline Architecture**: Chain multiple engines sequentially
 2. **Context Object**: Shared state (`Context` dataclass) passed through
-   pipeline
+  pipeline
 3. **Plugin Hooks**: Event-driven hooks (`pre_pipeline`, `pre_engine:*`,
-   `post_engine:*`, `post_pipeline`)
+  `post_engine:*`, `post_pipeline`)
 4. **Engine Registry**: Modular engine registration in `core.py:_ENGINES`
 5. **Stub Implementations**: Current engines are stubs ready for real
-   integrations
+  integrations
 
 ---
 
@@ -301,36 +301,34 @@ logic (abstract appropriately)
 1. **Create engine file**: `rvp/engines/yourengine.py`
 2. **Implement `run(ctx: Context) -> None`**:
 
-   ```python
-   from __future__ import annotations
-   from ..context import Context
+```python
+from __future__ import annotations
+from ..context import Context
 
-   def run(ctx: Context) -> None:
-       """Process APK with YourEngine."""
-       ctx.log("yourengine: starting")
-       input_apk = ctx.current_apk or ctx.input_apk
-       output_apk = ctx.output_dir / f"{input_apk.stem}.yourengine.apk"
+def run(ctx: Context) -> None:
+    """Process APK with YourEngine."""
+    ctx.log("yourengine: starting")
+    input_apk = ctx.current_apk or ctx.input_apk
+    output_apk = ctx.output_dir / f"{input_apk.stem}.yourengine.apk"
 
-       # Your processing logic here
+    # Your processing logic here
 
-       ctx.log(f"yourengine: output -> {output_apk}")
-       ctx.set_current_apk(output_apk)
-   ```
-
+    ctx.log(f"yourengine: output -> {output_apk}")
+    ctx.set_current_apk(output_apk)
+```
 3. **Register in `core.py`**:
 
-   ```python
-   from .engines import revanced, magisk, lspatch, dtlx, yourengine
+```python
+from .engines import revanced, magisk, lspatch, dtlx, yourengine
 
-   _ENGINES: Dict[str, EngineFn] = {
-       "revanced": revanced.run,
-       "magisk": magisk.run,
-       "lspatch": lspatch.run,
-       "dtlx": dtlx.run,
-       "yourengine": yourengine.run,
-   }
-   ```
-
+_ENGINES: Dict[str, EngineFn] = {
+    "revanced": revanced.run,
+    "magisk": magisk.run,
+    "lspatch": lspatch.run,
+    "dtlx": dtlx.run,
+    "yourengine": yourengine.run,
+}
+```
 4. **Update CLI help**: Add to `cli.py` engine description
 
 ### Creating Plugins
@@ -427,16 +425,16 @@ Activate: `/mode [mode-name]`
 
 ## Configuration Files Reference
 
-| File                | Purpose                        |
+| File | Purpose |
 | ------------------- | ------------------------------ |
-| `.editorconfig`     | Cross-editor formatting rules  |
-| `.megalinter.yml`   | Linter/formatter configuration |
-| `.prettierrc.yml`   | YAML/JSON formatting           |
-| `.yamllint.yml`     | YAML linting rules             |
-| `.shellcheckrc`     | Bash linting configuration     |
-| `pyproject.toml`    | Python package metadata        |
-| `gradle.properties` | Android/Gradle JVM settings    |
-| `.gitignore`        | VCS ignore patterns            |
+| `.editorconfig` | Cross-editor formatting rules |
+| `.megalinter.yml` | Linter/formatter configuration |
+| `.prettierrc.yml` | YAML/JSON formatting |
+| `.yamllint.yml` | YAML linting rules |
+| `.shellcheckrc` | Bash linting configuration |
+| `pyproject.toml` | Python package metadata |
+| `gradle.properties` | Android/Gradle JVM settings |
+| `.gitignore` | VCS ignore patterns |
 
 ---
 
@@ -460,7 +458,7 @@ Activate: `/mode [mode-name]`
 - [ ] LSPatch implementation (`lspatch.py`)
 - [ ] Magisk module layout (`magisk.py`)
 - [x] DTL-X analyzer/optimizer (`dtlx.py`) — ✅ Integrated with subprocess CLI
-      calls
+  calls
 - [ ] Plugin discovery system (filesystem/config-based)
 - [ ] Unit test suite (pytest)
 - [ ] Integration tests
@@ -539,5 +537,5 @@ mypy rvp/
 
 ---
 
-_Optimized for Claude's context window and reasoning capabilities_ _Last
-updated: 2025-12-04_
+*Optimized for Claude's context window and reasoning capabilities* *Last
+updated: 2025-12-04*

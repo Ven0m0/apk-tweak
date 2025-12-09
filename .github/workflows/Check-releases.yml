@@ -94,7 +94,7 @@ jobs:
           }
 
           echo "--- Checking Client Releases ---"
-          
+
           # Process all clients using the helper functions
           for apk_pattern in "telegram*.apk:Telegram" "ForkClient*.apk:ForkGram" "TF*.apk:TelegramFOSS"; do
             pattern="${apk_pattern%%:*}"
@@ -119,7 +119,7 @@ jobs:
             LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" \
               -H "Accept: application/vnd.github.v3+json" \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}")
-              
+
             if [[ $LATEST_RELEASE == *"Bad credentials"* ]] || [[ $LATEST_RELEASE == *"message"* ]]; then
               echo "Error checking releases for $REPO"; continue
             fi

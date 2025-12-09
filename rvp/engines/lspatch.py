@@ -22,9 +22,7 @@ def _check_lspatch_dependencies() -> tuple[bool, list[str]]:
   return (not missing, missing)
 
 
-def _build_lspatch_cmd(
-  ctx: Context, input_apk: Path, output_dir: Path
-) -> list[str]:
+def _build_lspatch_cmd(ctx: Context, input_apk: Path, output_dir: Path) -> list[str]:
   """
   Build lspatch command from context options.
 
@@ -68,9 +66,7 @@ def _build_lspatch_cmd(
   return cmd
 
 
-def _run_lspatch_cli(
-  ctx: Context, input_apk: Path, output_dir: Path
-) -> Path | None:
+def _run_lspatch_cli(ctx: Context, input_apk: Path, output_dir: Path) -> Path | None:
   """
   Execute LSPatch patching with binary command.
 
@@ -86,9 +82,7 @@ def _run_lspatch_cli(
   ctx.log(f"lspatch: running CLI → {output_dir}")
 
   try:
-    result = subprocess.run(
-      cmd, capture_output=True, text=True, timeout=900, check=False
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=False)
 
     if result.returncode == 0:
       # LSPatch outputs as {package_name}.apk or *-lspatched.apk

@@ -23,9 +23,7 @@ def _check_revanced_dependencies() -> tuple[bool, list[str]]:
   return (not missing, missing)
 
 
-def _build_revanced_cli_cmd(
-  ctx: Context, input_apk: Path, output_apk: Path
-) -> list[str]:
+def _build_revanced_cli_cmd(ctx: Context, input_apk: Path, output_apk: Path) -> list[str]:
   """
   Build revanced-cli command from context options.
 
@@ -107,9 +105,7 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
   ctx.log(f"revanced: running CLI → {output_apk.name}")
 
   try:
-    result = subprocess.run(
-      cmd, capture_output=True, text=True, timeout=900, check=False
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=False)
 
     if result.returncode == 0 and output_apk.exists():
       ctx.log("revanced: CLI patching successful")
@@ -127,9 +123,7 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
     return False
 
 
-def _create_stub_apk(
-  ctx: Context, input_apk: Path, patch_bundles_count: int
-) -> None:
+def _create_stub_apk(ctx: Context, input_apk: Path, patch_bundles_count: int) -> None:
   """
   Create stub APK when ReVanced tools are not available.
 
@@ -227,9 +221,7 @@ def run(ctx: Context) -> None:
   # Get configuration
   tools = ctx.options.get("tools", {})
   cli_jar = Path(tools.get("revanced_cli", "revanced-cli.jar"))
-  integrations_apk = Path(
-    tools.get("revanced_integrations", "integrations.apk")
-  )
+  integrations_apk = Path(tools.get("revanced_integrations", "integrations.apk"))
   # Support multiple patch bundles
   patch_bundles = ctx.options.get("revanced_patch_bundles", [])
   # Fallback to single patch bundle for backward compatibility
@@ -256,9 +248,7 @@ def run(ctx: Context) -> None:
     if not patch_jar.exists():
       ctx.log(f"revanced: Patch bundle not found: {patch_jar}, skipping")
       continue
-    ctx.log(
-      f"revanced: Applying patch bundle {idx}/{len(patch_bundles)}: {patch_jar.name}"
-    )
+    ctx.log(f"revanced: Applying patch bundle {idx}/{len(patch_bundles)}: {patch_jar.name}")
     # Determine output name
     if idx == len(patch_bundles):
       # Last patch - use final name

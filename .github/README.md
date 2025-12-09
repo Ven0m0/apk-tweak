@@ -108,14 +108,17 @@ def handle_hook(ctx: Context, stage: str) -> None:
 The media optimizer engine reduces APK size through:
 
 #### Image Optimization
+
 - **PNG**: Lossy compression using `pngquant` (65-80% quality range)
 - **JPEG**: Optimization using `jpegoptim` (85% quality, metadata stripped)
 
 #### Audio Optimization
+
 - **MP3**: Re-encode using `ffmpeg` with libmp3lame (96k bitrate)
 - **OGG**: Re-encode using `ffmpeg` with libvorbis (96k bitrate)
 
 #### DPI Resource Filtering
+
 Remove drawable resources for non-target screen densities:
 
 - **ldpi** (120 dpi)
@@ -128,6 +131,7 @@ Remove drawable resources for non-target screen densities:
 - **nodpi** - Always preserved (density-independent)
 
 **Usage:**
+
 ```bash
 # Optimize everything for xxhdpi devices
 rvp app.apk -e media_optimizer --optimize-images --optimize-audio --target-dpi xxhdpi
@@ -140,6 +144,7 @@ rvp app.apk -e media_optimizer --optimize-images
 ```
 
 **Dependencies:**
+
 ```bash
 # Arch Linux
 pacman -S pngquant jpegoptim ffmpeg
@@ -203,20 +208,18 @@ apk-tweak/
 ## Best Practices
 
 1. **Engine Development**:
-   - Accept `Context` as sole parameter
-   - Update `ctx.current_apk` after modification
-   - Use `ctx.log()` for output
-   - Raise exceptions on failure
-
+  - Accept `Context` as sole parameter
+  - Update `ctx.current_apk` after modification
+  - Use `ctx.log()` for output
+  - Raise exceptions on failure
 2. **Plugin Development**:
-   - Implement `handle_hook(ctx, stage)`
-   - Use lightweight operations
-   - Catch exceptions internally
-
+  - Implement `handle_hook(ctx, stage)`
+  - Use lightweight operations
+  - Catch exceptions internally
 3. **Testing**:
-   - Use `tmp_path` fixture
-   - Test both success and failure paths
-   - Verify state changes in context
+  - Use `tmp_path` fixture
+  - Test both success and failure paths
+  - Verify state changes in context
 
 ## Contributing
 
@@ -227,6 +230,7 @@ apk-tweak/
 5. Open Pull Request
 
 Ensure all checks pass:
+
 ```bash
 ruff check . && mypy rvp/ --strict && pytest tests/
 ```

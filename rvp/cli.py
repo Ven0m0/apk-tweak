@@ -40,9 +40,7 @@ def _build_config_options(cfg: Config) -> Options:
     "rkpairip_corex_hook": "corex_hook",
     "rkpairip_anti_split": "anti_split",
   }
-  options["rkpairip"] = {
-    new_key: options.pop(old_key) for old_key, new_key in rkpairip_keys.items()
-  }
+  options["rkpairip"] = {new_key: options.pop(old_key) for old_key, new_key in rkpairip_keys.items()}
 
   # Reorganize tools options into nested dict
   options["tools"] = {
@@ -170,15 +168,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
   p.add_argument("-c", "--config", help="Path to config JSON file")
   p.add_argument("-o", "--out", help="Output directory")
   p.add_argument("-e", "--engine", action="append", help="Engines to run")
-  p.add_argument(
-    "-v", "--verbose", action="store_true", help="Enable debug logging"
-  )
-  p.add_argument(
-    "--dtlx-analyze", action="store_true", help="Enable DTL-X analysis"
-  )
-  p.add_argument(
-    "--dtlx-optimize", action="store_true", help="Enable DTL-X optimization"
-  )
+  p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
+  p.add_argument("--dtlx-analyze", action="store_true", help="Enable DTL-X analysis")
+  p.add_argument("--dtlx-optimize", action="store_true", help="Enable DTL-X optimization")
   p.add_argument(
     "--patch-ads",
     action="store_true",
@@ -320,9 +312,7 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
   # Resolve Output
-  output_dir = (
-    Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
-  )
+  output_dir = Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
 
   # Resolve Engines: Args > Config > Default
   engines = args.engine

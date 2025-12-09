@@ -134,7 +134,7 @@ jobs:
             modules="$modules -m com.alex193a.tguseridviewer_v*_*.apk"
             echo "- UserID Viewer" >> release_body.txt
           fi
-          echo "$modules" > module_list.txt 
+          echo "$modules" > module_list.txt
           echo "" >> release_body.txt
         shell: bash
 
@@ -147,9 +147,9 @@ jobs:
           latest: true
 
       - name: Rename Televip Module
-        if: ${{ github.event.inputs.enable_televip_module == 'true' }}      
+        if: ${{ github.event.inputs.enable_televip_module == 'true' }}
         run: mv app-release.apk TeleVip.apk
-        shell: bash  
+        shell: bash
 
       - name: Download SpeedHook Module
         if: ${{ github.event.inputs.enable_speedhook_module == 'true' }}
@@ -166,9 +166,9 @@ jobs:
           fileName: "Killergram*.apk"
           repository: JeelsBoobz/Killergram
           latest: true
-      
+
       - name: Download UserID Viewer Module
-        if: ${{ github.event.inputs.enable_userid_module == 'true' }}  
+        if: ${{ github.event.inputs.enable_userid_module == 'true' }}
         uses: robinraju/release-downloader@v1
         with:
           fileName: "com.alex193a.tguseridviewer_v*_*.apk"

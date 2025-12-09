@@ -5,6 +5,7 @@ applyTo: ".github/workflows/*.yml"
 # GitHub Actions CI/CD Best Practices
 
 ## Core Concepts
+
 - **Structure**: Clear, modular, reusable.
   - **Triggers**: Specific `on` events (`push: branches: [main]`); use `workflow_dispatch` for manual.
   - **Concurrency**: Set to prevent race conditions/waste.
@@ -18,6 +19,7 @@ applyTo: ".github/workflows/*.yml"
   - **Cmds**: `run` w/ `|` for multi-line; combine `&&` for docker layers.
 
 ## 🛡️ Security
+
 - **Secrets**: Use `secrets.VAR`; never log; minimize scope.
 - **OIDC**: Auth w/ cloud (AWS/Azure) via OIDC ❌ static creds.
 - **Token**: `permissions: contents: read` default; restrict `write`.
@@ -25,12 +27,14 @@ applyTo: ".github/workflows/*.yml"
 - **Img Sign**: Sign/verify container images (Cosign).
 
 ## ⚡ Performance
+
 - **Caching**: `actions/cache` w/ hash keys (`hashFiles('**/lock')`); use `restore-keys`.
 - **Matrix**: Parallelize tests (`strategy.matrix`: os/node/ver); `fail-fast: true`.
 - **Checkout**: `fetch-depth: 1`; `submodules: false` unless req.
 - **Artifacts**: Upload/download for inter-job data; set `retention-days`.
 
 ## 🧪 Testing Strategy
+
 1. **Unit**: Fast, isolated, high cov; run on push.
 2. **Integ**: Real deps (`services`: db/redis); run after unit.
 3. **E2E**: Cypress/Playwright vs staging; mitigate flake (retries/waits).
@@ -38,6 +42,7 @@ applyTo: ".github/workflows/*.yml"
 5. **Reports**: Upload JUnit/HTML as artifacts; use PR annotations.
 
 ## 📦 Deployment
+
 - **Env**: Use GH Environments (Protection rules, Secrets).
 - **Staging**: Mirror prod; auto-deploy valid builds; smoke test.
 - **Prod**: Manual approval; strictly gated.
@@ -45,6 +50,7 @@ applyTo: ".github/workflows/*.yml"
 - **Rollback**: Auto-trigger on alert/fail; keep versioned artifacts ready.
 
 ## 🔍 Review Checklist
+
 - [ ] Name clear? Trigger scoped? Concurrency set?
 - [ ] Perms restricted? Secrets masked? OIDC used?
 - [ ] Jobs independent? `needs` set? `outputs` used?

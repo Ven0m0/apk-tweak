@@ -38,9 +38,10 @@ Example plugin demonstrating the hook system.
 **To use:**
 
 1. Copy to `rvp/plugins/` directory:
-   ```bash
-   cp examples/custom_plugin.py rvp/plugins/
-   ```
+
+```bash
+cp examples/custom_plugin.py rvp/plugins/
+```
 2. Run any pipeline - the plugin will be automatically discovered and loaded.
 
 **Features demonstrated:**

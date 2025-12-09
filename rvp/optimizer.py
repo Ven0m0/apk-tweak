@@ -62,9 +62,7 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
         match.unlink()
         removed_count += 1
       elif match.is_dir():
-        ctx.log(
-          f"optimizer: Removing directory {match.relative_to(decompiled_dir)}"
-        )
+        ctx.log(f"optimizer: Removing directory {match.relative_to(decompiled_dir)}")
         shutil.rmtree(match)
         removed_count += 1
   ctx.log(f"optimizer: Debloat complete - removed {removed_count} items")
@@ -97,20 +95,14 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
     for match in matches:
       if match.is_file():
         size = match.stat().st_size
-        ctx.log(
-          f"optimizer: Removing {match.relative_to(decompiled_dir)} ({size} bytes)"
-        )
+        ctx.log(f"optimizer: Removing {match.relative_to(decompiled_dir)} ({size} bytes)")
         match.unlink()
         removed_count += 1
         removed_size += size
-  ctx.log(
-    f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)"
-  )
+  ctx.log(f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)")
 
 
-def _apply_patch_to_file(
-  file_path: Path, patterns: list[AdPattern], ctx: Context
-) -> bool:
+def _apply_patch_to_file(file_path: Path, patterns: list[AdPattern], ctx: Context) -> bool:
   """
   Apply ad-blocking patches to a single smali file.
 
@@ -168,9 +160,7 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   with ThreadPoolExecutor() as executor:
     futures = []
     for smali_file in smali_files:
-      futures.append(
-        executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
-      )
+      futures.append(executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx))
 
     for future in futures:
       if future.result():

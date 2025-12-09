@@ -108,9 +108,7 @@ def run(ctx: Context) -> None:
   # Check Java dependency
   if not _check_java():
     ctx.log("whatsapp: ERROR - Java runtime not found")
-    ctx.log(
-      "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
-    )
+    ctx.log("whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre")
     return
 
   # Locate or clone patcher
