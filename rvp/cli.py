@@ -107,6 +107,32 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
         if getattr(args, arg_name, False):
             options["rkpairip"][opt_key] = True
 
+    # Discord patcher overrides
+    if args.discord_keystore:
+        options["discord_keystore"] = args.discord_keystore
+    if args.discord_keystore_pass:
+        options["discord_keystore_pass"] = args.discord_keystore_pass
+    if args.discord_version:
+        options["discord_version"] = args.discord_version
+    if args.discord_patches:
+        options["discord_patches"] = args.discord_patches
+
+    # Luniume overrides
+    if args.luniume_method:
+        options["luniume_method"] = args.luniume_method
+    if args.luniume_patches:
+        options["luniume_patches"] = args.luniume_patches
+    if args.luniume_modules:
+        options["luniume_modules"] = args.luniume_modules
+    if args.luniume_exclusive:
+        options["luniume_exclusive"] = True
+
+    # WhatsApp patcher overrides
+    if hasattr(args, "whatsapp_ab_tests"):
+        options["whatsapp_ab_tests"] = args.whatsapp_ab_tests
+    if args.whatsapp_timeout:
+        options["whatsapp_timeout"] = args.whatsapp_timeout
+
 
 def setup_logging(verbose: bool) -> None:
     """
@@ -179,6 +205,60 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--rkpairip-anti-split",
         action="store_true",
         help="RKPairip: Enable anti-split merge",
+    )
+
+    # Discord patcher options
+    p.add_argument(
+        "--discord-keystore",
+        help="Discord: Path to custom signing keystore",
+    )
+    p.add_argument(
+        "--discord-keystore-pass",
+        help="Discord: Keystore password (default: android)",
+    )
+    p.add_argument(
+        "--discord-version",
+        help="Discord: Target Discord version (default: auto)",
+    )
+    p.add_argument(
+        "--discord-patches",
+        nargs="+",
+        help="Discord: Custom patches to apply",
+    )
+
+    # Luniume options
+    p.add_argument(
+        "--luniume-method",
+        choices=["revanced", "lspatch"],
+        help="Luniume: Patching method (revanced or lspatch)",
+    )
+    p.add_argument(
+        "--luniume-patches",
+        nargs="+",
+        help="Luniume: Patches to apply (for ReVanced)",
+    )
+    p.add_argument(
+        "--luniume-modules",
+        nargs="+",
+        help="Luniume: LSPatch modules to embed",
+    )
+    p.add_argument(
+        "--luniume-exclusive",
+        action="store_true",
+        help="Luniume: Enable exclusive patching mode (ReVanced)",
+    )
+
+    # WhatsApp patcher options
+    p.add_argument(
+        "--whatsapp-ab-tests",
+        action="store_true",
+        default=True,
+        help="WhatsApp: Enable A/B testing features (default: True)",
+    )
+    p.add_argument(
+        "--whatsapp-timeout",
+        type=int,
+        help="WhatsApp: Patching timeout in seconds (default: 1200)",
     )
 
     return p.parse_args(argv)
