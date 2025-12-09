@@ -90,7 +90,7 @@
 		"assets/unused/*"
 	],
 	"apktool_path": "tools/apktool.jar",
-	"zipalign_path": "tools/zipalign"
-  "dtlx_analyze": true,
-  "dtlx_optimize": true,
+	"zipalign_path": "tools/zipalign",
+	"dtlx_analyze": true,
+	"dtlx_optimize": true
 }
