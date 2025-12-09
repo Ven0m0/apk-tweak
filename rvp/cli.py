@@ -265,7 +265,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     type=int,
     help="WhatsApp: Patching timeout in seconds (default: 1200)",
   )
-
+  # Android Builder options (for building from source)
+  p.add_argument(
+    "--android-source-dir",
+    help="Builder: Path to the root of the Android project to compile",
+  )
+  p.add_argument(
+    "--android-build-task",
+    help="Builder: Gradle task to execute (default: assembleRelease)",
+  )
+  p.add_argument(
+    "--android-output-pattern",
+    help="Builder: Glob pattern to find the output APK/AAB (default: **/*release.apk)",
+  )
   # Media optimizer options
   p.add_argument(
     "--optimize-images",
@@ -281,7 +293,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     "--target-dpi",
     help="Media: Target DPI(s) to keep, comma-separated (e.g., xhdpi,xxhdpi)",
   )
-
   return p.parse_args(argv)
 
 
