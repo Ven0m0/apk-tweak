@@ -452,6 +452,7 @@ Activate: `/mode [mode-name]`
 - [x] Stub engines (revanced, lspatch, magisk, dtlx)
 - [x] Comprehensive linting setup
 - [x] CI/CD workflows
+- [x] Media optimizer engine (`media_optimizer.py`) — ✅ PNG/JPG/MP3/OGG optimization, DPI filtering
 
 ### Pending 🚧
 
@@ -490,6 +491,9 @@ python3 -m rvp.cli path/to/app.apk --engine revanced --out output/
 
 # Multiple engines
 ./bin/rvp app.apk -e revanced -e lspatch -e dtlx --dtlx-analyze
+
+# Media optimization
+./bin/rvp app.apk -e media_optimizer --optimize-images --optimize-audio --target-dpi xxhdpi
 ```
 
 ### Linting workflow

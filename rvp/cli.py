@@ -133,6 +133,14 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
     if args.whatsapp_timeout:
         options["whatsapp_timeout"] = args.whatsapp_timeout
 
+    # Media optimizer overrides
+    if args.optimize_images:
+        options["optimize_images"] = True
+    if args.optimize_audio:
+        options["optimize_audio"] = True
+    if args.target_dpi:
+        options["target_dpi"] = args.target_dpi
+
 
 def setup_logging(verbose: bool) -> None:
     """
@@ -259,6 +267,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--whatsapp-timeout",
         type=int,
         help="WhatsApp: Patching timeout in seconds (default: 1200)",
+    )
+
+    # Media optimizer options
+    p.add_argument(
+        "--optimize-images",
+        action="store_true",
+        help="Media: Optimize PNG and JPEG images",
+    )
+    p.add_argument(
+        "--optimize-audio",
+        action="store_true",
+        help="Media: Optimize MP3 and OGG audio files",
+    )
+    p.add_argument(
+        "--target-dpi",
+        help="Media: Target DPI(s) to keep, comma-separated (e.g., xhdpi,xxhdpi)",
     )
 
     return p.parse_args(argv)
