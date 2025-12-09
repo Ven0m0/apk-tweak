@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from ..context import Context
+from ..utils import check_dependencies, find_latest_apk
 
 
 def run(ctx: Context) -> None:
@@ -40,7 +41,8 @@ def run(ctx: Context) -> None:
     raise ValueError("No input APK found in context")
 
   # Check if RKPairip is installed
-  if not shutil.which("RKPairip"):
+  deps_ok, _ = check_dependencies(["RKPairip"])
+  if not deps_ok:
     ctx.log(
       "rkpairip: RKPairip not found. Install via: pip install Pairip",
       level=logging.ERROR,
@@ -114,19 +116,17 @@ def run(ctx: Context) -> None:
 
   # Find output APK (RKPairip typically creates output in current dir)
   # Pattern: often creates files with "_signed" or similar suffix
-  output_candidates = list(work_dir.glob("*.apk"))
+  output_apk = find_latest_apk(work_dir)
 
-  if not output_candidates:
+  if not output_apk:
     ctx.log(
-      "rkpairip: No output APK found, checking parent directory",
+      "rkpairip: No output APK found, checking current directory",
       level=logging.WARNING,
     )
     # Sometimes output is in parent directory
-    output_candidates = list(Path.cwd().glob("*_signed.apk"))
+    output_apk = find_latest_apk(Path.cwd())
 
-  if output_candidates:
-    # Use the most recently modified APK as output
-    output_apk = max(output_candidates, key=lambda p: p.stat().st_mtime)
+  if output_apk:
     ctx.log(f"rkpairip: Found output APK: {output_apk.name}")
 
     # Move to output directory with standardized name

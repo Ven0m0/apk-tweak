@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import zipfile
 from pathlib import Path
 
 from ..context import Context
+from ..utils import check_dependencies
 
 # Constants
 DPI_FOLDERS = {
@@ -22,7 +22,7 @@ DPI_FOLDERS = {
 }
 
 
-def _check_dependencies(ctx: Context) -> dict[str, bool]:
+def _get_tool_availability(ctx: Context) -> dict[str, bool]:
   """
   Check availability of optimization tools.
 
@@ -32,13 +32,11 @@ def _check_dependencies(ctx: Context) -> dict[str, bool]:
   Returns:
       dict with tool availability status.
   """
-  tools = {
-    "pngquant": shutil.which("pngquant") is not None,
-    "jpegoptim": shutil.which("jpegoptim") is not None,
-    "ffmpeg": shutil.which("ffmpeg") is not None,
-  }
+  tool_list = ["pngquant", "jpegoptim", "ffmpeg"]
+  _, missing = check_dependencies(tool_list)
 
-  missing = [name for name, available in tools.items() if not available]
+  tools = {tool: tool not in missing for tool in tool_list}
+
   if missing:
     ctx.log(f"media_optimizer: missing tools: {', '.join(missing)}")
     ctx.log(
@@ -399,7 +397,7 @@ def run(ctx: Context) -> None:
   )
 
   # Check tool availability
-  tools = _check_dependencies(ctx)
+  tools = _get_tool_availability(ctx)
 
   # Create working directory
   work_dir = ctx.work_dir / "media_optimizer"

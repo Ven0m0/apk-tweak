@@ -3,25 +3,12 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any, cast
 
 from ..context import Context
 from ..optimizer import optimize_apk
-from ..utils import run_command
-
-
-def _check_revanced_dependencies() -> tuple[bool, list[str]]:
-  """
-  Check dependencies for ReVanced patching.
-
-  Returns:
-      Tuple of (all_found, missing_tools).
-  """
-  required = ["revanced-cli", "java"]
-  missing = [tool for tool in required if not shutil.which(tool)]
-  return (not missing, missing)
+from ..utils import check_dependencies, run_command, TIMEOUT_PATCH
 
 
 def _build_revanced_cli_cmd(
@@ -110,21 +97,14 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
   ctx.log(f"revanced: running CLI → {output_apk.name}")
 
   try:
-    result = subprocess.run(
-      cmd, capture_output=True, text=True, timeout=900, check=False
-    )
+    result = run_command(cmd, ctx, timeout=TIMEOUT_PATCH, check=False)
 
     if result.returncode == 0 and output_apk.exists():
       ctx.log("revanced: CLI patching successful")
       return True
     ctx.log(f"revanced: CLI failed (exit code: {result.returncode})")
-    if result.stderr:
-      ctx.log(f"revanced: {result.stderr[:500]}")
     return False
 
-  except subprocess.TimeoutExpired:
-    ctx.log("revanced: CLI timed out after 15 minutes")
-    return False
   except Exception as e:
     ctx.log(f"revanced: CLI error: {e}")
     return False
@@ -187,7 +167,7 @@ def run(ctx: Context) -> None:
     raise ValueError("No input APK found in context")
 
   # Check dependencies
-  deps_ok, missing_deps = _check_revanced_dependencies()
+  deps_ok, missing_deps = check_dependencies(["revanced-cli", "java"])
   if not deps_ok:
     ctx.log(f"revanced: Missing dependencies: {', '.join(missing_deps)}")
     ctx.log("revanced: Install with: yay -S revanced-cli-bin jdk17-openjdk")

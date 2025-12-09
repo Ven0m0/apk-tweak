@@ -7,57 +7,11 @@ import subprocess
 from pathlib import Path
 
 from ..context import Context
+from ..utils import check_dependencies, clone_repository
 
 # Constants
 DISCORD_PATCHER_REPO = "https://github.com/CyberL1/discord-apk-patcher"
 REQUIRED_TOOLS = ["apktool", "zipalign", "apksigner", "keytool"]
-
-
-def _check_dependencies() -> tuple[bool, list[str]]:
-  """
-  Check if required Android tools are available.
-
-  Returns:
-      Tuple of (all_found, missing_tools).
-  """
-  missing = [tool for tool in REQUIRED_TOOLS if not shutil.which(tool)]
-  return (not missing, missing)
-
-
-def _clone_patcher(target_dir: Path, ctx: Context) -> bool:
-  """
-  Clone discord-apk-patcher repository.
-
-  Args:
-      target_dir: Directory to clone into.
-      ctx: Pipeline context.
-
-  Returns:
-      True if successful, False otherwise.
-  """
-  if target_dir.exists():
-    ctx.log("discord: patcher already cloned, using existing")
-    return True
-
-  ctx.log(f"discord: cloning patcher from {DISCORD_PATCHER_REPO}")
-  try:
-    subprocess.run(
-      ["git", "clone", DISCORD_PATCHER_REPO, str(target_dir)],
-      capture_output=True,
-      text=True,
-      timeout=120,
-      check=True,
-    )
-    return True
-  except subprocess.TimeoutExpired:
-    ctx.log("discord: clone timed out")
-    return False
-  except subprocess.CalledProcessError as e:
-    ctx.log(f"discord: clone failed: {e.stderr}")
-    return False
-  except Exception as e:
-    ctx.log(f"discord: clone error: {e}")
-    return False
 
 
 def _create_settings_env(
@@ -142,7 +96,7 @@ def run(ctx: Context) -> None:
   input_apk = ctx.current_apk or ctx.input_apk
 
   # Check dependencies
-  deps_ok, missing_deps = _check_dependencies()
+  deps_ok, missing_deps = check_dependencies(REQUIRED_TOOLS)
   if not deps_ok:
     ctx.log(f"discord: ERROR - Missing dependencies: {', '.join(missing_deps)}")
     ctx.log(
@@ -159,7 +113,7 @@ def run(ctx: Context) -> None:
     patcher_dir = Path(str(patcher_path))
   else:
     patcher_dir = ctx.work_dir / "discord-apk-patcher"
-    if not _clone_patcher(patcher_dir, ctx):
+    if not clone_repository(DISCORD_PATCHER_REPO, patcher_dir, ctx):
       ctx.log("discord: failed to obtain patcher")
       return
 

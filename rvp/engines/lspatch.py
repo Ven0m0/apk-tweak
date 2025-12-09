@@ -3,23 +3,10 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 from pathlib import Path
 
 from ..context import Context
-from ..utils import run_command
-
-
-def _check_lspatch_dependencies() -> tuple[bool, list[str]]:
-  """
-  Check dependencies for LSPatch patching.
-
-  Returns:
-      Tuple of (all_found, missing_tools).
-  """
-  required = ["lspatch", "java"]
-  missing = [tool for tool in required if not shutil.which(tool)]
-  return (not missing, missing)
+from ..utils import check_dependencies, find_latest_apk, run_command, TIMEOUT_PATCH
 
 
 def _build_lspatch_cmd(
@@ -86,26 +73,18 @@ def _run_lspatch_cli(
   ctx.log(f"lspatch: running CLI → {output_dir}")
 
   try:
-    result = subprocess.run(
-      cmd, capture_output=True, text=True, timeout=900, check=False
-    )
+    result = run_command(cmd, ctx, timeout=TIMEOUT_PATCH, check=False)
 
     if result.returncode == 0:
       # LSPatch outputs as {package_name}.apk or *-lspatched.apk
-      patched_files = list(output_dir.glob("*.apk"))
-      if patched_files:
+      patched = find_latest_apk(output_dir)
+      if patched:
         ctx.log("lspatch: CLI patching successful")
-        # Return the most recently created file
-        return max(patched_files, key=lambda p: p.stat().st_mtime)
+        return patched
 
     ctx.log(f"lspatch: CLI failed (exit code: {result.returncode})")
-    if result.stderr:
-      ctx.log(f"lspatch: {result.stderr[:500]}")
     return None
 
-  except subprocess.TimeoutExpired:
-    ctx.log("lspatch: CLI timed out after 15 minutes")
-    return None
   except Exception as e:
     ctx.log(f"lspatch: CLI error: {e}")
     return None
@@ -140,7 +119,7 @@ def run(ctx: Context) -> None:
     raise ValueError("No input APK available")
 
   # Check dependencies
-  deps_ok, missing_deps = _check_lspatch_dependencies()
+  deps_ok, missing_deps = check_dependencies(["lspatch", "java"])
   if not deps_ok:
     ctx.log(f"lspatch: Missing dependencies: {', '.join(missing_deps)}")
     ctx.log("lspatch: Install from: https://github.com/LSPosed/LSPatch")
@@ -199,20 +178,14 @@ def run(ctx: Context) -> None:
   ctx.log(f"lspatch: Running patch on {input_apk.name}")
   run_command(cmd, ctx)
 
-  # LSPatch output handling (it might generate a specific name)
-  # For robust handling, we find the newest file in output dir
-  # Assuming standard behavior:
+  # Find the output APK (LSPatch generates *-lspatched.apk or similar)
   expected_out = ctx.output_dir / f"{input_apk.stem}-lspatched.apk"
-
   if expected_out.exists():
     ctx.set_current_apk(expected_out)
   else:
-    # Fallback: Find the file created by lspatch (often named *-lspatched.apk)
-    # O(n) where n = files in output dir
-    candidates = list(ctx.output_dir.glob("*-lspatched.apk"))
-    if candidates:
-      # Pick the most recently modified
-      newest = max(candidates, key=lambda p: p.stat().st_mtime)
+    # Fallback: Find the most recently created APK
+    newest = find_latest_apk(ctx.output_dir)
+    if newest:
       ctx.set_current_apk(newest)
     else:
       raise FileNotFoundError("LSPatch completed but output APK not found")

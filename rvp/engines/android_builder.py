@@ -9,12 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ..context import Context
-from ..utils import run_command
-
-
-def _check_gradle() -> bool:
-  """Check if Gradle is available in the system PATH."""
-  return shutil.which("gradle") is not None
+from ..utils import check_dependencies, find_latest_apk, run_command, TIMEOUT_BUILD
 
 
 def run(ctx: Context) -> None:
@@ -60,7 +55,8 @@ def run(ctx: Context) -> None:
     raise ValueError(f"Android source project directory not found: {source_dir}")
 
   # 2. Check Dependencies
-  if not _check_gradle():
+  deps_ok, _ = check_dependencies(["gradle"])
+  if not deps_ok and not (source_dir / "gradlew").exists():
     ctx.log(
       "android_builder: ERROR - Gradle or gradlew not found in PATH.",
       level=logging.ERROR,
@@ -78,7 +74,7 @@ def run(ctx: Context) -> None:
 
   try:
     # Execute command, capturing output for logs
-    run_command(cmd, ctx, cwd=source_dir, timeout=600)  # 10 min timeout
+    run_command(cmd, ctx, cwd=source_dir, timeout=TIMEOUT_BUILD)
 
   except subprocess.CalledProcessError as e:
     ctx.log(f"android_builder: Gradle build failed: {e.returncode}", level=logging.ERROR)
@@ -88,7 +84,7 @@ def run(ctx: Context) -> None:
   output_pattern = options.get(
     "android_output_pattern", "**/*release.apk"
   )
-  
+
   # Search the standard Gradle output location
   output_candidates = list(source_dir.glob(output_pattern))
 
@@ -100,7 +96,7 @@ def run(ctx: Context) -> None:
     raise FileNotFoundError(f"No build output found matching pattern: {output_pattern}")
 
   # Use the most recently modified file as the output APK
-  output_apk_path = max(output_candidates, key=lambda p: p.stat().st_mtime)
+  output_apk_path = find_latest_apk(source_dir) or max(output_candidates, key=lambda p: p.stat().st_mtime)
   
   # 5. Move to Output Directory and Update Context
   final_apk = ctx.output_dir / f"{source_dir.name}-{output_apk_path.name}"
