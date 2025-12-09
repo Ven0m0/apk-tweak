@@ -60,18 +60,96 @@ class Config:
     # Optimization configuration
     debloat_patterns: list[str] = field(
         default_factory=lambda: [
+            # Ad frameworks & libraries
             "*/admob/*",
             "*/google/ads/*",
             "*/facebook/ads/*",
+            "*/mopub/*",
+            "*/applovin/*",
+            "*/unity3d/ads/*",
+            "*/vungle/*",
+            "*/chartboost/*",
+            "*/inmobi/*",
+            "*/flurry/*",
+            "assets/extensions/ads/*",
+            "assets/extensions/search/*",
+            # Analytics & tracking
             "*/analytics/*",
             "*/crashlytics/*",
+            "*/firebase/analytics/*",
+            "*/firebase/crashlytics/*",
+            "*/google/firebase/analytics/*",
+            "*/adjust/*",
+            "*/branch/*",
+            "*/appsflyer/*",
+            "*/kochava/*",
+            # License files
+            "LICENSE_UNICODE",
+            "LICENSE_OFL",
+            "LICENSE.txt",
+            "NOTICE.txt",
+            "THIRD_PARTY_LICENSES",
+            "*/licenses/*",
+            # Metadata & build artifacts
+            "META-INF/*",
+            "car-app-api.level",
+            "*.properties",
+            "*/build-data.properties",
+            # Localization data (non-German/English)
+            "com/google/android/libraries/phonenumbers/data/PhoneNumberMetadataProto_A[CDEFGH]*",
+            "com/google/android/libraries/phonenumbers/data/PhoneNumberMetadataProto_[B-Z]*",
+            "com/google/android/libraries/phonenumbers/data/PhoneNumberAlternateFormatsProto_*",
+            "org/joda/time/format/messages_*.properties",
+            "org/joda/time/tz/data/Africa/*",
+            "org/joda/time/tz/data/America/*",
+            "org/joda/time/tz/data/Antarctica/*",
+            "org/joda/time/tz/data/Asia/*",
+            "org/joda/time/tz/data/Atlantic/*",
+            "org/joda/time/tz/data/Australia/*",
+            "org/joda/time/tz/data/Indian/*",
+            "org/joda/time/tz/data/Pacific/*",
+            # Google services bloat
+            "*/gms/*",
+            "*/play/core/*",
+            "*/android/gms/ads/*",
+            "*/android/gms/analytics/*",
+            # Social SDK bloat
+            "*/twitter/sdk/*",
+            "*/linkedin/platform/*",
+            "*/snapchat/kit/*",
+            # Unused assets
+            "assets/unused_*",
+            "assets/debug/*",
+            "assets/test/*",
         ]
     )
     minify_patterns: list[str] = field(
         default_factory=lambda: [
+            # High DPI drawables (xxxhdpi, xxhdpi often overkill)
             "res/drawable-xxxhdpi/*",
+            "res/drawable-xxhdpi/*",
+            # Raw media files
             "res/raw/*.mp3",
             "res/raw/*.wav",
+            "res/raw/*.ogg",
+            "res/raw/*.m4a",
+            # Large image assets
+            "assets/kazoo/*",
+            "assets/images/*.png",
+            "assets/images/*.jpg",
+            "assets/backgrounds/*",
+            "assets/splash/*",
+            # Video files
+            "res/raw/*.mp4",
+            "res/raw/*.webm",
+            "assets/video/*",
+            # Fonts (keep only essential)
+            "res/font/*-bold.ttf",
+            "res/font/*-light.ttf",
+            "assets/fonts/*-thin.ttf",
+            # Unused resources
+            "res/raw/unused_*",
+            "assets/unused/*",
         ]
     )
 
