@@ -7,13 +7,13 @@ import pkgutil
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from . import (
   engines as engines_pkg,
   plugins as plugins_pkg,
 )
 from .context import Context
+from .types import PipelineOptions
 from .validators import validate_apk_path, validate_output_dir
 
 EngineFn = Callable[[Context], None]
@@ -82,7 +82,9 @@ def load_plugins() -> list[PluginHandler]:
   return hook_funcs
 
 
-def dispatch_hooks(ctx: Context, stage: str, handlers: list[PluginHandler]) -> None:
+def dispatch_hooks(
+  ctx: Context, stage: str, handlers: list[PluginHandler]
+) -> None:
   """
   Dispatch plugin hooks for a specific pipeline stage.
 
@@ -103,7 +105,7 @@ def run_pipeline(
   input_apk: Path,
   output_dir: Path,
   engines: list[str],
-  options: dict[str, Any] | None = None,
+  options: PipelineOptions | None = None,
 ) -> Context:
   """
   Execute the APK modification pipeline with specified engines.

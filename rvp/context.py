@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .types import PipelineOptions
+
 # Configure default logger
 logger = logging.getLogger("rvp")
 
@@ -30,8 +32,8 @@ class Context:
   input_apk: Path
   output_dir: Path
   engines: list[str]
-  # TODO: Replace with TypedDict for better type safety
-  options: dict[str, Any] = field(default_factory=dict)
+  # ⚡ Type: Now using PipelineOptions TypedDict for type safety
+  options: PipelineOptions = field(default_factory=dict)  # type: ignore[assignment]
 
   # State
   current_apk: Path | None = None

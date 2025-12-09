@@ -14,7 +14,9 @@ DTLX_REPO_URL = "https://github.com/Gameye98/DTL-X"
 DTLX_NOT_FOUND_MSG = f"dtlx: DTL-X not found. Install from {DTLX_REPO_URL}"
 
 
-def _write_report(report_file: Path, apk_name: str, status: str, details: str) -> None:
+def _write_report(
+  report_file: Path, apk_name: str, status: str, details: str
+) -> None:
   """
   Write standardized DTL-X analysis report.
 
@@ -155,7 +157,9 @@ def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
     "--cleanrun",  # Clean up after patching
   ]
 
-  ctx.log(f"dtlx: optimizing {apk.name} with flags: {' '.join(optimization_flags)}")
+  ctx.log(
+    f"dtlx: optimizing {apk.name} with flags: {' '.join(optimization_flags)}"
+  )
 
   try:
     # Create working directory for DTL-X
@@ -241,4 +245,6 @@ def run(ctx: Context) -> None:
       ctx.set_current_apk(output_apk)
       ctx.log(f"dtlx: pipeline will continue with {output_apk}")
     else:
-      ctx.log("dtlx: optimization failed, pipeline will continue with original APK")
+      ctx.log(
+        "dtlx: optimization failed, pipeline will continue with original APK"
+      )

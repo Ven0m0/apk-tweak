@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 from ..context import Context
 from ..optimizer import optimize_apk
@@ -23,7 +24,9 @@ def _check_revanced_dependencies() -> tuple[bool, list[str]]:
   return (not missing, missing)
 
 
-def _build_revanced_cli_cmd(ctx: Context, input_apk: Path, output_apk: Path) -> list[str]:
+def _build_revanced_cli_cmd(
+  ctx: Context, input_apk: Path, output_apk: Path
+) -> list[str]:
   """
   Build revanced-cli command from context options.
 
@@ -46,12 +49,12 @@ def _build_revanced_cli_cmd(ctx: Context, input_apk: Path, output_apk: Path) -> 
     cmd = ["java", "-jar", str(cli_jar), "patch"]
 
   # Patches
-  patches = ctx.options.get("revanced_patches", [])
+  patches: Any = ctx.options.get("revanced_patches", [])
   for patch in patches:
     if isinstance(patch, str):
       cmd.extend(["-p", f"patches/revanced/{patch}.rvp"])
     elif isinstance(patch, dict):
-      patch_name = patch["name"]
+      patch_name = cast(str, patch["name"])
       cmd.extend(["-p", f"patches/revanced/{patch_name}.rvp"])
       # Add options
       for key, value in patch.get("options", {}).items():
@@ -61,8 +64,9 @@ def _build_revanced_cli_cmd(ctx: Context, input_apk: Path, output_apk: Path) -> 
           cmd.append(f"-O{key}={value}")
 
   # Excludes
-  for exclude in ctx.options.get("revanced_exclude_patches", []):
-    cmd.extend(["-e", exclude])
+  exclude_patches: Any = ctx.options.get("revanced_exclude_patches", [])
+  for exclude in exclude_patches:
+    cmd.extend(["-e", str(exclude)])
 
   # Exclusive mode
   if ctx.options.get("revanced_exclusive", False):
@@ -71,16 +75,17 @@ def _build_revanced_cli_cmd(ctx: Context, input_apk: Path, output_apk: Path) -> 
   # Signing
   keystore_opts = ctx.options.get("revanced_keystore")
   if keystore_opts:
+    keystore_dict = cast(dict[str, Any], keystore_opts)
     cmd.extend(
       [
         "--keystore",
-        keystore_opts["path"],
+        str(keystore_dict["path"]),
         "--keystore-entry-alias",
-        keystore_opts["alias"],
+        str(keystore_dict["alias"]),
         "--keystore-password",
-        keystore_opts["password"],
+        str(keystore_dict["password"]),
         "--keystore-entry-password",
-        keystore_opts.get("entry_password", keystore_opts["password"]),
+        str(keystore_dict.get("entry_password", keystore_dict["password"])),
       ]
     )
 
@@ -105,7 +110,9 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
   ctx.log(f"revanced: running CLI → {output_apk.name}")
 
   try:
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=False)
+    result = subprocess.run(
+      cmd, capture_output=True, text=True, timeout=900, check=False
+    )
 
     if result.returncode == 0 and output_apk.exists():
       ctx.log("revanced: CLI patching successful")
@@ -123,7 +130,9 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
     return False
 
 
-def _create_stub_apk(ctx: Context, input_apk: Path, patch_bundles_count: int) -> None:
+def _create_stub_apk(
+  ctx: Context, input_apk: Path, patch_bundles_count: int
+) -> None:
   """
   Create stub APK when ReVanced tools are not available.
 
@@ -220,15 +229,19 @@ def run(ctx: Context) -> None:
 
   # Get configuration
   tools = ctx.options.get("tools", {})
-  cli_jar = Path(tools.get("revanced_cli", "revanced-cli.jar"))
-  integrations_apk = Path(tools.get("revanced_integrations", "integrations.apk"))
+  tools_dict = cast(dict[str, Any], tools)
+  cli_jar = Path(str(tools_dict.get("revanced_cli", "revanced-cli.jar")))
+  integrations_apk = Path(
+    str(tools_dict.get("revanced_integrations", "integrations.apk"))
+  )
   # Support multiple patch bundles
-  patch_bundles = ctx.options.get("revanced_patch_bundles", [])
+  patch_bundles_obj = ctx.options.get("revanced_patch_bundles", [])
+  patch_bundles: list[str] = cast(list[str], patch_bundles_obj)
   # Fallback to single patch bundle for backward compatibility
   if not patch_bundles:
-    patches_path = tools.get("patches", "patches.jar")
+    patches_path = tools_dict.get("patches", "patches.jar")
     if patches_path:
-      patch_bundles = [patches_path]
+      patch_bundles = [str(patches_path)]
 
   if not patch_bundles:
     ctx.log("revanced: No patch bundles specified, using stub mode")
@@ -243,12 +256,14 @@ def run(ctx: Context) -> None:
   current_apk = input_apk
   work_dir = ctx.work_dir / "revanced"
   work_dir.mkdir(parents=True, exist_ok=True)
-  for idx, patch_bundle in enumerate(patch_bundles, 1):
-    patch_jar = Path(patch_bundle)
+  for idx, patch_bundle_str in enumerate(patch_bundles, 1):
+    patch_jar = Path(patch_bundle_str)
     if not patch_jar.exists():
       ctx.log(f"revanced: Patch bundle not found: {patch_jar}, skipping")
       continue
-    ctx.log(f"revanced: Applying patch bundle {idx}/{len(patch_bundles)}: {patch_jar.name}")
+    ctx.log(
+      f"revanced: Applying patch bundle {idx}/{len(patch_bundles)}: {patch_jar.name}"
+    )
     # Determine output name
     if idx == len(patch_bundles):
       # Last patch - use final name

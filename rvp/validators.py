@@ -43,10 +43,14 @@ def validate_output_dir(output_dir: Path) -> None:
       ValidationError: If output directory is invalid.
   """
   if output_dir.exists() and not output_dir.is_dir():
-    raise ValidationError(f"Output path exists but is not a directory: {output_dir}")
+    raise ValidationError(
+      f"Output path exists but is not a directory: {output_dir}"
+    )
 
 
-def validate_engine_names(engines: list[str], available: dict[str, object]) -> list[str]:
+def validate_engine_names(
+  engines: list[str], available: dict[str, object]
+) -> list[str]:
   """
   Validate engine names against available engines.
 
