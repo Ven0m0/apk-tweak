@@ -1,21 +1,5 @@
-# ShellCheck configuration
 # https://github.com/koalaman/shellcheck/wiki
-
-# Default shell to assume (bash)
 shell=bash
-
-# Enable all optional checks
-enable=all
-
-# Disable specific checks
-# SC1090: Can't follow non-constant source. Use a directive to specify location.
-# SC1091: Not following: file not included in mock.
-# SC2015: Note that A && B || C is not if-then-else. C may run when A is true.
-# SC2155: Declare and assign separately to avoid masking return values.
-disable=SC1090,SC1091
-
-# Source paths for external scripts
 source-path=SCRIPTDIR
-
-# Exclude patterns
-exclude=SC2086  # Double quote to prevent globbing (intentional in some cases)
+enable=all
+disable=SC1090,SC1091,SC2086
