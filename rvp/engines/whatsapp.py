@@ -12,192 +12,187 @@ from ..context import Context
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
 WHATSAPP_FEATURES = [
-    "Signature Verifier Bypass",
-    "Enable all AB tests",
-    "Keep revoked for all messages",
-    "Disable read receipts",
-    "Save view once media",
+  "Signature Verifier Bypass",
+  "Enable all AB tests",
+  "Keep revoked for all messages",
+  "Disable read receipts",
+  "Save view once media",
 ]
 
 
 def _check_java() -> bool:
-    """
-    Check if Java runtime is available.
+  """
+  Check if Java runtime is available.
 
-    Returns:
-        True if java is in PATH, False otherwise.
-    """
-    return shutil.which("java") is not None
+  Returns:
+      True if java is in PATH, False otherwise.
+  """
+  return shutil.which("java") is not None
 
 
 def _clone_patcher(target_dir: Path, ctx: Context) -> bool:
-    """
-    Clone WhatsAppPatcher repository.
+  """
+  Clone WhatsAppPatcher repository.
 
-    Args:
-        target_dir: Directory to clone into.
-        ctx: Pipeline context.
+  Args:
+      target_dir: Directory to clone into.
+      ctx: Pipeline context.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    if target_dir.exists():
-        ctx.log("whatsapp: patcher already cloned, using existing")
-        return True
+  Returns:
+      True if successful, False otherwise.
+  """
+  if target_dir.exists():
+    ctx.log("whatsapp: patcher already cloned, using existing")
+    return True
 
-    ctx.log(f"whatsapp: cloning patcher from {WHATSAPP_PATCHER_REPO}")
-    try:
-        subprocess.run(
-            ["git", "clone", WHATSAPP_PATCHER_REPO, str(target_dir)],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=True,
-        )
+  ctx.log(f"whatsapp: cloning patcher from {WHATSAPP_PATCHER_REPO}")
+  try:
+    subprocess.run(
+      ["git", "clone", WHATSAPP_PATCHER_REPO, str(target_dir)],
+      capture_output=True,
+      text=True,
+      timeout=120,
+      check=True,
+    )
 
-        # Install Python dependencies
-        req_file = target_dir / "requirements.txt"
-        if req_file.exists():
-            ctx.log("whatsapp: installing Python dependencies")
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
-                check=False,
-            )
+    # Install Python dependencies
+    req_file = target_dir / "requirements.txt"
+    if req_file.exists():
+      ctx.log("whatsapp: installing Python dependencies")
+      subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
+        check=False,
+      )
 
-        return True
-    except subprocess.TimeoutExpired:
-        ctx.log("whatsapp: clone timed out")
-        return False
-    except subprocess.CalledProcessError as e:
-        ctx.log(f"whatsapp: clone failed: {e.stderr}")
-        return False
-    except Exception as e:
-        ctx.log(f"whatsapp: clone error: {e}")
-        return False
+    return True
+  except subprocess.TimeoutExpired:
+    ctx.log("whatsapp: clone timed out")
+    return False
+  except subprocess.CalledProcessError as e:
+    ctx.log(f"whatsapp: clone failed: {e.stderr}")
+    return False
+  except Exception as e:
+    ctx.log(f"whatsapp: clone error: {e}")
+    return False
 
 
 def run(ctx: Context) -> None:
-    """
-    Execute WhatsApp APK patcher.
+  """
+  Execute WhatsApp APK patcher.
 
-    Patches WhatsApp Android APK using Schwartzblat/WhatsAppPatcher.
+  Patches WhatsApp Android APK using Schwartzblat/WhatsAppPatcher.
 
-    Features applied:
-    - Signature Verifier Bypass (removes signature checks)
-    - Enable all AB tests (activates experimental features)
-    - Keep revoked for all messages (maintains revocation status)
-    - Disable read receipts (prevents read notifications)
-    - Save view once media (allows saving disappearing media)
+  Features applied:
+  - Signature Verifier Bypass (removes signature checks)
+  - Enable all AB tests (activates experimental features)
+  - Keep revoked for all messages (maintains revocation status)
+  - Disable read receipts (prevents read notifications)
+  - Save view once media (allows saving disappearing media)
 
-    Required:
-    - Java Runtime Environment (JRE)
-    - Python 3 with termcolor, requests, pytest, cryptography
+  Required:
+  - Java Runtime Environment (JRE)
+  - Python 3 with termcolor, requests, pytest, cryptography
 
-    Args:
-        ctx: Pipeline context.
+  Args:
+      ctx: Pipeline context.
 
-    Options:
-        whatsapp_patcher_path: Custom patcher directory (default: clone to work_dir)
-        whatsapp_ab_tests: Enable A/B testing features (default: True)
-        whatsapp_temp_dir: Override temp extraction directory
-        whatsapp_timeout: Override 20-minute default timeout (seconds)
-    """
-    ctx.log("whatsapp: starting WhatsApp APK patcher")
-    input_apk = ctx.current_apk or ctx.input_apk
+  Options:
+      whatsapp_patcher_path: Custom patcher directory (default: clone to work_dir)
+      whatsapp_ab_tests: Enable A/B testing features (default: True)
+      whatsapp_temp_dir: Override temp extraction directory
+      whatsapp_timeout: Override 20-minute default timeout (seconds)
+  """
+  ctx.log("whatsapp: starting WhatsApp APK patcher")
+  input_apk = ctx.current_apk or ctx.input_apk
 
-    # Check Java dependency
-    if not _check_java():
-        ctx.log("whatsapp: ERROR - Java runtime not found")
-        ctx.log(
-            "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
-        )
-        return
+  # Check Java dependency
+  if not _check_java():
+    ctx.log("whatsapp: ERROR - Java runtime not found")
+    ctx.log(
+      "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
+    )
+    return
 
-    # Locate or clone patcher
-    patcher_path = ctx.options.get("whatsapp_patcher_path")
-    if patcher_path:
-        patcher_dir = Path(patcher_path)
+  # Locate or clone patcher
+  patcher_path = ctx.options.get("whatsapp_patcher_path")
+  if patcher_path:
+    patcher_dir = Path(patcher_path)
+  else:
+    patcher_dir = ctx.work_dir / "whatsapp-patcher"
+    if not _clone_patcher(patcher_dir, ctx):
+      ctx.log("whatsapp: failed to obtain patcher")
+      return
+
+  # Prepare output
+  output_apk = ctx.output_dir / f"{input_apk.stem}.whatsapp-patched.apk"
+
+  # Prepare temp directory
+  temp_dir = ctx.options.get("whatsapp_temp_dir")
+  temp_path = Path(temp_dir) if temp_dir else ctx.work_dir / "whatsapp_temp"
+  temp_path.mkdir(parents=True, exist_ok=True)
+
+  # Build command
+  main_script = patcher_dir / "whatsapp_patcher" / "main.py"
+  if not main_script.exists():
+    # Try alternative location
+    main_script = patcher_dir / "main.py"
+
+  if not main_script.exists():
+    ctx.log(f"whatsapp: main.py not found in {patcher_dir}")
+    return
+
+  cmd = [
+    sys.executable,
+    str(main_script),
+    "-p",
+    str(input_apk),
+    "-o",
+    str(output_apk),
+    "--temp-path",
+    str(temp_path),
+  ]
+
+  # Add AB tests flag if requested
+  if ctx.options.get("whatsapp_ab_tests", True):
+    cmd.append("--ab-tests")
+
+  # Execute patcher
+  timeout = ctx.options.get("whatsapp_timeout", 1200)  # 20 minutes default
+  ctx.log(f"whatsapp: running patcher (timeout: {timeout}s)")
+  ctx.log(f"whatsapp: features: {', '.join(WHATSAPP_FEATURES)}")
+
+  try:
+    result = subprocess.run(
+      cmd,
+      capture_output=True,
+      text=True,
+      cwd=patcher_dir,
+      timeout=timeout,
+      check=False,
+    )
+
+    if result.returncode == 0 and output_apk.exists():
+      ctx.set_current_apk(output_apk)
+      ctx.log(f"whatsapp: success → {output_apk}")
+
+      # Store metadata
+      ctx.metadata["whatsapp"] = {
+        "patched_apk": str(output_apk),
+        "features": WHATSAPP_FEATURES,
+        "ab_tests_enabled": ctx.options.get("whatsapp_ab_tests", True),
+      }
     else:
-        patcher_dir = ctx.work_dir / "whatsapp-patcher"
-        if not _clone_patcher(patcher_dir, ctx):
-            ctx.log("whatsapp: failed to obtain patcher")
-            return
+      ctx.log(f"whatsapp: patching failed (exit code: {result.returncode})")
+      if result.stderr:
+        ctx.log(f"whatsapp: stderr: {result.stderr[:500]}")
+      if result.stdout:
+        ctx.log(f"whatsapp: stdout: {result.stdout[:500]}")
 
-    # Prepare output
-    output_apk = ctx.output_dir / f"{input_apk.stem}.whatsapp-patched.apk"
-
-    # Prepare temp directory
-    temp_dir = ctx.options.get("whatsapp_temp_dir")
-    if temp_dir:
-        temp_path = Path(temp_dir)
-    else:
-        temp_path = ctx.work_dir / "whatsapp_temp"
-    temp_path.mkdir(parents=True, exist_ok=True)
-
-    # Build command
-    main_script = patcher_dir / "whatsapp_patcher" / "main.py"
-    if not main_script.exists():
-        # Try alternative location
-        main_script = patcher_dir / "main.py"
-
-    if not main_script.exists():
-        ctx.log(f"whatsapp: main.py not found in {patcher_dir}")
-        return
-
-    cmd = [
-        sys.executable,
-        str(main_script),
-        "-p",
-        str(input_apk),
-        "-o",
-        str(output_apk),
-        "--temp-path",
-        str(temp_path),
-    ]
-
-    # Add AB tests flag if requested
-    if ctx.options.get("whatsapp_ab_tests", True):
-        cmd.append("--ab-tests")
-
-    # Execute patcher
-    timeout = ctx.options.get("whatsapp_timeout", 1200)  # 20 minutes default
-    ctx.log(f"whatsapp: running patcher (timeout: {timeout}s)")
-    ctx.log(f"whatsapp: features: {', '.join(WHATSAPP_FEATURES)}")
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=patcher_dir,
-            timeout=timeout,
-            check=False,
-        )
-
-        if result.returncode == 0 and output_apk.exists():
-            ctx.set_current_apk(output_apk)
-            ctx.log(f"whatsapp: success → {output_apk}")
-
-            # Store metadata
-            ctx.metadata["whatsapp"] = {
-                "patched_apk": str(output_apk),
-                "features": WHATSAPP_FEATURES,
-                "ab_tests_enabled": ctx.options.get("whatsapp_ab_tests", True),
-            }
-        else:
-            ctx.log(
-                f"whatsapp: patching failed (exit code: {result.returncode})"
-            )
-            if result.stderr:
-                ctx.log(f"whatsapp: stderr: {result.stderr[:500]}")
-            if result.stdout:
-                ctx.log(f"whatsapp: stdout: {result.stdout[:500]}")
-
-    except subprocess.TimeoutExpired:
-        ctx.log(f"whatsapp: patching timed out after {timeout} seconds")
-    except Exception as e:
-        ctx.log(f"whatsapp: patching error: {e}")
-    finally:
-        # Cleanup temp directory if using default
-        if not ctx.options.get("whatsapp_temp_dir"):
-            shutil.rmtree(temp_path, ignore_errors=True)
+  except subprocess.TimeoutExpired:
+    ctx.log(f"whatsapp: patching timed out after {timeout} seconds")
+  except Exception as e:
+    ctx.log(f"whatsapp: patching error: {e}")
+  finally:
+    # Cleanup temp directory if using default
+    if not ctx.options.get("whatsapp_temp_dir"):
+      shutil.rmtree(temp_path, ignore_errors=True)
