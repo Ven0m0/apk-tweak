@@ -4,11 +4,12 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
 
-Extensible pipeline for APK modifications using ReVanced, Magisk modules, LSPatch, and DTL-X.
+Extensible pipeline for APK modifications using ReVanced, Magisk modules, LSPatch, DTL-X, and media optimization.
 
 ## Features
 
-- **�� Multi-Engine Support**: ReVanced, Magisk, LSPatch, DTL-X
+- **🔧 Multi-Engine Support**: ReVanced, Magisk, LSPatch, DTL-X, Media Optimizer
+- **🖼️ Media Optimization**: PNG/JPG compression, MP3/OGG re-encoding, DPI-aware resource filtering
 - **🔌 Plugin System**: Extensible hook-based plugin architecture
 - **⚡ Performance**: O(n) complexity, efficient caching
 - **📦 Type Safe**: Full mypy strict mode compliance
@@ -40,6 +41,15 @@ rvp -c config.json
 
 # Enable DTL-X analysis
 rvp input.apk -e dtlx --dtlx-analyze --dtlx-optimize
+
+# Media optimization - compress images and audio
+rvp input.apk -e media_optimizer --optimize-images --optimize-audio
+
+# Target specific DPI (keep only xhdpi and xxhdpi resources)
+rvp input.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
+
+# Combine media optimization with other engines
+rvp input.apk -e media_optimizer -e revanced --optimize-images --target-dpi xxhdpi
 ```
 
 ## Configuration
@@ -74,6 +84,7 @@ Input APK → Engine 1 → Engine 2 → ... → Output APK
 - **Magisk**: Package APK as Magisk module
 - **LSPatch**: Apply LSPatch modifications
 - **DTL-X**: Analyze/optimize with DTL-X
+- **Media Optimizer**: Compress images (PNG/JPG), optimize audio (MP3/OGG), filter DPI-specific resources
 
 ### Plugin System
 
@@ -90,6 +101,51 @@ from rvp.context import Context
 def handle_hook(ctx: Context, stage: str) -> None:
   """Handle pipeline hooks."""
   ctx.log(f"Plugin triggered at: {stage}")
+```
+
+### Media Optimizer
+
+The media optimizer engine reduces APK size through:
+
+#### Image Optimization
+- **PNG**: Lossy compression using `pngquant` (65-80% quality range)
+- **JPEG**: Optimization using `jpegoptim` (85% quality, metadata stripped)
+
+#### Audio Optimization
+- **MP3**: Re-encode using `ffmpeg` with libmp3lame (96k bitrate)
+- **OGG**: Re-encode using `ffmpeg` with libvorbis (96k bitrate)
+
+#### DPI Resource Filtering
+Remove drawable resources for non-target screen densities:
+
+- **ldpi** (120 dpi)
+- **mdpi** (160 dpi)
+- **hdpi** (240 dpi)
+- **xhdpi** (320 dpi) - Common for most modern phones
+- **xxhdpi** (480 dpi) - Common for high-end phones
+- **xxxhdpi** (640 dpi) - Highest density
+- **tvdpi** (213 dpi) - TV screens
+- **nodpi** - Always preserved (density-independent)
+
+**Usage:**
+```bash
+# Optimize everything for xxhdpi devices
+rvp app.apk -e media_optimizer --optimize-images --optimize-audio --target-dpi xxhdpi
+
+# Keep multiple DPIs (comma-separated)
+rvp app.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
+
+# Only optimize images
+rvp app.apk -e media_optimizer --optimize-images
+```
+
+**Dependencies:**
+```bash
+# Arch Linux
+pacman -S pngquant jpegoptim ffmpeg
+
+# Debian/Ubuntu
+apt-get install pngquant jpegoptim ffmpeg
 ```
 
 ## Development
