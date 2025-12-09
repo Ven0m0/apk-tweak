@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import mmap
 import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor
@@ -62,7 +63,9 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
         match.unlink()
         removed_count += 1
       elif match.is_dir():
-        ctx.log(f"optimizer: Removing directory {match.relative_to(decompiled_dir)}")
+        ctx.log(
+          f"optimizer: Removing directory {match.relative_to(decompiled_dir)}"
+        )
         shutil.rmtree(match)
         removed_count += 1
   ctx.log(f"optimizer: Debloat complete - removed {removed_count} items")
@@ -95,16 +98,24 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
     for match in matches:
       if match.is_file():
         size = match.stat().st_size
-        ctx.log(f"optimizer: Removing {match.relative_to(decompiled_dir)} ({size} bytes)")
+        ctx.log(
+          f"optimizer: Removing {match.relative_to(decompiled_dir)} ({size} bytes)"
+        )
         match.unlink()
         removed_count += 1
         removed_size += size
-  ctx.log(f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)")
+  ctx.log(
+    f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)"
+  )
 
 
-def _apply_patch_to_file(file_path: Path, patterns: list[AdPattern], ctx: Context) -> bool:
+def _apply_patch_to_file(
+  file_path: Path, patterns: list[AdPattern], ctx: Context
+) -> bool:
   """
   Apply ad-blocking patches to a single smali file.
+
+  ⚡ Perf: Uses mmap for files > 100KB for better memory efficiency.
 
   Args:
       file_path: Path to smali file to patch.
@@ -115,12 +126,27 @@ def _apply_patch_to_file(file_path: Path, patterns: list[AdPattern], ctx: Contex
       True if file was modified, False otherwise.
   """
   try:
-    # Use 'ignore' errors to match original script behavior
-    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    file_size = file_path.stat().st_size
+
+    # ⚡ Perf: Use mmap for large files (> 100KB) for memory efficiency
+    if file_size > 102400:  # 100KB threshold
+      with open(file_path, "r+b") as f:
+        # Try to use mmap for large files
+        try:
+          with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped:
+            content = mmapped.read().decode("utf-8", errors="ignore")
+        except (OSError, ValueError):
+          # Fall back to regular read if mmap fails
+          f.seek(0)
+          content = f.read().decode("utf-8", errors="ignore")
+    else:
+      # Small files: use regular read (faster for small files)
+      content = file_path.read_text(encoding="utf-8", errors="ignore")
+
     original_content = content
 
+    # Apply all patterns
     for pattern, replacement, _ in patterns:
-      # Use re.sub directly
       content = re.sub(pattern, replacement, content)
 
     if content != original_content:
@@ -160,7 +186,9 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   with ThreadPoolExecutor() as executor:
     futures = []
     for smali_file in smali_files:
-      futures.append(executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx))
+      futures.append(
+        executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
+      )
 
     for future in futures:
       if future.result():

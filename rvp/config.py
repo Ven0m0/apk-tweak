@@ -2,9 +2,26 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+# ⚡ Perf: Use orjson (~6x faster) with fallback to stdlib json
+try:
+  from typing import Any, TextIO
+
+  import orjson
+
+  def _load_json(file_handle: TextIO) -> Any:
+    """Load JSON using orjson for performance."""
+    return orjson.loads(file_handle.read())
+
+except ImportError:
+  import json
+  from typing import Any, TextIO
+
+  def _load_json(file_handle: TextIO) -> Any:
+    """Load JSON using stdlib json (fallback)."""
+    return json.load(file_handle)
 
 
 @dataclass
@@ -172,6 +189,8 @@ class Config:
     """
     Load configuration from a JSON file.
 
+    Uses orjson for ~6x faster parsing when available, falls back to stdlib.
+
     Args:
         path: Path to the JSON config file.
 
@@ -180,11 +199,11 @@ class Config:
 
     Raises:
         FileNotFoundError: If config file doesn't exist.
-        json.JSONDecodeError: If file contains invalid JSON.
+        ValueError: If file contains invalid JSON.
     """
     if not path.exists():
       raise FileNotFoundError(f"Config file not found: {path}")
 
     with open(path, encoding="utf-8") as f:
-      data = json.load(f)
+      data = _load_json(f)
       return cls(**data)

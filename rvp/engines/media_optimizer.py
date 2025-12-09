@@ -41,7 +41,9 @@ def _check_dependencies(ctx: Context) -> dict[str, bool]:
   missing = [name for name, available in tools.items() if not available]
   if missing:
     ctx.log(f"media_optimizer: missing tools: {', '.join(missing)}")
-    ctx.log("media_optimizer: install via package manager (Arch: pacman -S pngquant jpegoptim ffmpeg)")
+    ctx.log(
+      "media_optimizer: install via package manager (Arch: pacman -S pngquant jpegoptim ffmpeg)"
+    )
 
   return tools
 
@@ -77,7 +79,9 @@ def _optimize_png(ctx: Context, png_path: Path, quality: str = "65-80") -> bool:
     )
     return result.returncode == 0
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: PNG optimization failed for {png_path.name}: {e}")
+    ctx.log(
+      f"media_optimizer: PNG optimization failed for {png_path.name}: {e}"
+    )
     return False
 
 
@@ -104,11 +108,15 @@ def _optimize_jpg(ctx: Context, jpg_path: Path, quality: int = 85) -> bool:
     )
     return result.returncode == 0
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: JPEG optimization failed for {jpg_path.name}: {e}")
+    ctx.log(
+      f"media_optimizer: JPEG optimization failed for {jpg_path.name}: {e}"
+    )
     return False
 
 
-def _optimize_audio(ctx: Context, audio_path: Path, output_path: Path, bitrate: str = "96k") -> bool:
+def _optimize_audio(
+  ctx: Context, audio_path: Path, output_path: Path, bitrate: str = "96k"
+) -> bool:
   """
   Optimize audio file using ffmpeg.
 
@@ -156,7 +164,9 @@ def _optimize_audio(ctx: Context, audio_path: Path, output_path: Path, bitrate: 
     return False
 
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: Audio optimization failed for {audio_path.name}: {e}")
+    ctx.log(
+      f"media_optimizer: Audio optimization failed for {audio_path.name}: {e}"
+    )
     return False
 
 
@@ -195,7 +205,9 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
       True if repackaging succeeded, False otherwise.
   """
   try:
-    with zipfile.ZipFile(output_apk, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(
+      output_apk, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as zf:
       for file_path in extract_dir.rglob("*"):
         if file_path.is_file():
           arcname = file_path.relative_to(extract_dir)
@@ -208,7 +220,9 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
     return False
 
 
-def _process_images(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> dict[str, int]:
+def _process_images(
+  ctx: Context, extract_dir: Path, tools: dict[str, bool]
+) -> dict[str, int]:
   """
   Process and optimize images in extracted APK.
 
@@ -224,9 +238,13 @@ def _process_images(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> 
 
   # Find all image files
   png_files = list(extract_dir.rglob("*.png"))
-  jpg_files = list(extract_dir.rglob("*.jpg")) + list(extract_dir.rglob("*.jpeg"))
+  jpg_files = list(extract_dir.rglob("*.jpg")) + list(
+    extract_dir.rglob("*.jpeg")
+  )
 
-  ctx.log(f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files")
+  ctx.log(
+    f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files"
+  )
 
   # Optimize PNGs
   if tools.get("pngquant", False):
@@ -234,7 +252,9 @@ def _process_images(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> 
       if _optimize_png(ctx, png):
         stats["png"] += 1
   else:
-    ctx.log("media_optimizer: pngquant not available, skipping PNG optimization")
+    ctx.log(
+      "media_optimizer: pngquant not available, skipping PNG optimization"
+    )
 
   # Optimize JPEGs
   if tools.get("jpegoptim", False):
@@ -242,13 +262,19 @@ def _process_images(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> 
       if _optimize_jpg(ctx, jpg):
         stats["jpg"] += 1
   else:
-    ctx.log("media_optimizer: jpegoptim not available, skipping JPEG optimization")
+    ctx.log(
+      "media_optimizer: jpegoptim not available, skipping JPEG optimization"
+    )
 
-  ctx.log(f"media_optimizer: optimized {stats['png']} PNG, {stats['jpg']} JPEG files")
+  ctx.log(
+    f"media_optimizer: optimized {stats['png']} PNG, {stats['jpg']} JPEG files"
+  )
   return stats
 
 
-def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> int:
+def _process_audio(
+  ctx: Context, extract_dir: Path, tools: dict[str, bool]
+) -> int:
   """
   Process and optimize audio files in extracted APK.
 
@@ -261,11 +287,15 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
       Number of optimized audio files.
   """
   if not tools.get("ffmpeg", False):
-    ctx.log("media_optimizer: ffmpeg not available, skipping audio optimization")
+    ctx.log(
+      "media_optimizer: ffmpeg not available, skipping audio optimization"
+    )
     return 0
 
   # Find all audio files
-  audio_files = list(extract_dir.rglob("*.mp3")) + list(extract_dir.rglob("*.ogg"))
+  audio_files = list(extract_dir.rglob("*.mp3")) + list(
+    extract_dir.rglob("*.ogg")
+  )
   ctx.log(f"media_optimizer: found {len(audio_files)} audio files")
 
   optimized = 0
@@ -278,7 +308,9 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
   return optimized
 
 
-def _filter_dpi_resources(ctx: Context, extract_dir: Path, target_dpis: list[str]) -> int:
+def _filter_dpi_resources(
+  ctx: Context, extract_dir: Path, target_dpis: list[str]
+) -> int:
   """
   Remove drawable resources for non-target DPIs.
 
@@ -302,7 +334,9 @@ def _filter_dpi_resources(ctx: Context, extract_dir: Path, target_dpis: list[str
   # Always keep nodpi and default drawable
   target_dpis_set.add("nodpi")
 
-  ctx.log(f"media_optimizer: keeping DPIs: {', '.join(sorted(target_dpis_set))}")
+  ctx.log(
+    f"media_optimizer: keeping DPIs: {', '.join(sorted(target_dpis_set))}"
+  )
 
   removed_count = 0
   removed_folders = []
@@ -330,7 +364,9 @@ def _filter_dpi_resources(ctx: Context, extract_dir: Path, target_dpis: list[str
       removed_count += 1
 
   if removed_folders:
-    ctx.log(f"media_optimizer: removed {removed_count} DPI folders: {', '.join(removed_folders)}")
+    ctx.log(
+      f"media_optimizer: removed {removed_count} DPI folders: {', '.join(removed_folders)}"
+    )
   else:
     ctx.log("media_optimizer: no DPI folders removed")
 
@@ -358,7 +394,9 @@ def run(ctx: Context) -> None:
     return
 
   apk = ctx.current_apk or ctx.input_apk
-  ctx.log(f"media_optimizer: starting (images={optimize_images}, audio={optimize_audio}, dpi={target_dpi})")
+  ctx.log(
+    f"media_optimizer: starting (images={optimize_images}, audio={optimize_audio}, dpi={target_dpi})"
+  )
 
   # Check tool availability
   tools = _check_dependencies(ctx)
@@ -408,12 +446,18 @@ def run(ctx: Context) -> None:
     original_size = apk.stat().st_size
     optimized_size = output_apk.stat().st_size
     reduction = original_size - optimized_size
-    reduction_pct = (reduction / original_size) * 100 if original_size > 0 else 0
+    reduction_pct = (
+      (reduction / original_size) * 100 if original_size > 0 else 0
+    )
 
-    ctx.log(f"media_optimizer: size reduction: {reduction / 1024 / 1024:.2f} MB ({reduction_pct:.1f}%)")
+    ctx.log(
+      f"media_optimizer: size reduction: {reduction / 1024 / 1024:.2f} MB ({reduction_pct:.1f}%)"
+    )
     ctx.metadata["media_optimizer"]["size_reduction"] = {
       "bytes": reduction,
       "percentage": reduction_pct,
     }
   else:
-    ctx.log("media_optimizer: repackaging failed, pipeline will continue with original APK")
+    ctx.log(
+      "media_optimizer: repackaging failed, pipeline will continue with original APK"
+    )

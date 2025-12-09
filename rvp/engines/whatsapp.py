@@ -108,13 +108,15 @@ def run(ctx: Context) -> None:
   # Check Java dependency
   if not _check_java():
     ctx.log("whatsapp: ERROR - Java runtime not found")
-    ctx.log("whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre")
+    ctx.log(
+      "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
+    )
     return
 
   # Locate or clone patcher
   patcher_path = ctx.options.get("whatsapp_patcher_path")
   if patcher_path:
-    patcher_dir = Path(patcher_path)
+    patcher_dir = Path(str(patcher_path))
   else:
     patcher_dir = ctx.work_dir / "whatsapp-patcher"
     if not _clone_patcher(patcher_dir, ctx):

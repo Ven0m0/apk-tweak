@@ -7,17 +7,14 @@ import dataclasses
 import logging
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .config import Config
 from .core import run_pipeline
-
-# Type alias for options dictionary
-# TODO: Replace with TypedDict for better type safety
-Options = dict[str, Any]
+from .types import PipelineOptions
 
 
-def _build_config_options(cfg: Config) -> Options:
+def _build_config_options(cfg: Config) -> PipelineOptions:
   """
   Extract options from configuration object.
 
@@ -30,7 +27,9 @@ def _build_config_options(cfg: Config) -> Options:
   # Convert dataclass to dict and filter out input/output/engines
   all_fields = dataclasses.asdict(cfg)
   excluded = {"input_apk", "output_dir", "engines"}
-  options = {k: v for k, v in all_fields.items() if k not in excluded}
+  options: dict[str, Any] = {
+    k: v for k, v in all_fields.items() if k not in excluded
+  }
 
   # Reorganize rkpairip options into nested dict
   rkpairip_keys = {
@@ -40,7 +39,9 @@ def _build_config_options(cfg: Config) -> Options:
     "rkpairip_corex_hook": "corex_hook",
     "rkpairip_anti_split": "anti_split",
   }
-  options["rkpairip"] = {new_key: options.pop(old_key) for old_key, new_key in rkpairip_keys.items()}
+  options["rkpairip"] = {
+    new_key: options.pop(old_key) for old_key, new_key in rkpairip_keys.items()
+  }
 
   # Reorganize tools options into nested dict
   options["tools"] = {
@@ -49,10 +50,10 @@ def _build_config_options(cfg: Config) -> Options:
     "revanced_integrations": options.pop("revanced_integrations_path"),
   }
 
-  return options
+  return cast(PipelineOptions, options)
 
 
-def _build_default_options() -> Options:
+def _build_default_options() -> PipelineOptions:
   """
   Create default options when no configuration file is provided.
 
@@ -70,7 +71,9 @@ def _build_default_options() -> Options:
   }
 
 
-def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
+def _apply_flag_overrides(
+  options: PipelineOptions, args: argparse.Namespace
+) -> None:
   """
   Apply command-line flag overrides to options dictionary.
 
@@ -78,6 +81,9 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
       options: Options dictionary to modify in-place.
       args: Parsed command-line arguments.
   """
+  # Cast to dict[str, Any] for dynamic key access (TypedDict limitation)
+  opts: dict[str, Any] = cast(dict[str, Any], options)
+
   # Map command-line flags to option keys
   flag_mapping = {
     "dtlx_analyze": ("dtlx_analyze", None),
@@ -88,7 +94,7 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
   # Apply simple flag overrides
   for arg_name, (opt_key, _) in flag_mapping.items():
     if getattr(args, arg_name, False):
-      options[opt_key] = True
+      opts[opt_key] = True
 
   # RKPairip flag overrides (nested dict)
   rkpairip_flags = {
@@ -99,42 +105,42 @@ def _apply_flag_overrides(options: Options, args: argparse.Namespace) -> None:
     "rkpairip_anti_split": "anti_split",
   }
 
-  options.setdefault("rkpairip", {})
+  opts.setdefault("rkpairip", {})
   for arg_name, opt_key in rkpairip_flags.items():
     if getattr(args, arg_name, False):
-      options["rkpairip"][opt_key] = True
+      opts["rkpairip"][opt_key] = True
 
   # Discord patcher overrides
   if args.discord_keystore:
-    options["discord_keystore"] = args.discord_keystore
+    opts["discord_keystore"] = args.discord_keystore
   if args.discord_keystore_pass:
-    options["discord_keystore_pass"] = args.discord_keystore_pass
+    opts["discord_keystore_pass"] = args.discord_keystore_pass
   if args.discord_version:
-    options["discord_version"] = args.discord_version
+    opts["discord_version"] = args.discord_version
   if args.discord_patches:
-    options["discord_patches"] = args.discord_patches
+    opts["discord_patches"] = args.discord_patches
 
   # Legacy luniume option mapping (merged into revanced/lspatch)
   if hasattr(args, "luniume_patches") and args.luniume_patches:
-    options["revanced_patches"] = args.luniume_patches
+    opts["revanced_patches"] = args.luniume_patches
   if hasattr(args, "luniume_modules") and args.luniume_modules:
-    options["lspatch_modules"] = args.luniume_modules
+    opts["lspatch_modules"] = args.luniume_modules
   if hasattr(args, "luniume_exclusive") and args.luniume_exclusive:
-    options["revanced_exclusive"] = True
+    opts["revanced_exclusive"] = True
 
   # WhatsApp patcher overrides
   if hasattr(args, "whatsapp_ab_tests"):
-    options["whatsapp_ab_tests"] = args.whatsapp_ab_tests
+    opts["whatsapp_ab_tests"] = args.whatsapp_ab_tests
   if args.whatsapp_timeout:
-    options["whatsapp_timeout"] = args.whatsapp_timeout
+    opts["whatsapp_timeout"] = args.whatsapp_timeout
 
   # Media optimizer overrides
   if args.optimize_images:
-    options["optimize_images"] = True
+    opts["optimize_images"] = True
   if args.optimize_audio:
-    options["optimize_audio"] = True
+    opts["optimize_audio"] = True
   if args.target_dpi:
-    options["target_dpi"] = args.target_dpi
+    opts["target_dpi"] = args.target_dpi
 
 
 def setup_logging(verbose: bool) -> None:
@@ -168,9 +174,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
   p.add_argument("-c", "--config", help="Path to config JSON file")
   p.add_argument("-o", "--out", help="Output directory")
   p.add_argument("-e", "--engine", action="append", help="Engines to run")
-  p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
-  p.add_argument("--dtlx-analyze", action="store_true", help="Enable DTL-X analysis")
-  p.add_argument("--dtlx-optimize", action="store_true", help="Enable DTL-X optimization")
+  p.add_argument(
+    "-v", "--verbose", action="store_true", help="Enable debug logging"
+  )
+  p.add_argument(
+    "--dtlx-analyze", action="store_true", help="Enable DTL-X analysis"
+  )
+  p.add_argument(
+    "--dtlx-optimize", action="store_true", help="Enable DTL-X optimization"
+  )
   p.add_argument(
     "--patch-ads",
     action="store_true",
@@ -312,7 +324,9 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
   # Resolve Output
-  output_dir = Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
+  output_dir = (
+    Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
+  )
 
   # Resolve Engines: Args > Config > Default
   engines = args.engine

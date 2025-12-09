@@ -60,7 +60,9 @@ def _clone_patcher(target_dir: Path, ctx: Context) -> bool:
     return False
 
 
-def _create_settings_env(patcher_dir: Path, input_apk: Path, ctx: Context) -> Path:
+def _create_settings_env(
+  patcher_dir: Path, input_apk: Path, ctx: Context
+) -> Path:
   """
   Create settings.env configuration file.
 
@@ -75,7 +77,9 @@ def _create_settings_env(patcher_dir: Path, input_apk: Path, ctx: Context) -> Pa
   settings_file = patcher_dir / "settings.env"
 
   # Get custom settings from context or use defaults
-  keystore_path = ctx.options.get("discord_keystore", str(patcher_dir / "keystore.jks"))
+  keystore_path = ctx.options.get(
+    "discord_keystore", str(patcher_dir / "keystore.jks")
+  )
   keystore_pass = ctx.options.get("discord_keystore_pass", "android")
   discord_version = ctx.options.get("discord_version", "auto")
 
@@ -141,14 +145,18 @@ def run(ctx: Context) -> None:
   deps_ok, missing_deps = _check_dependencies()
   if not deps_ok:
     ctx.log(f"discord: ERROR - Missing dependencies: {', '.join(missing_deps)}")
-    ctx.log("discord: Install with: pacman -S android-tools apktool jdk-openjdk")
-    ctx.log("discord: Or: apt-get install -y android-sdk apktool openjdk-17-jdk")
+    ctx.log(
+      "discord: Install with: pacman -S android-tools apktool jdk-openjdk"
+    )
+    ctx.log(
+      "discord: Or: apt-get install -y android-sdk apktool openjdk-17-jdk"
+    )
     return
 
   # Locate or clone patcher
   patcher_path = ctx.options.get("discord_patcher_path")
   if patcher_path:
-    patcher_dir = Path(patcher_path)
+    patcher_dir = Path(str(patcher_path))
   else:
     patcher_dir = ctx.work_dir / "discord-apk-patcher"
     if not _clone_patcher(patcher_dir, ctx):
@@ -183,7 +191,9 @@ def run(ctx: Context) -> None:
         patcher_dir / "output" / "discord-patched.apk",
       ]
 
-      output_apk = next((apk for apk in output_candidates if apk.exists()), None)
+      output_apk = next(
+        (apk for apk in output_candidates if apk.exists()), None
+      )
 
       if output_apk:
         final_apk = ctx.output_dir / f"{input_apk.stem}.discord-patched.apk"
