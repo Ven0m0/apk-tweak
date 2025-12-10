@@ -28,6 +28,11 @@ apk-tweak/
 │       ├── __init__.py
 │       └── example_plugin.py
 ├── bin/rvp                 # Bash wrapper for Python CLI
+├── config/                 # Pipeline configurations
+│   ├── simple_pipeline.json
+│   ├── full_pipeline.json
+│   ├── development_pipeline.json
+│   └── README.md
 ├── .github/
 │   ├── agents.yml          # Specialized AI agents
 │   ├── chat-modes.yml      # Chat mode configurations
@@ -91,29 +96,14 @@ dup=duplicate
 
 ### Modern Python Patterns
 
-```python
-from __future__ import annotations
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Any, Callable
+**Key Patterns:**
+- Use `from __future__ import annotations` for forward references
+- Dataclasses for state (`@dataclass`)
+- Type hints for all function signatures
+- `Path` objects instead of strings for file operations
+- Type aliases for complex signatures (`EngineFn = Callable[[Context], None]`)
 
-# Use dataclasses for state
-@dataclass
-class Context:
-    work_dir: Path
-    options: Dict[str, Any] = field(default_factory=dict)
-
-    def log(self, msg: str) -> None:
-        """Log with [rvp] prefix."""
-        print(f"[rvp] {msg}")
-
-# Type aliases for clarity
-EngineFn = Callable[[Context], None]
-
-# Prefer Path over strings
-def process_apk(apk_path: Path) -> Path:
-    return apk_path.resolve()
-```
+See `rvp/context.py` for the Context dataclass implementation.
 
 ### File Operations
 
@@ -123,13 +113,19 @@ def process_apk(apk_path: Path) -> Path:
 
 ### Error Handling
 
+**Key Practices:**
+- Validate inputs early and fail fast
+- Use try/except blocks with specific exceptions
+- Log errors to stderr
+- Use context managers for file/resource handling
+- Provide clear error messages with context
+
+**Example:**
 ```python
-# Validate inputs early
 if not apk.is_file():
     print(f"Error: APK not found: {apk}", file=sys.stderr)
     return 1
 
-# Use context managers for resources
 with open(file_path, encoding="utf-8") as f:
     content = f.read()
 ```
@@ -316,6 +312,7 @@ def run(ctx: Context) -> None:
     ctx.log(f"yourengine: output -> {output_apk}")
     ctx.set_current_apk(output_apk)
 ```
+
 3. **Register in `core.py`**:
 
 ```python
@@ -329,12 +326,12 @@ _ENGINES: Dict[str, EngineFn] = {
     "yourengine": yourengine.run,
 }
 ```
+
 4. **Update CLI help**: Add to `cli.py` engine description
 
 ### Creating Plugins
 
-Plugins hook into pipeline stages via the
-`handle_hook(ctx: Context, stage: str)` pattern:
+Plugins hook into pipeline stages via the `handle_hook(ctx: Context, stage: str)` pattern:
 
 ```python
 def handle_hook(ctx: Context, stage: str) -> None:
@@ -349,9 +346,9 @@ def handle_hook(ctx: Context, stage: str) -> None:
 ```
 
 **Available Stages**:
-
 - `pre_pipeline` / `post_pipeline`
 - `pre_engine:{name}` / `post_engine:{name}` (e.g., `pre_engine:revanced`)
+- `error` - On pipeline failure
 
 ---
 
@@ -425,6 +422,8 @@ Activate: `/mode [mode-name]`
 
 ## Configuration Files Reference
 
+### Project Configuration
+
 | File | Purpose |
 | ------------------- | ------------------------------ |
 | `.editorconfig` | Cross-editor formatting rules |
@@ -435,6 +434,16 @@ Activate: `/mode [mode-name]`
 | `pyproject.toml` | Python package metadata |
 | `gradle.properties` | Android/Gradle JVM settings |
 | `.gitignore` | VCS ignore patterns |
+
+### Pipeline Configurations (config/)
+
+Ready-to-use pipeline configurations:
+
+- `config/simple_pipeline.json` - Basic single-engine configuration
+- `config/full_pipeline.json` - Production multi-engine pipeline
+- `config/development_pipeline.json` - Development/testing configuration
+
+See `config/README.md` for details and customization guide.
 
 ---
 
@@ -537,5 +546,5 @@ mypy rvp/
 
 ---
 
-*Optimized for Claude's context window and reasoning capabilities* *Last
-updated: 2025-12-04*
+*Optimized for Claude's context window and reasoning capabilities*
+*Last updated: 2025-12-10*

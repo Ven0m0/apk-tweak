@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "description": "Development/testing pipeline with verbose logging and no cleanup",
+  "input": null,
+  "output_dir": "dev_output",
+  "engines": [
+    {
+      "name": "dtlx",
+      "enabled": true,
+      "options": {
+        "analyze": true,
+        "optimize": false,
+        "output_report": true
+      }
+    },
+    {
+      "name": "revanced",
+      "enabled": true,
+      "options": {
+        "patches": ["video-ads"],
+        "integrations": true,
+        "experimental": true,
+        "purge": false
+      }
+    }
+  ],
+  "plugins": [
+    "logging",
+    "validation"
+  ],
+  "global_options": {
+    "verbose": true,
+    "debug": true,
+    "cleanup": false,
+    "cleanup_on_error": false,
+    "temp_dir": "/tmp/rvp_dev",
+    "parallel_processing": false,
+    "timeout": 7200,
+    "retry_on_failure": false
+  }
+}
