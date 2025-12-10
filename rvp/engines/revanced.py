@@ -8,7 +8,7 @@ from typing import Any, cast
 
 from ..context import Context
 from ..optimizer import optimize_apk
-from ..utils import check_dependencies, run_command, TIMEOUT_PATCH
+from ..utils import TIMEOUT_PATCH, check_dependencies, run_command
 
 
 def _build_revanced_cli_cmd(

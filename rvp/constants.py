@@ -19,3 +19,12 @@ ENGINE_MAGISK = "magisk"
 ENGINE_LSPATCH = "lspatch"
 ENGINE_DTLX = "dtlx"
 ENGINE_RKPAIRIP = "rkpairip"
+
+# Performance thresholds (bytes)
+MMAP_FILE_SIZE_THRESHOLD = 102_400  # 100 KiB - use mmap for larger files
+LARGE_FILE_THRESHOLD = 1_048_576  # 1 MB
+SMALL_FILE_THRESHOLD = 10_240  # 10 KB
+
+# Thread pool configuration
+MAX_WORKER_THREADS = 32  # Maximum concurrent workers
+DEFAULT_CPU_MULTIPLIER = 4  # CPU count multiplier for I/O-bound tasks

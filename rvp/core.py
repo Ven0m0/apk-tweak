@@ -18,68 +18,94 @@ from .validators import validate_apk_path, validate_output_dir
 
 EngineFn = Callable[[Context], None]
 PluginHandler = Callable[[Context, str], None]
-# Cache for discovered modules
-_ENGINES: dict[str, EngineFn] | None = None
-_PLUGIN_HANDLERS: list[PluginHandler] | None = None
+
+
+class _ModuleCache:
+  """Thread-safe singleton cache for discovered modules."""
+
+  def __init__(self) -> None:
+    self._engines: dict[str, EngineFn] | None = None
+    self._plugins: list[PluginHandler] | None = None
+
+  def get_engines(self) -> dict[str, EngineFn]:
+    """
+    Get cached engines or discover them.
+
+    Returns:
+        dict[str, EngineFn]: Mapping of engine names to run functions.
+    """
+    if self._engines is not None:
+      return self._engines
+
+    engines: dict[str, EngineFn] = {}
+
+    # ⚡ Perf: Auto-discovery instead of manual registry
+    if hasattr(engines_pkg, "__path__"):
+      for _, name, _ in pkgutil.iter_modules(engines_pkg.__path__):
+        try:
+          full_name = f"{engines_pkg.__name__}.{name}"
+          module = importlib.import_module(full_name)
+          if hasattr(module, "run") and callable(module.run):
+            engines[name] = module.run
+        except (ImportError, AttributeError) as e:
+          print(
+            f"[rvp] WARN: Engine '{name}' load fail: {e}",
+            file=sys.stderr,
+          )
+
+    self._engines = engines
+    return engines
+
+  def get_plugins(self) -> list[PluginHandler]:
+    """
+    Get cached plugins or discover them.
+
+    Returns:
+        list[PluginHandler]: List of plugin hook handlers.
+    """
+    if self._plugins is not None:
+      return self._plugins
+
+    hook_funcs: list[PluginHandler] = []
+    if hasattr(plugins_pkg, "__path__"):
+      for _, name, _ in pkgutil.iter_modules(plugins_pkg.__path__):
+        try:
+          full_name = f"{plugins_pkg.__name__}.{name}"
+          module = importlib.import_module(full_name)
+          if hasattr(module, "handle_hook") and callable(module.handle_hook):
+            hook_funcs.append(module.handle_hook)
+        except (ImportError, AttributeError) as e:
+          print(
+            f"[rvp] WARN: Plugin '{name}' load fail: {e}",
+            file=sys.stderr,
+          )
+
+    self._plugins = hook_funcs
+    return hook_funcs
+
+
+# Singleton instance
+_module_cache = _ModuleCache()
 
 
 def get_engines() -> dict[str, EngineFn]:
   """
-  Dynamically discover engines in rvp.engines package.
+  Get all discovered engines.
 
   Returns:
-      dict[str, EngineFn]: Mapping of engine names to their run functions.
+      dict[str, EngineFn]: Mapping of engine names to run functions.
   """
-  global _ENGINES
-  if _ENGINES is not None:
-    return _ENGINES
-
-  engines: dict[str, EngineFn] = {}
-
-  # ⚡ Perf: Auto-discovery instead of manual registry (O(n) where n = engine count)
-  if hasattr(engines_pkg, "__path__"):
-    for _, name, _ in pkgutil.iter_modules(engines_pkg.__path__):
-      try:
-        full_name = f"{engines_pkg.__name__}.{name}"
-        module = importlib.import_module(full_name)
-        if hasattr(module, "run") and callable(module.run):
-          engines[name] = module.run
-      except (ImportError, AttributeError) as e:
-        print(
-          f"[rvp] WARN: Engine '{name}' load fail: {e}",
-          file=sys.stderr,
-        )
-
-  _ENGINES = engines
-  return engines
+  return _module_cache.get_engines()
 
 
 def load_plugins() -> list[PluginHandler]:
   """
-  Dynamically discover and load plugins from rvp.plugins package.
+  Get all discovered plugins.
 
   Returns:
-      list[PluginHandler]: List of plugin hook handler functions.
+      list[PluginHandler]: List of plugin hook handlers.
   """
-  global _PLUGIN_HANDLERS
-  if _PLUGIN_HANDLERS is not None:
-    return _PLUGIN_HANDLERS
-  hook_funcs: list[PluginHandler] = []
-  if hasattr(plugins_pkg, "__path__"):
-    for _, name, _ in pkgutil.iter_modules(plugins_pkg.__path__):
-      try:
-        full_name = f"{plugins_pkg.__name__}.{name}"
-        module = importlib.import_module(full_name)
-        if hasattr(module, "handle_hook") and callable(module.handle_hook):
-          hook_funcs.append(module.handle_hook)
-      except (ImportError, AttributeError) as e:
-        print(
-          f"[rvp] WARN: Plugin '{name}' load fail: {e}",
-          file=sys.stderr,
-        )
-
-  _PLUGIN_HANDLERS = hook_funcs
-  return hook_funcs
+  return _module_cache.get_plugins()
 
 
 def dispatch_hooks(

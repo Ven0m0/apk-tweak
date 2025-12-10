@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from ..context import Context
-from ..utils import check_dependencies, find_latest_apk, run_command, TIMEOUT_BUILD
+from ..utils import (
+  TIMEOUT_BUILD,
+  check_dependencies,
+  find_latest_apk,
+  run_command,
+)
 
 
 def run(ctx: Context) -> None:
@@ -33,7 +38,8 @@ def run(ctx: Context) -> None:
   """
   ctx.log("android_builder: starting Gradle compilation")
 
-  options = ctx.options.get("android_builder", {})
+  # Cast to dict for runtime access (TypedDict limitation with nested keys)
+  options: dict[str, Any] = ctx.options.get("android_builder", {})  # type: ignore[assignment]
 
   # 1. Determine Source Directory
   source_dir_str: Any = options.get(
@@ -52,7 +58,9 @@ def run(ctx: Context) -> None:
       f"android_builder: ERROR - Source directory not found: {source_dir}",
       level=logging.ERROR,
     )
-    raise ValueError(f"Android source project directory not found: {source_dir}")
+    raise ValueError(
+      f"Android source project directory not found: {source_dir}"
+    )
 
   # 2. Check Dependencies
   deps_ok, _ = check_dependencies(["gradle"])
@@ -66,8 +74,10 @@ def run(ctx: Context) -> None:
   # 3. Build Command
   build_task = options.get("android_build_task", "assembleRelease")
   # Prefer using the Gradle Wrapper if it exists
-  gradle_cmd = ["./gradlew"] if (source_dir / "gradlew").exists() else ["gradle"]
-  
+  gradle_cmd = (
+    ["./gradlew"] if (source_dir / "gradlew").exists() else ["gradle"]
+  )
+
   cmd = gradle_cmd + [build_task]
 
   ctx.log(f"android_builder: Running task '{build_task}' in {source_dir.name}")
@@ -77,13 +87,14 @@ def run(ctx: Context) -> None:
     run_command(cmd, ctx, cwd=source_dir, timeout=TIMEOUT_BUILD)
 
   except subprocess.CalledProcessError as e:
-    ctx.log(f"android_builder: Gradle build failed: {e.returncode}", level=logging.ERROR)
+    ctx.log(
+      f"android_builder: Gradle build failed: {e.returncode}",
+      level=logging.ERROR,
+    )
     raise
 
   # 4. Find Output File
-  output_pattern = options.get(
-    "android_output_pattern", "**/*release.apk"
-  )
+  output_pattern = options.get("android_output_pattern", "**/*release.apk")
 
   # Search the standard Gradle output location
   output_candidates = list(source_dir.glob(output_pattern))
@@ -93,11 +104,15 @@ def run(ctx: Context) -> None:
       f"android_builder: No output file found matching pattern: {output_pattern}",
       level=logging.ERROR,
     )
-    raise FileNotFoundError(f"No build output found matching pattern: {output_pattern}")
+    raise FileNotFoundError(
+      f"No build output found matching pattern: {output_pattern}"
+    )
 
   # Use the most recently modified file as the output APK
-  output_apk_path = find_latest_apk(source_dir) or max(output_candidates, key=lambda p: p.stat().st_mtime)
-  
+  output_apk_path = find_latest_apk(source_dir) or max(
+    output_candidates, key=lambda p: p.stat().st_mtime
+  )
+
   # 5. Move to Output Directory and Update Context
   final_apk = ctx.output_dir / f"{source_dir.name}-{output_apk_path.name}"
   shutil.copy2(output_apk_path, final_apk)

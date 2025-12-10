@@ -20,336 +20,330 @@ from ..utils import TIMEOUT_PATCH, check_dependencies, run_command
 
 
 def _modify_icon(
-    ctx: Context, decompiled_dir: Path, icon_path: Path | None
+  ctx: Context, decompiled_dir: Path, icon_path: Path | None
 ) -> bool:
-    """
-    Modify APK icon using ImageMagick.
+  """
+  Modify APK icon using ImageMagick.
 
-    Args:
-        ctx: Pipeline context.
-        decompiled_dir: Path to decompiled APK directory.
-        icon_path: Path to new icon file.
+  Args:
+      ctx: Pipeline context.
+      decompiled_dir: Path to decompiled APK directory.
+      icon_path: Path to new icon file.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    if not icon_path or not icon_path.exists():
-        ctx.log("modify: No icon specified or icon file not found")
-        return False
+  Returns:
+      True if successful, False otherwise.
+  """
+  if not icon_path or not icon_path.exists():
+    ctx.log("modify: No icon specified or icon file not found")
+    return False
 
-    # Check for ImageMagick
-    if not shutil.which("magick") and not shutil.which("convert"):
-        ctx.log("modify: ImageMagick not found, skipping icon modification")
-        return False
+  # Check for ImageMagick
+  if not shutil.which("magick") and not shutil.which("convert"):
+    ctx.log("modify: ImageMagick not found, skipping icon modification")
+    return False
 
-    # Find icon directories in decompiled APK
-    res_dir = decompiled_dir / "res"
-    if not res_dir.exists():
-        ctx.log("modify: res directory not found in decompiled APK")
-        return False
+  # Find icon directories in decompiled APK
+  res_dir = decompiled_dir / "res"
+  if not res_dir.exists():
+    ctx.log("modify: res directory not found in decompiled APK")
+    return False
 
-    icon_dirs = [
-        d
-        for d in res_dir.iterdir()
-        if d.is_dir()
-        and (d.name.startswith("mipmap-") or d.name.startswith("drawable-"))
-    ]
+  icon_dirs = [
+    d
+    for d in res_dir.iterdir()
+    if d.is_dir()
+    and (d.name.startswith("mipmap-") or d.name.startswith("drawable-"))
+  ]
 
-    if not icon_dirs:
-        ctx.log("modify: No icon directories found")
-        return False
+  if not icon_dirs:
+    ctx.log("modify: No icon directories found")
+    return False
 
-    ctx.log(f"modify: Replacing icons in {len(icon_dirs)} directories")
+  ctx.log(f"modify: Replacing icons in {len(icon_dirs)} directories")
 
-    magick_cmd = "magick" if shutil.which("magick") else "convert"
+  magick_cmd = "magick" if shutil.which("magick") else "convert"
 
-    for icon_dir in icon_dirs:
-        for icon_file in icon_dir.glob("ic_launcher*"):
-            try:
-                # Resize icon to match original dimensions
-                result = subprocess.run(
-                    [
-                        magick_cmd,
-                        str(icon_path),
-                        "-resize",
-                        "512x512",
-                        str(icon_file),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if result.returncode == 0:
-                    ctx.log(
-                        f"  ✓ Updated {icon_file.relative_to(decompiled_dir)}"
-                    )
-                else:
-                    ctx.log(f"  ✗ Failed to update {icon_file.name}")
-            except Exception as e:
-                ctx.log(f"  ✗ Error updating {icon_file.name}: {e}")
+  for icon_dir in icon_dirs:
+    for icon_file in icon_dir.glob("ic_launcher*"):
+      try:
+        # Resize icon to match original dimensions
+        result = subprocess.run(
+          [
+            magick_cmd,
+            str(icon_path),
+            "-resize",
+            "512x512",
+            str(icon_file),
+          ],
+          capture_output=True,
+          text=True,
+          check=False,
+        )
+        if result.returncode == 0:
+          ctx.log(f"  ✓ Updated {icon_file.relative_to(decompiled_dir)}")
+        else:
+          ctx.log(f"  ✗ Failed to update {icon_file.name}")
+      except Exception as e:
+        ctx.log(f"  ✗ Error updating {icon_file.name}: {e}")
 
-    return True
+  return True
 
 
 def _replace_server_url(
-    ctx: Context, decompiled_dir: Path, old_url: str, new_url: str
+  ctx: Context, decompiled_dir: Path, old_url: str, new_url: str
 ) -> bool:
-    """
-    Replace server URLs in Smali code.
+  """
+  Replace server URLs in Smali code.
 
-    Args:
-        ctx: Pipeline context.
-        decompiled_dir: Path to decompiled APK directory.
-        old_url: URL to replace.
-        new_url: Replacement URL.
+  Args:
+      ctx: Pipeline context.
+      decompiled_dir: Path to decompiled APK directory.
+      old_url: URL to replace.
+      new_url: Replacement URL.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    smali_dir = decompiled_dir / "smali"
-    smali_classes_dir = decompiled_dir / "smali_classes2"
+  Returns:
+      True if successful, False otherwise.
+  """
+  smali_dir = decompiled_dir / "smali"
+  smali_classes_dir = decompiled_dir / "smali_classes2"
 
-    search_dirs = [d for d in [smali_dir, smali_classes_dir] if d.exists()]
+  search_dirs = [d for d in [smali_dir, smali_classes_dir] if d.exists()]
 
-    if not search_dirs:
-        ctx.log("modify: No smali directories found")
-        return False
+  if not search_dirs:
+    ctx.log("modify: No smali directories found")
+    return False
 
-    ctx.log(f"modify: Replacing '{old_url}' with '{new_url}' in Smali files")
+  ctx.log(f"modify: Replacing '{old_url}' with '{new_url}' in Smali files")
 
-    files_modified = 0
-    for search_dir in search_dirs:
-        for smali_file in search_dir.rglob("*.smali"):
-            try:
-                content = smali_file.read_text(
-                    encoding="utf-8", errors="ignore"
-                )
-                if old_url in content:
-                    new_content = content.replace(old_url, new_url)
-                    smali_file.write_text(new_content, encoding="utf-8")
-                    files_modified += 1
-                    ctx.log(
-                        f"  ✓ Modified {smali_file.relative_to(decompiled_dir)}"
-                    )
-            except Exception as e:
-                ctx.log(f"  ✗ Error processing {smali_file.name}: {e}")
+  files_modified = 0
+  for search_dir in search_dirs:
+    for smali_file in search_dir.rglob("*.smali"):
+      try:
+        content = smali_file.read_text(encoding="utf-8", errors="ignore")
+        if old_url in content:
+          new_content = content.replace(old_url, new_url)
+          smali_file.write_text(new_content, encoding="utf-8")
+          files_modified += 1
+          ctx.log(f"  ✓ Modified {smali_file.relative_to(decompiled_dir)}")
+      except Exception as e:
+        ctx.log(f"  ✗ Error processing {smali_file.name}: {e}")
 
-    ctx.log(f"modify: Modified {files_modified} Smali file(s)")
-    return files_modified > 0
+  ctx.log(f"modify: Modified {files_modified} Smali file(s)")
+  return files_modified > 0
 
 
 def _decompile_apk(ctx: Context, input_apk: Path, output_dir: Path) -> bool:
-    """
-    Decompile APK using apktool.
+  """
+  Decompile APK using apktool.
 
-    Args:
-        ctx: Pipeline context.
-        input_apk: Input APK path.
-        output_dir: Output directory for decompiled files.
+  Args:
+      ctx: Pipeline context.
+      input_apk: Input APK path.
+      output_dir: Output directory for decompiled files.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    ctx.log("modify: Decompiling APK with apktool")
+  Returns:
+      True if successful, False otherwise.
+  """
+  ctx.log("modify: Decompiling APK with apktool")
 
-    cmd = ["apktool", "d", "-f", "-o", str(output_dir), str(input_apk)]
+  cmd = ["apktool", "d", "-f", "-o", str(output_dir), str(input_apk)]
 
-    try:
-        run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
-        return output_dir.exists()
-    except Exception as e:
-        ctx.log(f"modify: Decompilation failed: {e}")
-        return False
+  try:
+    run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
+    return output_dir.exists()
+  except Exception as e:
+    ctx.log(f"modify: Decompilation failed: {e}")
+    return False
 
 
 def _recompile_apk(
-    ctx: Context, decompiled_dir: Path, output_apk: Path
+  ctx: Context, decompiled_dir: Path, output_apk: Path
 ) -> bool:
-    """
-    Recompile APK using apktool.
+  """
+  Recompile APK using apktool.
 
-    Args:
-        ctx: Pipeline context.
-        decompiled_dir: Decompiled APK directory.
-        output_apk: Output APK path.
+  Args:
+      ctx: Pipeline context.
+      decompiled_dir: Decompiled APK directory.
+      output_apk: Output APK path.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    ctx.log("modify: Recompiling APK with apktool")
+  Returns:
+      True if successful, False otherwise.
+  """
+  ctx.log("modify: Recompiling APK with apktool")
 
-    cmd = ["apktool", "b", "-f", "-o", str(output_apk), str(decompiled_dir)]
+  cmd = ["apktool", "b", "-f", "-o", str(output_apk), str(decompiled_dir)]
 
-    try:
-        run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
-        return output_apk.exists()
-    except Exception as e:
-        ctx.log(f"modify: Recompilation failed: {e}")
-        return False
+  try:
+    run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
+    return output_apk.exists()
+  except Exception as e:
+    ctx.log(f"modify: Recompilation failed: {e}")
+    return False
 
 
 def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
-    """
-    Sign APK with custom or default keystore.
+  """
+  Sign APK with custom or default keystore.
 
-    Args:
-        ctx: Pipeline context.
-        unsigned_apk: Unsigned APK path.
-        signed_apk: Signed APK output path.
+  Args:
+      ctx: Pipeline context.
+      unsigned_apk: Unsigned APK path.
+      signed_apk: Signed APK output path.
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    ctx.log("modify: Signing APK")
+  Returns:
+      True if successful, False otherwise.
+  """
+  ctx.log("modify: Signing APK")
 
-    # Get keystore options from context
-    keystore_opts = cast(dict[str, Any], ctx.options.get("modify_keystore", {}))
-    keystore_path = Path(
-        str(keystore_opts.get("path", ctx.work_dir / "keystore.jks"))
-    )
-    keystore_alias = str(keystore_opts.get("alias", "key0"))
-    keystore_pass = str(keystore_opts.get("password", "android"))
+  # Get keystore options from context
+  keystore_opts = cast(dict[str, Any], ctx.options.get("modify_keystore", {}))
+  keystore_path = Path(
+    str(keystore_opts.get("path", ctx.work_dir / "keystore.jks"))
+  )
+  keystore_alias = str(keystore_opts.get("alias", "key0"))
+  keystore_pass = str(keystore_opts.get("password", "android"))
 
-    # Create keystore if it doesn't exist
-    if not keystore_path.exists():
-        ctx.log(f"modify: Creating new keystore at {keystore_path}")
-        keytool_cmd = [
-            "keytool",
-            "-genkey",
-            "-v",
-            "-keystore",
-            str(keystore_path),
-            "-alias",
-            keystore_alias,
-            "-keyalg",
-            "RSA",
-            "-keysize",
-            "2048",
-            "-validity",
-            "10000",
-            "-storepass",
-            keystore_pass,
-            "-keypass",
-            keystore_pass,
-            "-dname",
-            "CN=APK Modifier, OU=Dev, O=APK, L=City, S=State, C=US",
-        ]
-
-        try:
-            run_command(keytool_cmd, ctx)
-        except Exception as e:
-            ctx.log(f"modify: Keystore creation failed: {e}")
-            return False
-
-    # Sign APK using apksigner
-    sign_cmd = [
-        "apksigner",
-        "sign",
-        "--ks",
-        str(keystore_path),
-        "--ks-key-alias",
-        keystore_alias,
-        "--ks-pass",
-        f"pass:{keystore_pass}",
-        "--out",
-        str(signed_apk),
-        str(unsigned_apk),
+  # Create keystore if it doesn't exist
+  if not keystore_path.exists():
+    ctx.log(f"modify: Creating new keystore at {keystore_path}")
+    keytool_cmd = [
+      "keytool",
+      "-genkey",
+      "-v",
+      "-keystore",
+      str(keystore_path),
+      "-alias",
+      keystore_alias,
+      "-keyalg",
+      "RSA",
+      "-keysize",
+      "2048",
+      "-validity",
+      "10000",
+      "-storepass",
+      keystore_pass,
+      "-keypass",
+      keystore_pass,
+      "-dname",
+      "CN=APK Modifier, OU=Dev, O=APK, L=City, S=State, C=US",
     ]
 
     try:
-        run_command(sign_cmd, ctx, timeout=TIMEOUT_PATCH)
-        return signed_apk.exists()
+      run_command(keytool_cmd, ctx)
     except Exception as e:
-        ctx.log(f"modify: Signing failed: {e}")
-        return False
+      ctx.log(f"modify: Keystore creation failed: {e}")
+      return False
+
+  # Sign APK using apksigner
+  sign_cmd = [
+    "apksigner",
+    "sign",
+    "--ks",
+    str(keystore_path),
+    "--ks-key-alias",
+    keystore_alias,
+    "--ks-pass",
+    f"pass:{keystore_pass}",
+    "--out",
+    str(signed_apk),
+    str(unsigned_apk),
+  ]
+
+  try:
+    run_command(sign_cmd, ctx, timeout=TIMEOUT_PATCH)
+    return signed_apk.exists()
+  except Exception as e:
+    ctx.log(f"modify: Signing failed: {e}")
+    return False
 
 
 def run(ctx: Context) -> None:
-    """
-    Execute APK Modifier engine.
+  """
+  Execute APK Modifier engine.
 
-    Workflow:
-    1. Decompile APK with apktool
-    2. Modify icon (if specified and ImageMagick available)
-    3. Replace server URLs (if specified)
-    4. Recompile modified APK
-    5. Sign with custom keystore
+  Workflow:
+  1. Decompile APK with apktool
+  2. Modify icon (if specified and ImageMagick available)
+  3. Replace server URLs (if specified)
+  4. Recompile modified APK
+  5. Sign with custom keystore
 
-    Args:
-        ctx: Pipeline context.
+  Args:
+      ctx: Pipeline context.
 
-    Options:
-        modify_icon: Path to new icon file (PNG/SVG)
-        modify_server_url_old: Old server URL to replace
-        modify_server_url_new: New server URL
-        modify_keystore: Dict with path, alias, password
-        modify_use_apkeditor: Use apkeditor instead of apktool (default: False)
+  Options:
+      modify_icon: Path to new icon file (PNG/SVG)
+      modify_server_url_old: Old server URL to replace
+      modify_server_url_new: New server URL
+      modify_keystore: Dict with path, alias, password
+      modify_use_apkeditor: Use apkeditor instead of apktool (default: False)
 
-    Raises:
-        ValueError: If no input APK is available.
-        RuntimeError: If dependencies are missing.
-    """
-    ctx.log("modify: starting APK modifier")
+  Raises:
+      ValueError: If no input APK is available.
+      RuntimeError: If dependencies are missing.
+  """
+  ctx.log("modify: starting APK modifier")
 
-    input_apk = ctx.current_apk or ctx.input_apk
-    if not input_apk:
-        raise ValueError("No input APK found in context")
+  input_apk = ctx.current_apk or ctx.input_apk
+  if not input_apk:
+    raise ValueError("No input APK found in context")
 
-    # Check dependencies
-    required_deps = ["apktool", "java", "keytool", "apksigner"]
-    deps_ok, missing_deps = check_dependencies(required_deps)
+  # Check dependencies
+  required_deps = ["apktool", "java", "keytool", "apksigner"]
+  deps_ok, missing_deps = check_dependencies(required_deps)
 
-    if not deps_ok:
-        raise RuntimeError(
-            f"modify: Missing dependencies: {', '.join(missing_deps)}\n"
-            f"Install with: apt-get install -y apktool default-jdk apksigner\n"
-            f"Or on Arch: pacman -S android-tools jdk-openjdk"
-        )
+  if not deps_ok:
+    raise RuntimeError(
+      f"modify: Missing dependencies: {', '.join(missing_deps)}\n"
+      f"Install with: apt-get install -y apktool default-jdk apksigner\n"
+      f"Or on Arch: pacman -S android-tools jdk-openjdk"
+    )
 
-    # Create work directory
-    modify_work = ctx.work_dir / "modify"
-    modify_work.mkdir(parents=True, exist_ok=True)
+  # Create work directory
+  modify_work = ctx.work_dir / "modify"
+  modify_work.mkdir(parents=True, exist_ok=True)
 
-    decompiled_dir = modify_work / "decompiled"
-    unsigned_apk = modify_work / f"{input_apk.stem}.unsigned.apk"
-    final_apk = ctx.output_dir / f"{input_apk.stem}.modified.apk"
+  decompiled_dir = modify_work / "decompiled"
+  unsigned_apk = modify_work / f"{input_apk.stem}.unsigned.apk"
+  final_apk = ctx.output_dir / f"{input_apk.stem}.modified.apk"
 
-    # Step 1: Decompile APK
-    if not _decompile_apk(ctx, input_apk, decompiled_dir):
-        raise RuntimeError("modify: Decompilation failed")
+  # Step 1: Decompile APK
+  if not _decompile_apk(ctx, input_apk, decompiled_dir):
+    raise RuntimeError("modify: Decompilation failed")
 
-    # Step 2: Modify icon (optional)
-    icon_path_obj = ctx.options.get("modify_icon")
-    if icon_path_obj:
-        icon_path = Path(str(icon_path_obj))
-        _modify_icon(ctx, decompiled_dir, icon_path)
+  # Step 2: Modify icon (optional)
+  icon_path_obj = ctx.options.get("modify_icon")
+  if icon_path_obj:
+    icon_path = Path(str(icon_path_obj))
+    _modify_icon(ctx, decompiled_dir, icon_path)
 
-    # Step 3: Replace server URLs (optional)
-    old_url = ctx.options.get("modify_server_url_old")
-    new_url = ctx.options.get("modify_server_url_new")
-    if old_url and new_url:
-        _replace_server_url(ctx, decompiled_dir, str(old_url), str(new_url))
+  # Step 3: Replace server URLs (optional)
+  old_url = ctx.options.get("modify_server_url_old")
+  new_url = ctx.options.get("modify_server_url_new")
+  if old_url and new_url:
+    _replace_server_url(ctx, decompiled_dir, str(old_url), str(new_url))
 
-    # Step 4: Recompile APK
-    if not _recompile_apk(ctx, decompiled_dir, unsigned_apk):
-        raise RuntimeError("modify: Recompilation failed")
+  # Step 4: Recompile APK
+  if not _recompile_apk(ctx, decompiled_dir, unsigned_apk):
+    raise RuntimeError("modify: Recompilation failed")
 
-    # Step 5: Sign APK
-    if not _sign_apk(ctx, unsigned_apk, final_apk):
-        raise RuntimeError("modify: Signing failed")
+  # Step 5: Sign APK
+  if not _sign_apk(ctx, unsigned_apk, final_apk):
+    raise RuntimeError("modify: Signing failed")
 
-    # Update context
-    ctx.set_current_apk(final_apk)
+  # Update context
+  ctx.set_current_apk(final_apk)
 
-    # Get keystore path for metadata
-    keystore_meta = cast(dict[str, Any], ctx.options.get("modify_keystore", {}))
-    keystore_path_str = str(keystore_meta.get("path", "auto-generated"))
+  # Get keystore path for metadata
+  keystore_meta = cast(dict[str, Any], ctx.options.get("modify_keystore", {}))
+  keystore_path_str = str(keystore_meta.get("path", "auto-generated"))
 
-    ctx.metadata["modify"] = {
-        "icon_modified": bool(icon_path_obj),
-        "url_replaced": bool(old_url and new_url),
-        "signed_apk": str(final_apk),
-        "keystore": keystore_path_str,
-    }
+  ctx.metadata["modify"] = {
+    "icon_modified": bool(icon_path_obj),
+    "url_replaced": bool(old_url and new_url),
+    "signed_apk": str(final_apk),
+    "keystore": keystore_path_str,
+  }
 
-    ctx.log(f"modify: APK modification complete → {final_apk}")
+  ctx.log(f"modify: APK modification complete → {final_apk}")
