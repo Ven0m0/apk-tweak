@@ -1,0 +1,14 @@
+{
+    "description": "APK modification pipeline with icon replacement and URL patching",
+    "engines": ["modify"],
+    "options": {
+        "modify_icon": "path/to/custom_icon.png",
+        "modify_server_url_old": "https://api.example.com",
+        "modify_server_url_new": "https://api.modified.com",
+        "modify_keystore": {
+            "path": "signing/keystore.jks",
+            "alias": "mykey",
+            "password": "changeme123",
+        },
+    },
+}
