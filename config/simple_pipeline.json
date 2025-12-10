@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "description": "Simple single-engine pipeline for basic ReVanced patching",
+  "input": null,
+  "output_dir": "output",
+  "engines": [
+    {
+      "name": "revanced",
+      "enabled": true,
+      "options": {
+        "patches": ["all"],
+        "integrations": true,
+        "merge": true,
+        "experimental": false
+      }
+    }
+  ],
+  "plugins": [],
+  "global_options": {
+    "verbose": false,
+    "cleanup": true,
+    "temp_dir": "/tmp/rvp_work"
+  }
+}

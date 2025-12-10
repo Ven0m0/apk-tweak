@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "description": "Full production pipeline with multiple engines and plugins",
+  "input": null,
+  "output_dir": "output",
+  "engines": [
+    {
+      "name": "dtlx",
+      "enabled": true,
+      "options": {
+        "analyze": true,
+        "optimize": false,
+        "deobfuscate": false,
+        "output_report": true
+      }
+    },
+    {
+      "name": "media_optimizer",
+      "enabled": true,
+      "options": {
+        "optimize_images": true,
+        "optimize_audio": true,
+        "target_dpi": "xxhdpi",
+        "image_quality": 85,
+        "strip_metadata": true
+      }
+    },
+    {
+      "name": "revanced",
+      "enabled": true,
+      "options": {
+        "cli_path": "/opt/revanced/revanced-cli.jar",
+        "patches_path": "/opt/revanced/patches.jar",
+        "integrations_path": "/opt/revanced/integrations.apk",
+        "patches": [
+          "video-ads",
+          "general-ads",
+          "hide-shorts",
+          "swipe-controls",
+          "sponsorblock",
+          "return-youtube-dislike"
+        ],
+        "exclude_patches": [],
+        "integrations": true,
+        "merge": true,
+        "experimental": false,
+        "keystore": "~/.android/debug.keystore",
+        "purge": true
+      }
+    },
+    {
+      "name": "lspatch",
+      "enabled": false,
+      "options": {
+        "module_path": null,
+        "debuggable": false,
+        "sigbypasslv": 2
+      }
+    },
+    {
+      "name": "magisk",
+      "enabled": false,
+      "options": {
+        "module_id": "revanced_youtube",
+        "module_name": "ReVanced YouTube",
+        "version": "1.0.0",
+        "author": "APK Tweak Pipeline",
+        "description": "YouTube ReVanced with custom patches",
+        "system_app": true,
+        "package_name": "com.google.android.youtube"
+      }
+    }
+  ],
+  "plugins": [
+    "logging",
+    "metrics",
+    "validation"
+  ],
+  "global_options": {
+    "verbose": true,
+    "debug": false,
+    "cleanup": true,
+    "cleanup_on_error": false,
+    "temp_dir": "/tmp/rvp_work",
+    "parallel_processing": false,
+    "max_workers": 4,
+    "timeout": 3600,
+    "retry_on_failure": true,
+    "max_retries": 3
+  },
+  "hooks": {
+    "pre_pipeline": [],
+    "post_pipeline": [],
+    "on_error": []
+  },
+  "notifications": {
+    "enabled": false,
+    "telegram": {
+      "bot_token": null,
+      "chat_id": null
+    },
+    "webhook": {
+      "url": null,
+      "method": "POST"
+    }
+  }
+}
