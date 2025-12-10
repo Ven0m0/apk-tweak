@@ -15,6 +15,15 @@ try:
     """Load JSON using orjson for performance."""
     return orjson.loads(file_handle.read())
 
+  def _dump_json(data: Any, file_handle: TextIO) -> None:
+    """Write JSON using orjson for performance (~6x faster)."""
+    # orjson.dumps returns bytes, need to decode for text mode
+    json_bytes = orjson.dumps(
+      data,
+      option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
+    )
+    file_handle.write(json_bytes.decode("utf-8"))
+
 except ImportError:
   import json
   from typing import Any, TextIO
@@ -22,6 +31,10 @@ except ImportError:
   def _load_json(file_handle: TextIO) -> Any:
     """Load JSON using stdlib json (fallback)."""
     return json.load(file_handle)
+
+  def _dump_json(data: Any, file_handle: TextIO) -> None:
+    """Write JSON using stdlib json (fallback)."""
+    json.dump(data, file_handle, indent=2, sort_keys=True)
 
 
 @dataclass
@@ -209,3 +222,24 @@ class Config:
     with open(path, encoding="utf-8") as f:
       data = _load_json(f)
       return cls(**data)
+
+  def save_to_file(self, path: Path) -> None:
+    """
+    Save configuration to a JSON file.
+
+    Uses orjson for ~6x faster serialization when available.
+
+    Args:
+        path: Path to save the JSON config file.
+
+    Raises:
+        OSError: If file cannot be written.
+    """
+    from dataclasses import asdict
+
+    # Ensure parent directory exists
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as f:
+      data = asdict(self)
+      _dump_json(data, f)

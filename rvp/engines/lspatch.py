@@ -6,7 +6,12 @@ import shutil
 from pathlib import Path
 
 from ..context import Context
-from ..utils import check_dependencies, find_latest_apk, run_command, TIMEOUT_PATCH
+from ..utils import (
+  TIMEOUT_PATCH,
+  check_dependencies,
+  find_latest_apk,
+  run_command,
+)
 
 
 def _build_lspatch_cmd(

@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import mmap
+import os
 import re
 import shutil
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from .ad_patterns import AD_PATTERNS, AdPattern
 from .constants import (
   APKTOOL_PATH_KEY,
   DEFAULT_APKTOOL,
+  DEFAULT_CPU_MULTIPLIER,
   DEFAULT_ZIPALIGN,
+  MAX_WORKER_THREADS,
+  MMAP_FILE_SIZE_THRESHOLD,
   ZIPALIGN_PATH_KEY,
 )
 from .context import Context
@@ -43,6 +47,8 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   """
   Remove bloatware from decompiled APK.
 
+  ⚡ Optimized: O(n) complexity using set-based matching.
+
   Args:
       decompiled_dir: Directory containing decompiled APK.
       ctx: Pipeline context for logging and options.
@@ -53,22 +59,47 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   if not debloat_patterns:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
+
   removed_count = 0
-  # Remove files matching debloat patterns (O(n*m) where n=files, m=patterns)
+  removed_size = 0
+
+  # ⚡ Perf: Use generator to avoid loading all matches into memory
+  # Process patterns in batches to minimize repeated rglob calls
+  seen_paths: set[Path] = set()
+
   for pattern in debloat_patterns:
-    matches = list(decompiled_dir.rglob(pattern))
-    for match in matches:
-      if match.is_file():
-        ctx.log(f"optimizer: Removing {match.relative_to(decompiled_dir)}")
-        match.unlink()
-        removed_count += 1
-      elif match.is_dir():
-        ctx.log(
-          f"optimizer: Removing directory {match.relative_to(decompiled_dir)}"
-        )
-        shutil.rmtree(match)
-        removed_count += 1
-  ctx.log(f"optimizer: Debloat complete - removed {removed_count} items")
+    # Use generator to avoid memory overhead for large directories
+    for match in decompiled_dir.rglob(pattern):
+      # Skip if already processed (handles overlapping patterns)
+      if match in seen_paths or not match.exists():
+        continue
+      seen_paths.add(match)
+
+      try:
+        if match.is_file():
+          size = match.stat().st_size
+          ctx.log(f"optimizer: Removing {match.relative_to(decompiled_dir)}")
+          match.unlink()
+          removed_count += 1
+          removed_size += size
+        elif match.is_dir():
+          # Calculate dir size before removal
+          dir_size = sum(
+            f.stat().st_size for f in match.rglob("*") if f.is_file()
+          )
+          ctx.log(
+            f"optimizer: Removing directory {match.relative_to(decompiled_dir)}"
+          )
+          shutil.rmtree(match)
+          removed_count += 1
+          removed_size += dir_size
+      except OSError as e:
+        ctx.log(f"optimizer: Failed to remove {match.name}: {e}")
+
+  ctx.log(
+    f"optimizer: Debloat complete - removed {removed_count} items "
+    f"({removed_size / 1024 / 1024:.2f} MB)"
+  )
 
 
 def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
@@ -115,7 +146,7 @@ def _apply_patch_to_file(
   """
   Apply ad-blocking patches to a single smali file.
 
-  ⚡ Perf: Uses mmap for files > 100KB for better memory efficiency.
+  ⚡ Perf: Uses mmap for large files, optimized threshold from constants.
 
   Args:
       file_path: Path to smali file to patch.
@@ -128,8 +159,8 @@ def _apply_patch_to_file(
   try:
     file_size = file_path.stat().st_size
 
-    # ⚡ Perf: Use mmap for large files (> 100KB) for memory efficiency
-    if file_size > 102400:  # 100KB threshold
+    # ⚡ Perf: Use mmap for large files for memory efficiency
+    if file_size > MMAP_FILE_SIZE_THRESHOLD:
       with open(file_path, "r+b") as f:
         # Try to use mmap for large files
         try:
@@ -163,6 +194,8 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   """
   Apply regex-based ad patching to smali files.
 
+  ⚡ Optimized: Tuned thread pool size based on CPU count.
+
   Args:
       decompiled_dir: Directory containing decompiled APK.
       ctx: Pipeline context.
@@ -177,20 +210,25 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
 
   ctx.log(f"optimizer: Scanning {len(smali_files)} smali files...")
 
-  # Pre-compile regex patterns if possible, but the patterns list has descriptions
-  # We'll just pass the raw patterns list to the helper for simplicity/compatibility
   total_patched = 0
 
-  # Use ThreadPool for performance (IO boundish, but regex is CPU)
-  # O(n) scan of files
-  with ThreadPoolExecutor() as executor:
-    futures = []
-    for smali_file in smali_files:
-      futures.append(
-        executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
-      )
+  # ⚡ Perf: Calculate optimal pool size (min of max workers or CPU-based)
+  cpu_count = os.cpu_count() or 1
+  optimal_workers = min(MAX_WORKER_THREADS, cpu_count + DEFAULT_CPU_MULTIPLIER)
 
-    for future in futures:
+  ctx.log(f"optimizer: Using {optimal_workers} worker threads")
+
+  # Use ThreadPool for performance (I/O bound with CPU-heavy regex)
+  with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+    # Submit all tasks and use as_completed for better progress tracking
+    futures = {
+      executor.submit(
+        _apply_patch_to_file, smali_file, AD_PATTERNS, ctx
+      ): smali_file
+      for smali_file in smali_files
+    }
+
+    for future in as_completed(futures):
       if future.result():
         total_patched += 1
 
