@@ -1,5 +1,0 @@
-# https://github.com/koalaman/shellcheck/wiki
-shell=bash
-source-path=SCRIPTDIR
-enable=all
-disable=SC1090,SC1091,SC2086
