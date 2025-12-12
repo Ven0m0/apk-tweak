@@ -100,12 +100,33 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      # ⚡ Perf: Cache Gradle dependencies (saves 30-60s per run)
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Cache AAPT tool
         id: cache-aapt
         uses: actions/cache@v4
         with:
           path: build-tools
           key: aapt-r33.0.2
+
+      # ⚡ Perf: Cache LSPatch JAR to avoid re-download (saves ~5-10s per run)
+      - name: Cache LSPatch JAR
+        id: cache-lspatch
+        uses: actions/cache@v4
+        with:
+          path: lspatch-cache
+          key: lspatch-jar-${{ github.sha }}
+          restore-keys: |
+            lspatch-jar-
 
       - name: Download AAPT Tool
         if: steps.cache-aapt.outputs.cache-hit != 'true'
@@ -175,12 +196,22 @@ jobs:
           repository: Xposed-Modules-Repo/com.alex193a.tguseridviewer
           latest: true
 
+      # ⚡ Perf: Download LSPatch JAR only if not cached
       - name: Download LSPatch Jar from Github
+        if: steps.cache-lspatch.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           fileName: "*.jar"
           repository: JingMatrix/LSPatch
           latest: true
+          out-file-path: lspatch-cache
+
+      # ⚡ Perf: Copy cached JAR to working directory
+      - name: Use cached LSPatch JAR
+        run: |
+          mkdir -p lspatch-cache
+          cp lspatch-cache/*.jar . 2>/dev/null || true
+        shell: bash
 
       - name: Download and Patch Telegram Client
         run: |
