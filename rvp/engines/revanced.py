@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, cast
 
@@ -105,7 +106,7 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
     ctx.log(f"revanced: CLI failed (exit code: {result.returncode})")
     return False
 
-  except Exception as e:
+  except (OSError, subprocess.SubprocessError) as e:
     ctx.log(f"revanced: CLI error: {e}")
     return False
 
@@ -210,9 +211,9 @@ def run(ctx: Context) -> None:
   # Get configuration
   tools = ctx.options.get("tools", {})
   tools_dict = cast(dict[str, Any], tools)
-  cli_jar = Path(str(tools_dict.get("revanced_cli", "revanced-cli.jar")))
+  cli_jar = Path(tools_dict.get("revanced_cli", "revanced-cli.jar"))
   integrations_apk = Path(
-    str(tools_dict.get("revanced_integrations", "integrations.apk"))
+    tools_dict.get("revanced_integrations", "integrations.apk")
   )
   # Support multiple patch bundles
   patch_bundles_obj = ctx.options.get("revanced_patch_bundles", [])

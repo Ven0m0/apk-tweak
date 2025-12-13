@@ -86,7 +86,9 @@ def _optimize_png(ctx: Context, png_path: Path, quality: str = "65-80") -> bool:
     return False
 
 
-def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, bool]:
+def _optimize_png_worker(
+  png_path: Path, quality: str = "65-80"
+) -> tuple[Path, bool]:
   """
   Worker function for parallel PNG optimization.
 
@@ -147,7 +149,9 @@ def _optimize_jpg(ctx: Context, jpg_path: Path, quality: int = 85) -> bool:
     return False
 
 
-def _optimize_jpg_worker(jpg_path: Path, quality: int = 85) -> tuple[Path, bool]:
+def _optimize_jpg_worker(
+  jpg_path: Path, quality: int = 85
+) -> tuple[Path, bool]:
   """
   Worker function for parallel JPEG optimization.
 
@@ -295,7 +299,7 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
       zf.extractall(extract_dir)
     ctx.log(f"media_optimizer: extracted {apk.name} to {extract_dir}")
     return True
-  except Exception as e:
+  except (OSError, zipfile.BadZipFile) as e:
     ctx.log(f"media_optimizer: extraction failed: {e}")
     return False
 
@@ -316,7 +320,7 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
   """
   try:
     # ⚡ Perf: Extensions that are already compressed
-    NO_COMPRESS_EXTS = {
+    no_compress_exts = {
       ".png",
       ".jpg",
       ".jpeg",
@@ -338,16 +342,19 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
 
           # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
           # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
-          if file_path.suffix.lower() in NO_COMPRESS_EXTS:
+          if file_path.suffix.lower() in no_compress_exts:
             zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
           else:
             zf.write(
-              file_path, arcname, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6
+              file_path,
+              arcname,
+              compress_type=zipfile.ZIP_DEFLATED,
+              compresslevel=6,
             )
 
     ctx.log(f"media_optimizer: repackaged to {output_apk.name}")
     return True
-  except Exception as e:
+  except (OSError, zipfile.BadZipFile) as e:
     ctx.log(f"media_optimizer: repackaging failed: {e}")
     return False
 

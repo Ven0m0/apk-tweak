@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 from ..context import Context
 from ..utils import check_dependencies, clone_repository
@@ -62,7 +63,7 @@ def run(ctx: Context) -> None:
   # Locate or clone patcher
   patcher_path = ctx.options.get("whatsapp_patcher_path")
   if patcher_path:
-    patcher_dir = Path(str(patcher_path))
+    patcher_dir = Path(cast(str, patcher_path))
   else:
     patcher_dir = ctx.work_dir / "whatsapp-patcher"
     if not clone_repository(WHATSAPP_PATCHER_REPO, patcher_dir, ctx):
@@ -145,7 +146,7 @@ def run(ctx: Context) -> None:
 
   except subprocess.TimeoutExpired:
     ctx.log(f"whatsapp: patching timed out after {timeout} seconds")
-  except Exception as e:
+  except (OSError, subprocess.CalledProcessError) as e:
     ctx.log(f"whatsapp: patching error: {e}")
   finally:
     # Cleanup temp directory if using default

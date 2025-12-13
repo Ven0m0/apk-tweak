@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import cast
 
 from ..context import Context
 from ..utils import check_dependencies, clone_repository
@@ -110,7 +111,7 @@ def run(ctx: Context) -> None:
   # Locate or clone patcher
   patcher_path = ctx.options.get("discord_patcher_path")
   if patcher_path:
-    patcher_dir = Path(str(patcher_path))
+    patcher_dir = Path(cast(str, patcher_path))
   else:
     patcher_dir = ctx.work_dir / "discord-apk-patcher"
     if not clone_repository(DISCORD_PATCHER_REPO, patcher_dir, ctx):
@@ -171,5 +172,5 @@ def run(ctx: Context) -> None:
 
   except subprocess.TimeoutExpired:
     ctx.log("discord: build timed out after 15 minutes")
-  except Exception as e:
+  except (OSError, subprocess.CalledProcessError) as e:
     ctx.log(f"discord: build error: {e}")

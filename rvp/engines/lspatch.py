@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 from ..context import Context
 from ..utils import (
@@ -35,7 +37,8 @@ def _build_lspatch_cmd(
     cmd = ["lspatch", "-v", "-l", "2", "-f", "-o", str(output_dir)]
   else:
     tools = ctx.options.get("tools", {})
-    lspatch_jar = Path(str(tools.get("lspatch_jar", "lspatch.jar")))
+    tools_dict = cast(dict[str, Any], tools)
+    lspatch_jar = Path(tools_dict.get("lspatch_jar", "lspatch.jar"))
     cmd = ["java", "-jar", str(lspatch_jar), "-l", "2", "-o", str(output_dir)]
 
   # Modules
@@ -90,7 +93,7 @@ def _run_lspatch_cli(
     ctx.log(f"lspatch: CLI failed (exit code: {result.returncode})")
     return None
 
-  except Exception as e:
+  except (OSError, subprocess.SubprocessError) as e:
     ctx.log(f"lspatch: CLI error: {e}")
     return None
 
@@ -154,7 +157,8 @@ def run(ctx: Context) -> None:
 
   # Config Resolution
   tools = ctx.options.get("tools", {})
-  lspatch_jar = Path(str(tools.get("lspatch_jar", "lspatch.jar")))
+  tools_dict = cast(dict[str, Any], tools)
+  lspatch_jar = Path(tools_dict.get("lspatch_jar", "lspatch.jar"))
 
   if not lspatch_jar.exists():
     ctx.log(f"LSPatch jar not found at {lspatch_jar}", level=40)  # ERROR

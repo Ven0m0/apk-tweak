@@ -8,7 +8,7 @@ licensing checks in smali files.
 from __future__ import annotations
 
 import re
-from typing import Pattern
+from re import Pattern
 
 # Type alias for pattern tuples: (compiled_pattern, replacement, description)
 AdPattern = tuple[Pattern[str], str, str]

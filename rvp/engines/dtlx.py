@@ -126,7 +126,7 @@ def _run_dtlx_analyze(ctx: Context, apk: Path, report_file: Path) -> bool:
       "Reason: Analysis exceeded 5 minute timeout\n",
     )
     return False
-  except Exception as e:
+  except (OSError, subprocess.CalledProcessError) as e:
     ctx.log(f"dtlx: analysis failed: {e}")
     _write_report(report_file, apk.name, "ERROR", f"Error: {e}\n")
     return False
@@ -200,7 +200,7 @@ def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
   except subprocess.TimeoutExpired:
     ctx.log("dtlx: optimization timed out after 10 minutes")
     return False
-  except Exception as e:
+  except (OSError, subprocess.CalledProcessError) as e:
     ctx.log(f"dtlx: optimization failed: {e}")
     return False
 
