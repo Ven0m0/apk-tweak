@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import mmap
 import os
-import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -79,7 +78,9 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
     rel_path = str(item_path.relative_to(decompiled_dir))
 
     # Check if path matches any pattern
-    matches_pattern = any(fnmatch(rel_path, pattern) for pattern in debloat_patterns)
+    matches_pattern = any(
+      fnmatch(rel_path, pattern) for pattern in debloat_patterns
+    )
 
     if matches_pattern:
       seen_paths.add(item_path)
@@ -192,7 +193,7 @@ def _apply_patch_to_file(
       return True
 
     return False
-  except Exception as e:
+  except (OSError, UnicodeError) as e:
     ctx.log(f"optimizer: Error patching {file_path.name}: {e}")
     return False
 

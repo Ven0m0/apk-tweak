@@ -52,7 +52,7 @@ def run(ctx: Context) -> None:
     )
     raise ValueError("Android source project directory not specified")
 
-  source_dir = Path(str(source_dir_str))
+  source_dir = Path(source_dir_str)
   if not source_dir.is_dir():
     ctx.log(
       f"android_builder: ERROR - Source directory not found: {source_dir}",

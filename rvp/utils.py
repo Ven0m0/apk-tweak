@@ -92,7 +92,7 @@ def run_command(
   except subprocess.TimeoutExpired:
     # Re-raise timeout exceptions
     raise
-  except Exception as e:
+  except (OSError, ValueError) as e:
     ctx.log(f"ERR: Command failed: {e}")
     if check:
       raise
@@ -152,7 +152,7 @@ def clone_repository(
   except subprocess.CalledProcessError as e:
     ctx.log(f"ERR: Clone failed: {e.stderr or e.stdout}")
     return False
-  except Exception as e:
+  except OSError as e:
     ctx.log(f"ERR: Clone error: {e}")
     return False
 

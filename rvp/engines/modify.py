@@ -83,7 +83,7 @@ def _modify_icon(
           ctx.log(f"  ✓ Updated {icon_file.relative_to(decompiled_dir)}")
         else:
           ctx.log(f"  ✗ Failed to update {icon_file.name}")
-      except Exception as e:
+      except OSError as e:
         ctx.log(f"  ✗ Error updating {icon_file.name}: {e}")
 
   return True
@@ -125,7 +125,7 @@ def _replace_server_url(
           smali_file.write_text(new_content, encoding="utf-8")
           files_modified += 1
           ctx.log(f"  ✓ Modified {smali_file.relative_to(decompiled_dir)}")
-      except Exception as e:
+      except (OSError, UnicodeError) as e:
         ctx.log(f"  ✗ Error processing {smali_file.name}: {e}")
 
   ctx.log(f"modify: Modified {files_modified} Smali file(s)")
@@ -151,7 +151,7 @@ def _decompile_apk(ctx: Context, input_apk: Path, output_dir: Path) -> bool:
   try:
     run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
     return output_dir.exists()
-  except Exception as e:
+  except (subprocess.SubprocessError, OSError) as e:
     ctx.log(f"modify: Decompilation failed: {e}")
     return False
 
@@ -177,7 +177,7 @@ def _recompile_apk(
   try:
     run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
     return output_apk.exists()
-  except Exception as e:
+  except (subprocess.SubprocessError, OSError) as e:
     ctx.log(f"modify: Recompilation failed: {e}")
     return False
 
@@ -231,7 +231,7 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
 
     try:
       run_command(keytool_cmd, ctx)
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
       ctx.log(f"modify: Keystore creation failed: {e}")
       return False
 
@@ -253,7 +253,7 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
   try:
     run_command(sign_cmd, ctx, timeout=TIMEOUT_PATCH)
     return signed_apk.exists()
-  except Exception as e:
+  except (subprocess.SubprocessError, OSError) as e:
     ctx.log(f"modify: Signing failed: {e}")
     return False
 
@@ -315,7 +315,7 @@ def run(ctx: Context) -> None:
   # Step 2: Modify icon (optional)
   icon_path_obj = ctx.options.get("modify_icon")
   if icon_path_obj:
-    icon_path = Path(str(icon_path_obj))
+    icon_path = Path(cast(str, icon_path_obj))
     _modify_icon(ctx, decompiled_dir, icon_path)
 
   # Step 3: Replace server URLs (optional)
