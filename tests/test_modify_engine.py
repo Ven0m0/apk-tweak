@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -201,7 +202,9 @@ class TestDecompileApk:
         tmp_path: Path,
     ) -> None:
         """Test APK decompilation failure."""
-        mock_run.side_effect = RuntimeError("apktool failed")
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, "apktool", stderr="apktool failed"
+        )
         output_dir = tmp_path / "decompiled"
 
         result = _decompile_apk(
@@ -243,7 +246,9 @@ class TestRecompileApk:
         tmp_path: Path,
     ) -> None:
         """Test APK recompilation failure."""
-        mock_run.side_effect = RuntimeError("apktool build failed")
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, "apktool", stderr="apktool build failed"
+        )
         decompiled_dir = tmp_path / "decompiled"
         decompiled_dir.mkdir()
         output_apk = tmp_path / "output.apk"
