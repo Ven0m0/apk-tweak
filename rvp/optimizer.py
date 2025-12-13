@@ -6,6 +6,7 @@ import mmap
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from fnmatch import fnmatch
 from pathlib import Path
 
 from .ad_patterns import AD_PATTERNS, AdPattern
@@ -131,19 +132,28 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   )
   removed_count = 0
   removed_size = 0
-  for pattern in minify_patterns:
-    matches = list(decompiled_dir.rglob(pattern))
-    for match in matches:
-      if match.is_file():
-        size = match.stat().st_size
-        ctx.log(
-          f"optimizer: Removing {match.relative_to(decompiled_dir)} ({size} bytes)"
-        )
-        match.unlink()
-        removed_count += 1
-        removed_size += size
+  matches = [
+    path
+    for path in decompiled_dir.rglob("*")
+    if path.is_file()
+    and any(
+      fnmatch(path.relative_to(decompiled_dir).as_posix(), pattern)
+      for pattern in minify_patterns
+    )
+  ]
+  for match in matches:
+    try:
+      size = match.stat().st_size
+      rel_path = match.relative_to(decompiled_dir)
+      ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
+      match.unlink()
+      removed_count += 1
+      removed_size += size
+    except OSError as e:
+      ctx.log(f"optimizer: Failed to remove {match.name}: {e}")
   ctx.log(
-    f"optimizer: Minification complete - removed {removed_count} files ({removed_size} bytes)"
+    "optimizer: Minification complete - removed "
+    f"{removed_count} files ({removed_size} bytes)"
   )
 
 

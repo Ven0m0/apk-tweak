@@ -19,6 +19,33 @@ from ..context import Context
 from ..utils import TIMEOUT_PATCH, check_dependencies, run_command
 
 
+def _run_apktool(
+  ctx: Context, args: list[str], success_path: Path, action: str
+) -> bool:
+  """
+  Run apktool with shared error handling and logging.
+
+  Args:
+      ctx: Pipeline context.
+      args: Apktool arguments.
+      success_path: Path that should exist on success.
+      action: Description for logging.
+
+  Returns:
+      True if the command succeeds, False otherwise.
+  """
+  ctx.log(f"modify: {action} with apktool")
+
+  cmd = ["apktool", *args]
+
+  try:
+    run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
+    return success_path.exists()
+  except (subprocess.SubprocessError, OSError) as e:
+    ctx.log(f"modify: {action} failed: {e}")
+    return False
+
+
 def _modify_icon(
   ctx: Context, decompiled_dir: Path, icon_path: Path | None
 ) -> bool:
@@ -144,16 +171,12 @@ def _decompile_apk(ctx: Context, input_apk: Path, output_dir: Path) -> bool:
   Returns:
       True if successful, False otherwise.
   """
-  ctx.log("modify: Decompiling APK with apktool")
-
-  cmd = ["apktool", "d", "-f", "-o", str(output_dir), str(input_apk)]
-
-  try:
-    run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
-    return output_dir.exists()
-  except (subprocess.SubprocessError, OSError) as e:
-    ctx.log(f"modify: Decompilation failed: {e}")
-    return False
+  return _run_apktool(
+    ctx,
+    ["d", "-f", "-o", str(output_dir), str(input_apk)],
+    output_dir,
+    "Decompiling APK",
+  )
 
 
 def _recompile_apk(
@@ -170,16 +193,12 @@ def _recompile_apk(
   Returns:
       True if successful, False otherwise.
   """
-  ctx.log("modify: Recompiling APK with apktool")
-
-  cmd = ["apktool", "b", "-f", "-o", str(output_apk), str(decompiled_dir)]
-
-  try:
-    run_command(cmd, ctx, timeout=TIMEOUT_PATCH)
-    return output_apk.exists()
-  except (subprocess.SubprocessError, OSError) as e:
-    ctx.log(f"modify: Recompilation failed: {e}")
-    return False
+  return _run_apktool(
+    ctx,
+    ["b", "-f", "-o", str(output_apk), str(decompiled_dir)],
+    output_apk,
+    "Recompiling APK",
+  )
 
 
 def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
