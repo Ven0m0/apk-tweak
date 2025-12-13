@@ -1,59 +1,326 @@
 ---
 applyTo: ".github/workflows/*.yml"
+description: "GitHub Actions CI/CD best practices: secure, efficient workflows"
 ---
 
-# GitHub Actions CI/CD Best Practices
+# GitHub Actions Best Practices
 
-## Core Concepts
+## Workflow Structure
 
-- **Structure**: Clear, modular, reusable.
-  - **Triggers**: Specific `on` events (`push: branches: [main]`); use `workflow_dispatch` for manual.
-  - **Concurrency**: Set to prevent race conditions/waste.
-  - **Permissions**: Global `contents: read` (least privilege) » override per job.
-- **Jobs**: Independent phases (build, test, deploy).
-  - **Deps**: Use `needs` for order; `outputs` for data passing.
-  - **Cond**: `if` for branch/event specific exec.
-  - **Runners**: `ubuntu-latest` default; self-hosted for specific hw/net.
-- **Steps**: Atomic, versioned actions.
-  - **Actions**: Pin SHA/Tag (`uses: actions/checkout@v4`); audit marketplace.
-  - **Cmds**: `run` w/ `|` for multi-line; combine `&&` for docker layers.
+```yaml
+name: CI/CD Pipeline
+on:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main] }
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
 
-## 🛡️ Security
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-- **Secrets**: Use `secrets.VAR`; never log; minimize scope.
-- **OIDC**: Auth w/ cloud (AWS/Azure) via OIDC ❌ static creds.
-- **Token**: `permissions: contents: read` default; restrict `write`.
-- **SCA/SAST**: Scan deps (`dependency-review`) & code (CodeQL); block on crit.
-- **Img Sign**: Sign/verify container images (Cosign).
+permissions:
+  contents: read
+  packages: write
+```
 
-## ⚡ Performance
+**Triggers:** `push`, `pull_request`, `workflow_dispatch` (manual), `schedule` (cron), `repository_dispatch`, `workflow_call` (reusable)
 
-- **Caching**: `actions/cache` w/ hash keys (`hashFiles('**/lock')`); use `restore-keys`.
-- **Matrix**: Parallelize tests (`strategy.matrix`: os/node/ver); `fail-fast: true`.
-- **Checkout**: `fetch-depth: 1`; `submodules: false` unless req.
-- **Artifacts**: Upload/download for inter-job data; set `retention-days`.
+**Concurrency:** Prevent simultaneous runs, avoid race conditions
 
-## 🧪 Testing Strategy
+**Permissions:** Least privilege for `GITHUB_TOKEN`
 
-1. **Unit**: Fast, isolated, high cov; run on push.
-2. **Integ**: Real deps (`services`: db/redis); run after unit.
-3. **E2E**: Cypress/Playwright vs staging; mitigate flake (retries/waits).
-4. **Perf**: Load test (k6/JMeter) crit paths; check baselines.
-5. **Reports**: Upload JUnit/HTML as artifacts; use PR annotations.
+## Jobs
 
-## 📦 Deployment
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_path: ${{ steps.package.outputs.path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci && npm run build
+      - id: package
+        run: |
+          zip -r dist.zip dist
+          echo "path=dist.zip" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with: { name: build, path: dist.zip }
 
-- **Env**: Use GH Environments (Protection rules, Secrets).
-- **Staging**: Mirror prod; auto-deploy valid builds; smoke test.
-- **Prod**: Manual approval; strictly gated.
-- **Strat**: Rolling (std), Blue/Green (0-downtime), Canary (risk mitigation).
-- **Rollback**: Auto-trigger on alert/fail; keep versioned artifacts ready.
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: build }
+      - run: npm test
 
-## 🔍 Review Checklist
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+      - run: echo "Deploy ${{ needs.build.outputs.artifact_path }}"
+```
 
-- [ ] Name clear? Trigger scoped? Concurrency set?
-- [ ] Perms restricted? Secrets masked? OIDC used?
-- [ ] Jobs independent? `needs` set? `outputs` used?
-- [ ] Actions pinned? Cache optimized? Matrix used?
-- [ ] Tests: Unit » Integ » E2E? Reports uploaded?
-- [ ] Deploy: Env protection? Rollback plan?
+**Key Concepts:**
+- `runs-on`: `ubuntu-latest`, `windows-latest`, `macos-latest`, `self-hosted`
+- `needs`: Job dependencies (sequential execution)
+- `outputs`: Pass data between jobs
+- `if`: Conditional execution (`if: success()`, `if: failure()`, `if: always()`)
+- `environment`: Protection rules, approvals, secrets
+
+## Security
+
+**Secrets:**
+```yaml
+env:
+  API_KEY: ${{ secrets.API_KEY }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+```
+
+- Store in GitHub Secrets (Settings → Secrets)
+- Environment secrets for staged deployments
+- Never print secrets to logs
+- Use `dependabot` for action updates
+
+**Action Pinning:**
+```yaml
+# ✅ Pin to SHA (most secure)
+uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+
+# ✅ Pin to major version
+uses: actions/checkout@v4
+
+# ❌ Never use
+uses: actions/checkout@main
+```
+
+**Permissions:**
+```yaml
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  packages: write
+```
+
+## Caching
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.npm
+      node_modules
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: ${{ runner.os }}-node-
+```
+
+**Common Caches:**
+- **Node.js**: `~/.npm`, `node_modules`
+- **Python**: `~/.cache/pip`, `~/.local/share/virtualenvs`
+- **Rust**: `~/.cargo`, `target/`
+- **Go**: `~/go/pkg/mod`
+
+## Matrix Strategy
+
+```yaml
+strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest, macos-latest]
+    node: [18, 20, 22]
+    exclude:
+      - os: macos-latest
+        node: 18
+  fail-fast: false
+  max-parallel: 4
+
+runs-on: ${{ matrix.os }}
+steps:
+  - uses: actions/setup-node@v4
+    with: { node-version: ${{ matrix.node }} }
+```
+
+## Reusable Workflows
+
+**.github/workflows/build.yml:**
+```yaml
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      api_token:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Building for ${{ inputs.environment }}"
+```
+
+**Caller:**
+```yaml
+jobs:
+  call-build:
+    uses: ./.github/workflows/build.yml
+    with: { environment: production }
+    secrets: { api_token: ${{ secrets.API_TOKEN }} }
+```
+
+## Environments
+
+```yaml
+jobs:
+  deploy:
+    environment:
+      name: production
+      url: https://prod.example.com
+    steps:
+      - run: echo "Deploying to ${{ github.event.inputs.environment }}"
+```
+
+**Features:**
+- Manual approvals (required reviewers)
+- Branch restrictions
+- Environment secrets
+- Deployment history
+
+## Artifacts
+
+```yaml
+# Upload
+- uses: actions/upload-artifact@v4
+  with:
+    name: coverage-report
+    path: coverage/
+    retention-days: 30
+
+# Download
+- uses: actions/download-artifact@v4
+  with: { name: coverage-report }
+```
+
+## Debugging
+
+```yaml
+# Enable debug logging
+- run: echo "::debug::Debug message"
+
+# Set output
+- run: echo "version=1.0.0" >> "$GITHUB_OUTPUT"
+  id: version
+
+# Error annotation
+- run: echo "::error file=app.js,line=10::Syntax error"
+
+# Warning
+- run: echo "::warning::Deprecated API usage"
+```
+
+**Enable runner diagnostics:**
+- Set `ACTIONS_RUNNER_DEBUG=true` (repo secret)
+- Set `ACTIONS_STEP_DEBUG=true` (repo secret)
+
+## Performance
+
+**Parallel Jobs:**
+```yaml
+jobs:
+  lint: { runs-on: ubuntu-latest, steps: [...] }
+  test: { runs-on: ubuntu-latest, steps: [...] }
+  build: { runs-on: ubuntu-latest, needs: [lint, test], steps: [...] }
+```
+
+**Optimization:**
+- Cache dependencies
+- Use matrix for parallel tests
+- Minimize artifact size
+- Skip CI on docs changes: `paths-ignore: ['docs/**', '*.md']`
+- Conditional steps: `if: runner.os == 'Linux'`
+
+## Common Patterns
+
+**Skip CI:**
+```yaml
+if: "!contains(github.event.head_commit.message, '[skip ci]')"
+```
+
+**Version from package.json:**
+```yaml
+- id: version
+  run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+```
+
+**Context Variables:**
+```yaml
+${{ github.actor }}          # User triggering workflow
+${{ github.sha }}            # Commit SHA
+${{ github.ref }}            # Branch ref
+${{ github.event_name }}     # Event type
+${{ runner.os }}             # OS (Linux, Windows, macOS)
+```
+
+## Docker
+
+```yaml
+- uses: docker/setup-buildx-action@v3
+- uses: docker/login-action@v3
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+- uses: docker/build-push-action@v5
+  with:
+    push: true
+    tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+    cache-from: type=gha
+    cache-to: type=gha,mode=max
+```
+
+## Testing
+
+```yaml
+- name: Unit tests
+  run: npm test -- --coverage
+
+- name: Upload coverage
+  uses: codecov/codecov-action@v4
+  with:
+    token: ${{ secrets.CODECOV_TOKEN }}
+    files: ./coverage/lcov.info
+
+- name: E2E tests
+  run: npx playwright test
+  env:
+    PLAYWRIGHT_BROWSERS_PATH: 0
+```
+
+## Checklist
+
+- [ ] Pin actions to SHA or major version
+- [ ] Use GitHub Secrets for sensitive data
+- [ ] Set explicit permissions (least privilege)
+- [ ] Cache dependencies
+- [ ] Use concurrency for resource management
+- [ ] Add environment protection rules
+- [ ] Enable branch protection
+- [ ] Use reusable workflows for common patterns
+- [ ] Matrix strategy for multi-platform/version tests
+- [ ] Conditional execution (`if`, `needs`)
+- [ ] Upload artifacts for debugging
+- [ ] Set retention days for artifacts
+- [ ] Use environment URLs for deployments
