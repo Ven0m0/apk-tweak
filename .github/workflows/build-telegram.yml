@@ -102,7 +102,7 @@ jobs:
 
       # ⚡ Perf: Cache Gradle dependencies (saves 30-60s per run)
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -113,7 +113,7 @@ jobs:
 
       - name: Cache AAPT tool
         id: cache-aapt
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: build-tools
           key: aapt-r33.0.2
@@ -121,7 +121,7 @@ jobs:
       # ⚡ Perf: Cache LSPatch JAR to avoid re-download (saves ~5-10s per run)
       - name: Cache LSPatch JAR
         id: cache-lspatch
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: lspatch-cache
           key: lspatch-jar-${{ github.sha }}
