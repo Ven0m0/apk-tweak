@@ -16,7 +16,12 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..context import Context
-from ..utils import TIMEOUT_PATCH, check_dependencies, run_command
+from ..utils import (
+  TIMEOUT_PATCH,
+  check_dependencies,
+  require_input_apk,
+  run_command,
+)
 
 
 def _run_apktool(
@@ -340,9 +345,7 @@ def run(ctx: Context) -> None:
   """
   ctx.log("modify: starting APK modifier")
 
-  input_apk = ctx.current_apk or ctx.input_apk
-  if not input_apk:
-    raise ValueError("No input APK found in context")
+  input_apk = require_input_apk(ctx)
 
   # Check dependencies
   required_deps = ["apktool", "java", "keytool", "apksigner"]

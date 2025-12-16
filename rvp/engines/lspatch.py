@@ -12,6 +12,7 @@ from ..utils import (
   TIMEOUT_PATCH,
   check_dependencies,
   find_latest_apk,
+  require_input_apk,
   run_command,
 )
 
@@ -122,9 +123,7 @@ def run(ctx: Context) -> None:
   """
   ctx.log("lspatch: starting patcher")
 
-  input_apk = ctx.current_apk
-  if not input_apk:
-    raise ValueError("No input APK available")
+  input_apk = require_input_apk(ctx)
 
   # Check dependencies
   deps_ok, missing_deps = check_dependencies(["lspatch", "java"])

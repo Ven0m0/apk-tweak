@@ -9,7 +9,12 @@ from typing import Any, cast
 
 from ..context import Context
 from ..optimizer import optimize_apk
-from ..utils import TIMEOUT_PATCH, check_dependencies, run_command
+from ..utils import (
+  TIMEOUT_PATCH,
+  check_dependencies,
+  require_input_apk,
+  run_command,
+)
 
 
 def _build_revanced_cli_cmd(
@@ -163,9 +168,7 @@ def run(ctx: Context) -> None:
       ValueError: If no input APK is available.
   """
   ctx.log("revanced: starting patcher")
-  input_apk = ctx.current_apk or ctx.input_apk
-  if not input_apk:
-    raise ValueError("No input APK found in context")
+  input_apk = require_input_apk(ctx)
 
   # Check dependencies
   deps_ok, missing_deps = check_dependencies(["revanced-cli", "java"])

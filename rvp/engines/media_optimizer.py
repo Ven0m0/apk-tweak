@@ -11,7 +11,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from ..context import Context
-from ..utils import check_dependencies
+from ..utils import check_dependencies, require_input_apk
 
 # Constants
 DPI_FOLDERS = {
@@ -581,7 +581,7 @@ def run(ctx: Context) -> None:
     ctx.log("media_optimizer: no operations requested; skipping.")
     return
 
-  apk = ctx.current_apk or ctx.input_apk
+  apk = require_input_apk(ctx)
   ctx.log(
     f"media_optimizer: starting (images={optimize_images}, audio={optimize_audio}, dpi={target_dpi})"
   )

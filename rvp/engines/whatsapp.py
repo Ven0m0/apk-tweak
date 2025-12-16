@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import cast
 
 from ..context import Context
-from ..utils import check_dependencies, clone_repository
+from ..utils import check_dependencies, clone_repository, require_input_apk
 
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
@@ -49,7 +49,7 @@ def run(ctx: Context) -> None:
       whatsapp_timeout: Override 20-minute default timeout (seconds)
   """
   ctx.log("whatsapp: starting WhatsApp APK patcher")
-  input_apk = ctx.current_apk or ctx.input_apk
+  input_apk = require_input_apk(ctx)
 
   # Check Java dependency
   deps_ok, _ = check_dependencies(["java"])
