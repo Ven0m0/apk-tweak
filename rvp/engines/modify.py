@@ -122,6 +122,8 @@ def _replace_server_url(
   """
   Replace server URLs in Smali code.
 
+  ⚡ Optimized: Uses grep to pre-filter files containing the URL before loading.
+
   Args:
       ctx: Pipeline context.
       decompiled_dir: Path to decompiled APK directory.
@@ -143,17 +145,51 @@ def _replace_server_url(
   ctx.log(f"modify: Replacing '{old_url}' with '{new_url}' in Smali files")
 
   files_modified = 0
+
+  # ⚡ Perf: First use grep to find files containing the URL
+  # This avoids loading thousands of files into memory unnecessarily
+  candidate_files: list[Path] = []
   for search_dir in search_dirs:
-    for smali_file in search_dir.rglob("*.smali"):
-      try:
-        content = smali_file.read_text(encoding="utf-8", errors="ignore")
-        if old_url in content:
-          new_content = content.replace(old_url, new_url)
-          smali_file.write_text(new_content, encoding="utf-8")
-          files_modified += 1
-          ctx.log(f"  ✓ Modified {smali_file.relative_to(decompiled_dir)}")
-      except (OSError, UnicodeError) as e:
-        ctx.log(f"  ✗ Error processing {smali_file.name}: {e}")
+    try:
+      # Use grep to find files containing the URL (much faster than Python iteration)
+      result = subprocess.run(
+        ["grep", "-rl", "--include=*.smali", old_url, str(search_dir)],
+        capture_output=True,
+        text=True,
+        check=False,
+      )
+      if result.returncode == 0:
+        # Grep found matches
+        candidate_files.extend(
+          Path(line.strip())
+          for line in result.stdout.splitlines()
+          if line.strip()
+        )
+    except (OSError, subprocess.SubprocessError):
+      # Grep not available or failed, fall back to manual search
+      ctx.log(
+        "modify: grep not available, falling back to slower file-by-file search"
+      )
+      candidate_files = list(search_dir.rglob("*.smali"))
+      break
+
+  if not candidate_files:
+    ctx.log("modify: No files contain the target URL")
+    return False
+
+  ctx.log(f"modify: Found {len(candidate_files)} files to check")
+
+  # Now only process files that potentially contain the URL
+  for smali_file in candidate_files:
+    try:
+      content = smali_file.read_text(encoding="utf-8", errors="ignore")
+      if old_url in content:
+        new_content = content.replace(old_url, new_url)
+        smali_file.write_text(new_content, encoding="utf-8")
+        files_modified += 1
+        ctx.log(f"  ✓ Modified {smali_file.relative_to(decompiled_dir)}")
+    except (OSError, UnicodeError) as e:
+      ctx.log(f"  ✗ Error processing {smali_file.name}: {e}")
 
   ctx.log(f"modify: Modified {files_modified} Smali file(s)")
   return files_modified > 0

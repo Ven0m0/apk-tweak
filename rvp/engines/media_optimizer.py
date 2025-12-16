@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import os
 import shutil
 import subprocess
@@ -365,7 +366,7 @@ def _process_images(
   """
   Process and optimize images in extracted APK.
 
-  ⚡ Optimized: Parallel processing with ProcessPoolExecutor (4x speedup on 4 cores).
+  ⚡ Optimized: Shared process pool for better worker utilization.
 
   Args:
       ctx: Pipeline context.
@@ -377,50 +378,64 @@ def _process_images(
   """
   stats = {"png": 0, "jpg": 0}
 
-  # Find all image files
+  # ⚡ Perf: Use itertools.chain for lazy concatenation of JPEG files
+  # Materialize only when needed for counting and iteration
   png_files = list(extract_dir.rglob("*.png"))
-  jpg_files = list(extract_dir.rglob("*.jpg")) + list(
-    extract_dir.rglob("*.jpeg")
+  jpg_files = list(
+    itertools.chain(extract_dir.rglob("*.jpg"), extract_dir.rglob("*.jpeg"))
   )
 
   ctx.log(
     f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files"
   )
 
+  # Check tool availability
+  has_pngquant = tools.get("pngquant", False)
+  has_jpegoptim = tools.get("jpegoptim", False)
+
+  if not has_pngquant and not has_jpegoptim:
+    ctx.log(
+      "media_optimizer: no optimization tools available, skipping image optimization"
+    )
+    return stats
+
   # ⚡ Perf: Calculate optimal worker count for CPU-bound operations
   cpu_count = os.cpu_count() or 1
   max_workers = min(cpu_count, 8)  # Cap at 8 to avoid overhead
 
-  # Optimize PNGs in parallel
-  if tools.get("pngquant", False) and png_files:
-    ctx.log(f"media_optimizer: optimizing PNGs with {max_workers} workers")
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-      futures = {
-        executor.submit(_optimize_png_worker, png): png for png in png_files
-      }
-      for future in as_completed(futures):
-        _, success = future.result()
-        if success:
-          stats["png"] += 1
-  elif not tools.get("pngquant", False):
-    ctx.log(
-      "media_optimizer: pngquant not available, skipping PNG optimization"
-    )
+  # ⚡ Perf: Use single shared process pool for both PNG and JPEG optimization
+  # This avoids process creation/teardown overhead and maximizes worker utilization
+  ctx.log(
+    f"media_optimizer: optimizing images with {max_workers} shared workers"
+  )
 
-  # Optimize JPEGs in parallel
-  if tools.get("jpegoptim", False) and jpg_files:
-    ctx.log(f"media_optimizer: optimizing JPEGs with {max_workers} workers")
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-      futures = {
-        executor.submit(_optimize_jpg_worker, jpg): jpg for jpg in jpg_files
-      }
-      for future in as_completed(futures):
-        _, success = future.result()
-        if success:
-          stats["jpg"] += 1
-  elif not tools.get("jpegoptim", False):
+  with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    futures = {}
+
+    # Submit PNG optimization tasks
+    if has_pngquant and png_files:
+      for png in png_files:
+        future = executor.submit(_optimize_png_worker, png)
+        futures[future] = ("png", png)
+
+    # Submit JPEG optimization tasks
+    if has_jpegoptim and jpg_files:
+      for jpg in jpg_files:
+        future = executor.submit(_optimize_jpg_worker, jpg)
+        futures[future] = ("jpg", jpg)
+
+    # Process results as they complete
+    for future in as_completed(futures):
+      file_type, _ = futures[future]
+      _, success = future.result()
+      if success:
+        stats[file_type] += 1
+
+  if not has_pngquant:
+    ctx.log("media_optimizer: pngquant not available, skipped PNG optimization")
+  if not has_jpegoptim:
     ctx.log(
-      "media_optimizer: jpegoptim not available, skipping JPEG optimization"
+      "media_optimizer: jpegoptim not available, skipped JPEG optimization"
     )
 
   ctx.log(
@@ -451,9 +466,9 @@ def _process_audio(
     )
     return 0
 
-  # Find all audio files
-  audio_files = list(extract_dir.rglob("*.mp3")) + list(
-    extract_dir.rglob("*.ogg")
+  # ⚡ Perf: Use itertools.chain for lazy concatenation of audio files
+  audio_files = list(
+    itertools.chain(extract_dir.rglob("*.mp3"), extract_dir.rglob("*.ogg"))
   )
   ctx.log(f"media_optimizer: found {len(audio_files)} audio files")
 
