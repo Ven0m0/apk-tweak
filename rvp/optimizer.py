@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import mmap
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,7 +15,6 @@ from .constants import (
   DEFAULT_CPU_MULTIPLIER,
   DEFAULT_ZIPALIGN,
   MAX_WORKER_THREADS,
-  MMAP_FILE_SIZE_THRESHOLD,
   ZIPALIGN_PATH_KEY,
 )
 from .context import Context
@@ -93,26 +91,26 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
           removed_count += 1
           removed_size += size
         elif item_path.is_dir():
-          # Calculate dir size before removal
-          dir_size = sum(
-            f.stat().st_size for f in item_path.rglob("*") if f.is_file()
-          )
+          # ⚡ Perf: Skip size calculation for directories to avoid double traversal
+          # shutil.rmtree() will traverse the tree internally for deletion
           ctx.log(f"optimizer: Removing directory {rel_path}")
           shutil.rmtree(item_path)
           removed_count += 1
-          removed_size += dir_size
+          # Size not counted for directories to avoid redundant traversal
       except OSError as e:
         ctx.log(f"optimizer: Failed to remove {item_path.name}: {e}")
 
   ctx.log(
     f"optimizer: Debloat complete - removed {removed_count} items "
-    f"({removed_size / 1024 / 1024:.2f} MB)"
+    f"({removed_size / 1024 / 1024:.2f} MB from files)"
   )
 
 
 def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   """
   Minify APK resources (remove unused resources).
+
+  ⚡ Optimized: O(n) single-pass traversal for memory efficiency.
 
   Args:
       decompiled_dir: Directory containing decompiled APK.
@@ -132,25 +130,27 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   )
   removed_count = 0
   removed_size = 0
-  matches = [
-    path
-    for path in decompiled_dir.rglob("*")
-    if path.is_file()
-    and any(
+
+  # ⚡ Perf: Single-pass traversal - process and delete files immediately
+  # instead of collecting in a list first (saves memory for large APKs)
+  for path in decompiled_dir.rglob("*"):
+    if not path.is_file():
+      continue
+
+    if any(
       fnmatch(path.relative_to(decompiled_dir).as_posix(), pattern)
       for pattern in minify_patterns
-    )
-  ]
-  for match in matches:
-    try:
-      size = match.stat().st_size
-      rel_path = match.relative_to(decompiled_dir)
-      ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
-      match.unlink()
-      removed_count += 1
-      removed_size += size
-    except OSError as e:
-      ctx.log(f"optimizer: Failed to remove {match.name}: {e}")
+    ):
+      try:
+        size = path.stat().st_size
+        rel_path = path.relative_to(decompiled_dir)
+        ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
+        path.unlink()
+        removed_count += 1
+        removed_size += size
+      except OSError as e:
+        ctx.log(f"optimizer: Failed to remove {path.name}: {e}")
+
   ctx.log(
     "optimizer: Minification complete - removed "
     f"{removed_count} files ({removed_size} bytes)"
@@ -163,7 +163,7 @@ def _apply_patch_to_file(
   """
   Apply ad-blocking patches to a single smali file.
 
-  ⚡ Perf: Uses mmap for large files, optimized threshold from constants.
+  ⚡ Perf: Simple file reading - mmap removed as regex requires full string anyway.
 
   Args:
       file_path: Path to smali file to patch.
@@ -174,23 +174,9 @@ def _apply_patch_to_file(
       True if file was modified, False otherwise.
   """
   try:
-    file_size = file_path.stat().st_size
-
-    # ⚡ Perf: Use mmap for large files for memory efficiency
-    if file_size > MMAP_FILE_SIZE_THRESHOLD:
-      with open(file_path, "r+b") as f:
-        # Try to use mmap for large files
-        try:
-          with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped:
-            content = mmapped.read().decode("utf-8", errors="ignore")
-        except (OSError, ValueError):
-          # Fall back to regular read if mmap fails
-          f.seek(0)
-          content = f.read().decode("utf-8", errors="ignore")
-    else:
-      # Small files: use regular read (faster for small files)
-      content = file_path.read_text(encoding="utf-8", errors="ignore")
-
+    # ⚡ Perf: Direct file reading (mmap doesn't help since regex needs full string)
+    # Python's regex engine requires string objects, so we need to load content anyway
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
     original_content = content
 
     # ⚡ Perf: Use pre-compiled patterns (50-70% faster)
