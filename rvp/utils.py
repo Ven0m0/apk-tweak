@@ -16,6 +16,14 @@ TIMEOUT_OPTIMIZE = 600  # Optimization operations (10 min)
 TIMEOUT_BUILD = 1200  # Build operations (20 min)
 
 
+def require_input_apk(ctx: Context) -> Path:
+  """Return active input APK from context or raise if missing."""
+  apk = ctx.current_apk or ctx.input_apk
+  if not apk:
+    raise ValueError("No input APK found in context")
+  return apk
+
+
 def run_command(
   cmd: list[str],
   ctx: Context,

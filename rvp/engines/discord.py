@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import cast
 
 from ..context import Context
-from ..utils import check_dependencies, clone_repository
+from ..utils import check_dependencies, clone_repository, require_input_apk
 
 # Constants
 DISCORD_PATCHER_REPO = "https://github.com/CyberL1/discord-apk-patcher"
@@ -94,7 +94,7 @@ def run(ctx: Context) -> None:
       discord_patcher_path: Custom patcher directory (default: clone to work_dir)
   """
   ctx.log("discord: starting Discord APK patcher")
-  input_apk = ctx.current_apk or ctx.input_apk
+  input_apk = require_input_apk(ctx)
 
   # Check dependencies
   deps_ok, missing_deps = check_dependencies(REQUIRED_TOOLS)

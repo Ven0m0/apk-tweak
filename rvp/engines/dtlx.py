@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from ..context import Context
+from ..utils import require_input_apk
 
 # Constants
 DTLX_REPO_URL = "https://github.com/Gameye98/DTL-X"
@@ -223,7 +224,7 @@ def run(ctx: Context) -> None:
     ctx.log("dtlx: neither analyze nor optimize requested; skipping.")
     return
 
-  apk = ctx.current_apk or ctx.input_apk
+  apk = require_input_apk(ctx)
   ctx.log(f"dtlx: starting (analyze={analyze}, optimize={optimize}) on {apk}.")
 
   # Performance: Use direct dict access pattern instead of setdefault
