@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+shopt -s nullglob globstar
+
+ROOT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT_DIR"
+
+require_cmd() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Missing required command: $cmd" >&2
+    exit 1
+  fi
+}
+
+run() {
+  echo "==> $*"
+  "$@"
+}
+
+require_cmd ruff
+require_cmd black
+require_cmd mypy
+require_cmd pytest
+require_cmd actionlint
+
+if command -v fd >/dev/null 2>&1; then
+  mapfile -t shell_files < <(fd --type f --extension sh --extension bash)
+else
+  mapfile -t shell_files < <(find . -type f \( -name "*.sh" -o -name "*.bash" \))
+fi
+
+if ((${#shell_files[@]})); then
+  require_cmd shfmt
+  require_cmd shellcheck
+  run shfmt -i 2 -bn -ci -s "${shell_files[@]}"
+  run shellcheck -x "${shell_files[@]}"
+fi
+
+if command -v yamlfmt >/dev/null 2>&1; then
+  run yamlfmt -w .github
+fi
+
+if command -v yamllint >/dev/null 2>&1; then
+  run yamllint .github
+fi
+
+if command -v taplo >/dev/null 2>&1; then
+  run taplo format --option indent_entries=true --option indent_tables=true .
+fi
+
+if command -v fd >/dev/null 2>&1; then
+  mapfile -t prettify_files < <(fd --type f --extension md --extension markdown --extension json)
+else
+  mapfile -t prettify_files < <(find . -type f \( -name "*.md" -o -name "*.markdown" -o -name "*.json" \))
+fi
+
+if ((${#prettify_files[@]})); then
+  if command -v prettier >/dev/null 2>&1; then
+    run prettier --write "${prettify_files[@]}"
+  fi
+fi
+
+if command -v fd >/dev/null 2>&1; then
+  mapfile -t markdown_files < <(fd --type f --extension md --extension markdown)
+else
+  mapfile -t markdown_files < <(find . -type f \( -name "*.md" -o -name "*.markdown" \))
+fi
+
+if ((${#markdown_files[@]})); then
+  if command -v markdownlint >/dev/null 2>&1; then
+    run markdownlint "${markdown_files[@]}"
+  fi
+fi
+
+run ruff check --fix .
+run ruff format .
+run black .
+run mypy rvp/
+run actionlint
+run pytest tests/ -v --tb=short

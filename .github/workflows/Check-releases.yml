@@ -60,6 +60,7 @@ jobs:
         id: check-client-releases
         run: |
           set -euo pipefail
+          shopt -s nullglob
           AAPT="build-tools/android-13/aapt"
           chmod +x "$AAPT"
           RELEASES_FOUND=false
@@ -99,9 +100,9 @@ jobs:
           for apk_pattern in "telegram*.apk:Telegram" "ForkClient*.apk:ForkGram" "TF*.apk:TelegramFOSS"; do
             pattern="${apk_pattern%%:*}"
             name="${apk_pattern##*:}"
-            # shellcheck disable=SC2086
-            apk_file=$(ls $pattern 2>/dev/null | head -1)
-            if [ -n "$apk_file" ]; then
+            apk_files=($pattern)
+            apk_file="${apk_files[0]:-}"
+            if [[ -n "$apk_file" ]]; then
               version=$(get_apk_version "$apk_file")
               echo "Current $name Version: $version"
               if update_release "$name" "$version"; then
