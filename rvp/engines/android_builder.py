@@ -58,9 +58,7 @@ def run(ctx: Context) -> None:
       f"android_builder: ERROR - Source directory not found: {source_dir}",
       level=logging.ERROR,
     )
-    raise ValueError(
-      f"Android source project directory not found: {source_dir}"
-    )
+    raise ValueError(f"Android source project directory not found: {source_dir}")
 
   # 2. Check Dependencies
   deps_ok, _ = check_dependencies(["gradle"])
@@ -74,9 +72,7 @@ def run(ctx: Context) -> None:
   # 3. Build Command
   build_task = options.get("android_build_task", "assembleRelease")
   # Prefer using the Gradle Wrapper if it exists
-  gradle_cmd = (
-    ["./gradlew"] if (source_dir / "gradlew").exists() else ["gradle"]
-  )
+  gradle_cmd = ["./gradlew"] if (source_dir / "gradlew").exists() else ["gradle"]
 
   cmd = gradle_cmd + [build_task]
 
@@ -104,9 +100,7 @@ def run(ctx: Context) -> None:
       f"android_builder: No output file found matching pattern: {output_pattern}",
       level=logging.ERROR,
     )
-    raise FileNotFoundError(
-      f"No build output found matching pattern: {output_pattern}"
-    )
+    raise FileNotFoundError(f"No build output found matching pattern: {output_pattern}")
 
   # Use the most recently modified file as the output APK
   output_apk_path = find_latest_apk(source_dir) or max(

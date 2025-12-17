@@ -77,9 +77,7 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
     rel_path = str(item_path.relative_to(decompiled_dir))
 
     # Check if path matches any pattern
-    matches_pattern = any(
-      fnmatch(rel_path, pattern) for pattern in debloat_patterns
-    )
+    matches_pattern = any(fnmatch(rel_path, pattern) for pattern in debloat_patterns)
 
     if matches_pattern:
       seen_paths.add(item_path)
@@ -226,9 +224,7 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
     # Submit all tasks and use as_completed for better progress tracking
     futures = {
-      executor.submit(
-        _apply_patch_to_file, smali_file, AD_PATTERNS, ctx
-      ): smali_file
+      executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx): smali_file
       for smali_file in smali_files
     }
 

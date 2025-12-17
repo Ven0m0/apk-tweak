@@ -27,9 +27,7 @@ def _build_config_options(cfg: Config) -> PipelineOptions:
   # Convert dataclass to dict and filter out input/output/engines
   all_fields = dataclasses.asdict(cfg)
   excluded = {"input_apk", "output_dir", "engines"}
-  options: dict[str, Any] = {
-    k: v for k, v in all_fields.items() if k not in excluded
-  }
+  options: dict[str, Any] = {k: v for k, v in all_fields.items() if k not in excluded}
 
   # Reorganize rkpairip options into nested dict
   rkpairip_keys = {
@@ -71,9 +69,7 @@ def _build_default_options() -> PipelineOptions:
   }
 
 
-def _apply_flag_overrides(
-  options: PipelineOptions, args: argparse.Namespace
-) -> None:
+def _apply_flag_overrides(options: PipelineOptions, args: argparse.Namespace) -> None:
   """
   Apply command-line flag overrides to options dictionary.
 
@@ -141,9 +137,7 @@ def _apply_flag_overrides(
   if args.android_build_task:
     opts["android_builder"]["android_build_task"] = args.android_build_task
   if args.android_output_pattern:
-    opts["android_builder"]["android_output_pattern"] = (
-      args.android_output_pattern
-    )
+    opts["android_builder"]["android_output_pattern"] = args.android_output_pattern
 
   # Media optimizer overrides
   if args.optimize_images:
@@ -185,12 +179,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
   p.add_argument("-c", "--config", help="Path to config JSON file")
   p.add_argument("-o", "--out", help="Output directory")
   p.add_argument("-e", "--engine", action="append", help="Engines to run")
-  p.add_argument(
-    "-v", "--verbose", action="store_true", help="Enable debug logging"
-  )
-  p.add_argument(
-    "--dtlx-analyze", action="store_true", help="Enable DTL-X analysis"
-  )
+  p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
+  p.add_argument("--dtlx-analyze", action="store_true", help="Enable DTL-X analysis")
   p.add_argument(
     "--dtlx-optimize", action="store_true", help="Enable DTL-X optimization"
   )
@@ -346,9 +336,7 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
   # Resolve Output
-  output_dir = (
-    Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
-  )
+  output_dir = Path(args.out) if args.out else Path(cfg.output_dir if cfg else "out")
 
   # Resolve Engines: Args > Config > Default
   engines = args.engine
