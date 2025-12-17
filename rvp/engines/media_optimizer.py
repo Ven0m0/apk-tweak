@@ -81,15 +81,11 @@ def _optimize_png(ctx: Context, png_path: Path, quality: str = "65-80") -> bool:
     )
     return result.returncode == 0
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(
-      f"media_optimizer: PNG optimization failed for {png_path.name}: {e}"
-    )
+    ctx.log(f"media_optimizer: PNG optimization failed for {png_path.name}: {e}")
     return False
 
 
-def _optimize_png_worker(
-  png_path: Path, quality: str = "65-80"
-) -> tuple[Path, bool]:
+def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, bool]:
   """
   Worker function for parallel PNG optimization.
 
@@ -144,15 +140,11 @@ def _optimize_jpg(ctx: Context, jpg_path: Path, quality: int = 85) -> bool:
     )
     return result.returncode == 0
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(
-      f"media_optimizer: JPEG optimization failed for {jpg_path.name}: {e}"
-    )
+    ctx.log(f"media_optimizer: JPEG optimization failed for {jpg_path.name}: {e}")
     return False
 
 
-def _optimize_jpg_worker(
-  jpg_path: Path, quality: int = 85
-) -> tuple[Path, bool]:
+def _optimize_jpg_worker(jpg_path: Path, quality: int = 85) -> tuple[Path, bool]:
   """
   Worker function for parallel JPEG optimization.
 
@@ -226,15 +218,11 @@ def _optimize_audio(
     return False
 
   except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(
-      f"media_optimizer: Audio optimization failed for {audio_path.name}: {e}"
-    )
+    ctx.log(f"media_optimizer: Audio optimization failed for {audio_path.name}: {e}")
     return False
 
 
-def _optimize_audio_worker(
-  audio_path: Path, bitrate: str = "96k"
-) -> tuple[Path, bool]:
+def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path, bool]:
   """
   Worker function for parallel audio optimization.
 
@@ -385,9 +373,7 @@ def _process_images(
     itertools.chain(extract_dir.rglob("*.jpg"), extract_dir.rglob("*.jpeg"))
   )
 
-  ctx.log(
-    f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files"
-  )
+  ctx.log(f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files")
 
   # Check tool availability
   has_pngquant = tools.get("pngquant", False)
@@ -405,9 +391,7 @@ def _process_images(
 
   # ⚡ Perf: Use single shared process pool for both PNG and JPEG optimization
   # This avoids process creation/teardown overhead and maximizes worker utilization
-  ctx.log(
-    f"media_optimizer: optimizing images with {max_workers} shared workers"
-  )
+  ctx.log(f"media_optimizer: optimizing images with {max_workers} shared workers")
 
   with ProcessPoolExecutor(max_workers=max_workers) as executor:
     futures = {}
@@ -434,19 +418,13 @@ def _process_images(
   if not has_pngquant:
     ctx.log("media_optimizer: pngquant not available, skipped PNG optimization")
   if not has_jpegoptim:
-    ctx.log(
-      "media_optimizer: jpegoptim not available, skipped JPEG optimization"
-    )
+    ctx.log("media_optimizer: jpegoptim not available, skipped JPEG optimization")
 
-  ctx.log(
-    f"media_optimizer: optimized {stats['png']} PNG, {stats['jpg']} JPEG files"
-  )
+  ctx.log(f"media_optimizer: optimized {stats['png']} PNG, {stats['jpg']} JPEG files")
   return stats
 
 
-def _process_audio(
-  ctx: Context, extract_dir: Path, tools: dict[str, bool]
-) -> int:
+def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> int:
   """
   Process and optimize audio files in extracted APK.
 
@@ -461,9 +439,7 @@ def _process_audio(
       Number of optimized audio files.
   """
   if not tools.get("ffmpeg", False):
-    ctx.log(
-      "media_optimizer: ffmpeg not available, skipping audio optimization"
-    )
+    ctx.log("media_optimizer: ffmpeg not available, skipping audio optimization")
     return 0
 
   # ⚡ Perf: Use itertools.chain for lazy concatenation of audio files
@@ -484,8 +460,7 @@ def _process_audio(
   optimized = 0
   with ProcessPoolExecutor(max_workers=max_workers) as executor:
     futures = {
-      executor.submit(_optimize_audio_worker, audio): audio
-      for audio in audio_files
+      executor.submit(_optimize_audio_worker, audio): audio for audio in audio_files
     }
     for future in as_completed(futures):
       _, success = future.result()
@@ -522,9 +497,7 @@ def _filter_dpi_resources(
   # Always keep nodpi and default drawable
   target_dpis_set.add("nodpi")
 
-  ctx.log(
-    f"media_optimizer: keeping DPIs: {', '.join(sorted(target_dpis_set))}"
-  )
+  ctx.log(f"media_optimizer: keeping DPIs: {', '.join(sorted(target_dpis_set))}")
 
   removed_count = 0
   removed_folders = []
@@ -634,9 +607,7 @@ def run(ctx: Context) -> None:
     original_size = apk.stat().st_size
     optimized_size = output_apk.stat().st_size
     reduction = original_size - optimized_size
-    reduction_pct = (
-      (reduction / original_size) * 100 if original_size > 0 else 0
-    )
+    reduction_pct = (reduction / original_size) * 100 if original_size > 0 else 0
 
     ctx.log(
       f"media_optimizer: size reduction: {reduction / 1024 / 1024:.2f} MB ({reduction_pct:.1f}%)"

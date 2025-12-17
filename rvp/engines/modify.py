@@ -51,9 +51,7 @@ def _run_apktool(
     return False
 
 
-def _modify_icon(
-  ctx: Context, decompiled_dir: Path, icon_path: Path | None
-) -> bool:
+def _modify_icon(ctx: Context, decompiled_dir: Path, icon_path: Path | None) -> bool:
   """
   Modify APK icon using ImageMagick.
 
@@ -83,8 +81,7 @@ def _modify_icon(
   icon_dirs = [
     d
     for d in res_dir.iterdir()
-    if d.is_dir()
-    and (d.name.startswith("mipmap-") or d.name.startswith("drawable-"))
+    if d.is_dir() and (d.name.startswith("mipmap-") or d.name.startswith("drawable-"))
   ]
 
   if not icon_dirs:
@@ -166,15 +163,11 @@ def _replace_server_url(
       if result.returncode == 0:
         # Grep found matches
         candidate_files.extend(
-          Path(line.strip())
-          for line in result.stdout.splitlines()
-          if line.strip()
+          Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         )
     except (OSError, subprocess.SubprocessError):
       # Grep not available or failed, fall back to manual search
-      ctx.log(
-        "modify: grep not available, falling back to slower file-by-file search"
-      )
+      ctx.log("modify: grep not available, falling back to slower file-by-file search")
       candidate_files = list(search_dir.rglob("*.smali"))
       break
 
@@ -220,9 +213,7 @@ def _decompile_apk(ctx: Context, input_apk: Path, output_dir: Path) -> bool:
   )
 
 
-def _recompile_apk(
-  ctx: Context, decompiled_dir: Path, output_apk: Path
-) -> bool:
+def _recompile_apk(ctx: Context, decompiled_dir: Path, output_apk: Path) -> bool:
   """
   Recompile APK using apktool.
 
@@ -258,9 +249,7 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
 
   # Get keystore options from context
   keystore_opts = cast(dict[str, Any], ctx.options.get("modify_keystore", {}))
-  keystore_path = Path(
-    str(keystore_opts.get("path", ctx.work_dir / "keystore.jks"))
-  )
+  keystore_path = Path(str(keystore_opts.get("path", ctx.work_dir / "keystore.jks")))
   keystore_alias = str(keystore_opts.get("alias", "key0"))
   keystore_pass = str(keystore_opts.get("password", "android"))
 

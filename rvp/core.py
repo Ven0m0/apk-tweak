@@ -108,9 +108,7 @@ def load_plugins() -> list[PluginHandler]:
   return _module_cache.get_plugins()
 
 
-def dispatch_hooks(
-  ctx: Context, stage: str, handlers: list[PluginHandler]
-) -> None:
+def dispatch_hooks(ctx: Context, stage: str, handlers: list[PluginHandler]) -> None:
   """
   Dispatch plugin hooks for a specific pipeline stage.
 

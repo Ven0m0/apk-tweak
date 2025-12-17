@@ -16,18 +16,19 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 dependencies = [
-  "httpx>=0.27.0",  # Modern HTTP client (async, HTTP/2)
-  "orjson>=3.9.0",  # Fast JSON serialization (~6x faster)
+  "orjson>=3.11.0,<4.0.0",  # Fast JSON serialization (~6x faster)
   # "Pairip>=1.0.0",  # RKPairip APK decompilation/rebuilding
 ]
 
+[tool.setuptools]
+packages = ["rvp"]
+
 [project.optional-dependencies]
 dev = [
-  "pytest>=7.4.0",
-  "mypy",
-  "ruff",
-  "black",
-  "types-httpx",
+  "pytest>=9.0.0,<10.0.0",
+  "mypy>=1.19.0,<2.0.0",
+  "ruff>=0.14.0,<0.15.0",
+  "pip-audit>=2.7.0,<3.0.0",
 ]
 
 [project.scripts]
@@ -43,7 +44,7 @@ warn_return_any = true
 disallow_untyped_defs = true
 
 [tool.ruff]
-line-length = 80
+line-length = 88
 indent-width = 2
 target-version = "py311"
 extend-exclude = [
@@ -120,7 +121,7 @@ known-first-party = ["rvp"]
 "tests/*" = ["PLR2004", "S101"]  # Allow magic values and asserts in tests
 
 [tool.black]
-line-length = 80
+line-length = 88
 target-version = ['py311']
 skip-string-normalization = false
 include = '\.pyi?$'

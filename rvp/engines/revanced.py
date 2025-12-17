@@ -116,9 +116,7 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
     return False
 
 
-def _create_stub_apk(
-  ctx: Context, input_apk: Path, patch_bundles_count: int
-) -> None:
+def _create_stub_apk(ctx: Context, input_apk: Path, patch_bundles_count: int) -> None:
   """
   Create stub APK when ReVanced tools are not available.
 
@@ -215,9 +213,7 @@ def run(ctx: Context) -> None:
   tools = ctx.options.get("tools", {})
   tools_dict = cast(dict[str, Any], tools)
   cli_jar = Path(tools_dict.get("revanced_cli", "revanced-cli.jar"))
-  integrations_apk = Path(
-    tools_dict.get("revanced_integrations", "integrations.apk")
-  )
+  integrations_apk = Path(tools_dict.get("revanced_integrations", "integrations.apk"))
   # Support multiple patch bundles
   patch_bundles_obj = ctx.options.get("revanced_patch_bundles", [])
   patch_bundles: list[str] = cast(list[str], patch_bundles_obj)
