@@ -24,10 +24,7 @@
       }
     }
   ],
-  "plugins": [
-    "logging",
-    "validation"
-  ],
+  "plugins": ["logging", "validation"],
   "global_options": {
     "verbose": true,
     "debug": true,
