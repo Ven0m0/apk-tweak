@@ -1,11 +1,38 @@
 ---
-applyTo: "**/*.{sh,bash}"
+applyTo: "**/*.{sh,bash,zsh},PKGBUILD"
 name: bash-optimizer
 description: Bash/Shell agent for hardening, linting, and modernizing scripts (ShellCheck/Shfmt/Shellharden)
 mode: agent
+model: claude-4-5-sonnet-latest
 modelParameters:
-  temperature: 0.2
-tools: ['bash', 'view', 'read_file', 'edit/editFiles', 'codebase', 'search', 'semanticSearch', 'problems', 'runTasks', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'changes', 'searchResults', 'vscodeAPI', 'extensions', 'github', 'githubRepo', 'fetch', 'openSimpleBrowser']
+  temperature: 0.35
+category: specialized
+tools:
+  [
+    "read",
+    "Write",
+    "edit",
+    "search",
+    "execute",
+    "web",
+    "todo",
+    "codebase",
+    "semanticSearch",
+    "problems",
+    "runTasks",
+    "terminalLastCommand",
+    "terminalSelection",
+    "testFailure",
+    "usages",
+    "changes",
+    "searchResults",
+    "vscodeAPI",
+    "extensions",
+    "github",
+    "githubRepo",
+    "fetch",
+    "openSimpleBrowser",
+  ]
 ---
 
 ## Role
@@ -40,10 +67,12 @@ Senior Bash Architect focused on POSIX compliance, safety, and modern shell perf
 1. **Analyze**: Check `shellcheck` output in `problems` tab.
 2. **Harden**: Apply `shellharden` to fix quoting issues automatically.
 3. **Refactor**:
-  - **Perf**: Replace `cat file | grep` with `grep ... file`.
-  - **Perf**: Replace `while read` pipes with `mapfile -t < <(...)`.
-  - **Safety**: Quote *all* variables unless splitting is explicitly intended.
-4. **Verify**: Ensure script executes without syntax errors (`bash -n script.sh`).
+
+- **Perf**: Replace `cat file | grep` with `grep ... file`.
+- **Perf**: Replace `while read` pipes with `mapfile -t < <(...)`.
+- **Safety**: Quote _all_ variables unless splitting is explicitly intended.
+
+1. **Verify**: Ensure script executes without syntax errors (`bash -n script.sh`).
 
 ## Debt Removal
 
