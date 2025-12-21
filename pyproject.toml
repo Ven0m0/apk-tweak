@@ -52,6 +52,10 @@ disallow_untyped_defs = true
 line-length = 88
 indent-width = 2
 target-version = "py311"
+# fix_only = true
+fixable = ["ALL"]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 extend-exclude = [
   ".git",
   "__pycache__",
@@ -60,12 +64,15 @@ extend-exclude = [
   ".env",
   "dist",
   "build",
+  "_build",
   "*.egg-info",
   ".pytest_cache",
   ".mypy_cache",
   ".ruff_cache",
   "node_modules",
+  "site-packages",
   "vendor",
+  ".vscode",
 ]
 
 [tool.ruff.lint]
@@ -108,22 +115,29 @@ ignore = [
   "PT015",   # assertion always fails (use pytest.raises)
   "B011",    # do not assert False
 ]
+tab_size = 2
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-line-ending = "lf"
+indent_width = 2
+line-ending = "auto"
 skip-magic-trailing-comma = false
-docstring-code-format = true
-docstring-code-line-length = 100
+docstring-code-line-length = "dynamic"
+preview = "enabled"
+unresolved_target_version = 3.11
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-wrap-aliases = true
+force_single_line = true
+detect_same_package = true
 known-first-party = ["rvp"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "S101"]  # Allow magic values and asserts in tests
+"__init__.py" = ["E402"]
+"**/{tests,docs,tools}/*" = ["E402"]
 
 [tool.black]
 line-length = 88
