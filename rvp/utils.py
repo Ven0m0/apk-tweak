@@ -30,6 +30,7 @@ def run_command(
   cwd: Path | None = None,
   check: bool = True,
   timeout: int | None = None,
+  env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
   """
   Execute a subprocess with real-time logging to context.
@@ -42,6 +43,7 @@ def run_command(
       cwd: Working directory for the command.
       check: Raise CalledProcessError on non-zero exit code.
       timeout: Command timeout in seconds (None = no timeout).
+      env: Environment variables to pass to the command (None = inherit).
 
   Returns:
       subprocess.CompletedProcess: Completed process info.
@@ -63,6 +65,7 @@ def run_command(
       stderr=subprocess.STDOUT,  # Merge stderr into stdout
       text=True,
       cwd=cwd,
+      env=env,
       bufsize=8192,  # 8KB buffer (optimized for performance)
       encoding="utf-8",
       errors="replace",

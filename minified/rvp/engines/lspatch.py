@@ -1,0 +1,50 @@
+from __future__ import annotations
+_E='lspatch.jar'
+_D='lspatch_jar'
+_C='lspatch_modules'
+_B='java'
+_A='lspatch'
+import shutil,subprocess
+from pathlib import Path
+from typing import Any,cast
+from..context import Context
+from..utils import TIMEOUT_PATCH,check_dependencies,find_latest_apk,require_input_apk,run_command
+def _build_lspatch_cmd(ctx,input_apk,output_dir):
+	E=output_dir;A=ctx
+	if shutil.which(_A):B=[_A,'-v','-l','2','-f','-o',str(E)]
+	else:F=A.options.get('tools',{});G=cast(dict[str,Any],F);H=Path(G.get(_D,_E));B=[_B,'-jar',str(H),'-l','2','-o',str(E)]
+	I=A.options.get(_C,[])
+	for C in I:
+		if isinstance(C,Path)or'/'in str(C):D=Path(C)
+		else:D=A.work_dir/f"patches/lspatch/{C}.apk"
+		if D.exists():B.extend(['-m',str(D)])
+		else:A.log(f"lspatch: Module not found: {D}")
+	if A.options.get('lspatch_manager_mode',False):B.extend(['--manager','--injectdex'])
+	B.append(str(input_apk));return B
+def _run_lspatch_cli(ctx,input_apk,output_dir):
+	B=output_dir;A=ctx;E=_build_lspatch_cmd(A,input_apk,B);A.log(f"lspatch: running CLI → {B}")
+	try:
+		C=run_command(E,A,timeout=TIMEOUT_PATCH,check=False)
+		if C.returncode==0:
+			D=find_latest_apk(B)
+			if D:A.log('lspatch: CLI patching successful');return D
+		A.log(f"lspatch: CLI failed (exit code: {C.returncode})");return
+	except(OSError,subprocess.SubprocessError)as F:A.log(f"lspatch: CLI error: {F}");return
+def run(ctx):
+	O='modules';N='patched_apk';M='method';E=True;A=ctx;A.log('lspatch: starting patcher');B=require_input_apk(A);P,F=check_dependencies([_A,_B])
+	if not P:A.log(f"lspatch: Missing dependencies: {', '.join(F)}");A.log('lspatch: Install from: https://github.com/LSPosed/LSPatch');raise FileNotFoundError(f"LSPatch dependencies missing: {F}")
+	Q=A.options.get('lspatch_use_cli',E)
+	if Q and shutil.which(_A):
+		G=A.work_dir/'lspatch_output';G.mkdir(parents=E,exist_ok=E);H=_run_lspatch_cli(A,B,G)
+		if H:C=A.output_dir/f"{B.stem}.lspatch.apk";shutil.copy2(H,C);A.set_current_apk(C);A.metadata[_A]={M:'cli',N:str(C),O:A.options.get(_C,[])};A.log(f"lspatch: patching complete → {C}");return
+	A.log('lspatch: using JAR-based approach');R=A.options.get('tools',{});S=cast(dict[str,Any],R);D=Path(S.get(_D,_E))
+	if not D.exists():A.log(f"LSPatch jar not found at {D}",level=40);raise FileNotFoundError(f"LSPatch jar missing: {D}")
+	I=[_B,'-jar',str(D),'-l','2','-o',str(A.output_dir),str(B)];J=A.options.get(_C,[])
+	for T in J:I.extend(['-m',str(T)])
+	A.log(f"lspatch: Running patch on {B.name}");run_command(I,A);K=A.output_dir/f"{B.stem}-lspatched.apk"
+	if K.exists():A.set_current_apk(K)
+	else:
+		L=find_latest_apk(A.output_dir)
+		if L:A.set_current_apk(L)
+		else:raise FileNotFoundError('LSPatch completed but output APK not found')
+	A.metadata[_A]={M:'jar',N:str(A.current_apk),O:J};A.log(f"lspatch: patching complete → {A.current_apk}")
