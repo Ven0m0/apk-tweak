@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "revanced-pipeline"
 version = "0.1.1"
@@ -19,6 +15,15 @@ dependencies = [
   "orjson>=3.11.0,<4.0.0",  # Fast JSON serialization (~6x faster)
   # "Pairip>=1.0.0",  # RKPairip APK decompilation/rebuilding
 ]
+
+[project.urls]
+Homepage = "https://github.com/Ven0m0/apk-tweak"
+Issues = "https://github.com/Ven0m0/apk-tweak/issues"
+Repository = "https://github.com/Ven0m0/apk-tweak"
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["rvp"]
