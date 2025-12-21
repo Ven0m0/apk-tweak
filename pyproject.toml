@@ -1,9 +1,9 @@
 [project]
 name = "revanced-pipeline"
-version = "0.1.1"
+version = "0.1.2"
 description = "Extensible pipeline for ReVanced, Magisk modules, LSPatch, and DTL-X"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "ven0m0", email = "dev@example.com" },
 ]
