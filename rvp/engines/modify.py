@@ -10,6 +10,7 @@ Provides advanced APK modification capabilities including:
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -256,6 +257,7 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
   # Create keystore if it doesn't exist
   if not keystore_path.exists():
     ctx.log(f"modify: Creating new keystore at {keystore_path}")
+    # Use environment variables to avoid password exposure in process listings
     keytool_cmd = [
       "keytool",
       "-genkey",
@@ -270,21 +272,24 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
       "2048",
       "-validity",
       "10000",
-      "-storepass",
-      keystore_pass,
-      "-keypass",
-      keystore_pass,
+      "-storepass:env",
+      "KEYSTORE_PASS",
+      "-keypass:env",
+      "KEYSTORE_PASS",
       "-dname",
       "CN=APK Modifier, OU=Dev, O=APK, L=City, S=State, C=US",
     ]
 
     try:
-      run_command(keytool_cmd, ctx)
+      # Pass password via environment variable to avoid exposure
+      env = os.environ.copy()
+      env["KEYSTORE_PASS"] = keystore_pass
+      run_command(keytool_cmd, ctx, env=env)
     except (subprocess.SubprocessError, OSError) as e:
       ctx.log(f"modify: Keystore creation failed: {e}")
       return False
 
-  # Sign APK using apksigner
+  # Sign APK using apksigner with environment variable for password
   sign_cmd = [
     "apksigner",
     "sign",
@@ -293,14 +298,17 @@ def _sign_apk(ctx: Context, unsigned_apk: Path, signed_apk: Path) -> bool:
     "--ks-key-alias",
     keystore_alias,
     "--ks-pass",
-    f"pass:{keystore_pass}",
+    "pass:env:KEYSTORE_PASS",
     "--out",
     str(signed_apk),
     str(unsigned_apk),
   ]
 
   try:
-    run_command(sign_cmd, ctx, timeout=TIMEOUT_PATCH)
+    # Pass password via environment variable to avoid exposure
+    env = os.environ.copy()
+    env["KEYSTORE_PASS"] = keystore_pass
+    run_command(sign_cmd, ctx, timeout=TIMEOUT_PATCH, env=env)
     return signed_apk.exists()
   except (subprocess.SubprocessError, OSError) as e:
     ctx.log(f"modify: Signing failed: {e}")
