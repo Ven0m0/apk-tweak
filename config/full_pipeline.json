@@ -71,11 +71,7 @@
       }
     }
   ],
-  "plugins": [
-    "logging",
-    "metrics",
-    "validation"
-  ],
+  "plugins": ["logging", "metrics", "validation"],
   "global_options": {
     "verbose": true,
     "debug": false,
