@@ -170,14 +170,9 @@ dev = [
    # Run when needed: uv run --with pip-audit pip-audit
    ```
 
-5. **Verify python-minifier usage**
-   ```bash
-   # If not actively used, remove from dependency-groups
-   # Otherwise keep it
-   ```
-
 ### ✅ LOW PRIORITY - Keep
 
+5. **Keep python-minifier** - Actively used via `minify_all.py` (uses `pyminify`)
 6. **Keep orjson** - Actively used, good performance benefit
 7. **Keep pytest** - Essential for testing
 8. **Keep ruff** - Primary linter and formatter
