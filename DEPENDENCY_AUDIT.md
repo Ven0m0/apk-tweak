@@ -85,8 +85,8 @@ All 36 dependencies scanned with `pip-audit 2.10.0`:
    - **Current:** 3.1.1
    - **Latest:** ~3.1.1 ✅
    - **Status:** Up-to-date
-   - **Usage:** Check if actively used for minification
-   - **Verdict:** ⚠️ **VERIFY USAGE** - Keep only if actively minifying code
+   - **Usage:** Actively used by `minify_all.py` for Python code minification
+   - **Verdict:** ✅ **KEEP** - Required for the active minification pipeline
 
 ---
 
