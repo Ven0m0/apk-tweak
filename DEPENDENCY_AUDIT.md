@@ -216,7 +216,7 @@ Current constraints are well-structured:
    - Update workflows to use `ruff format` instead of `black`
 
 2. **Verify and Act:**
-   - Check if `python-minifier` is used (check `minify_all.py`)
+   - Document that `python-minifier` is required (it is used in `minify_all.py`)
    - Verify `pyrefly` is working and remove `mypy` if confirmed
 
 3. **Optimize:**
