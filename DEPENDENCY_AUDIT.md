@@ -158,10 +158,13 @@ dev = [
 
 ### 🟡 MEDIUM PRIORITY - Consider
 
-3. **Remove mypy** - If using pyrefly exclusively
+3. **Align type-checking tooling**
    ```bash
-   # Verify pyrefly is set up: pyrefly check
-   # Then remove mypy from dev dependencies
+   # Current setup: mypy is configured and enforced in CI.
+   # Optionally evaluate pyrefly. If you adopt it:
+   #  - Add pyrefly as a dependency
+   #  - Integrate it into CI alongside or instead of mypy
+   # Only then reconsider removing mypy to avoid breaking checks.
    ```
 
 4. **Make pip-audit optional** - Use on-demand instead
