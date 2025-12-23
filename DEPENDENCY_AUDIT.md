@@ -107,8 +107,8 @@ Most of these are transitive dependencies (required by the packages we explicitl
 2. **mypy (1.19.1)**
    - **Size:** Medium
    - **Dependencies:** 4 packages (librt, mypy-extensions, pathspec, typing-extensions)
-   - **Redundancy:** CLAUDE.md specifies using `pyrefly` for type checking
-   - **Recommendation:** ❌ **REMOVE** if pyrefly is the standard
+   - **Role:** Primary static type checker (configured in `pyproject.toml` and used in CI)
+   - **Recommendation:** ✅ **KEEP** - Required for type checking in this project
 
 3. **pip-audit (2.10.0)**
    - **Size:** Medium-Large
