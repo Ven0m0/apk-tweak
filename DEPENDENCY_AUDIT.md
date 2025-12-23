@@ -57,8 +57,8 @@ All 36 dependencies scanned with `pip-audit 2.10.0`:
    - **Current:** 1.19.1
    - **Latest:** ~1.19.1 ✅
    - **Status:** Up-to-date
-   - **Notes:** CLAUDE.md specifies using `pyrefly` for type checking instead
-   - **Verdict:** ⚠️ **CONSIDER REMOVING** - If using pyrefly exclusively, mypy may be redundant
+   - **Notes:** Configured in `pyproject.toml` and enforced in CI as the primary type checker
+   - **Verdict:** ✅ **KEEP** - Actively used for static type checking
 
 3. **ruff** `>=0.14.0,<0.15.0`
    - **Current:** 0.14.9
