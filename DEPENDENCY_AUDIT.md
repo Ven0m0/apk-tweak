@@ -136,7 +136,7 @@ dev = [
 
 **On-demand tools** (not installed by default):
 - `pip-audit` - Run via `uv run --with pip-audit pip-audit`
-- `python-minifier` - Run via `uv run --with python-minifier` if needed
+- `python-minifier` - Run via `uv run --with python-minifier pyminify ...` if needed
 
 ---
 
