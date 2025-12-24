@@ -5,7 +5,7 @@ ANDROID="src/android/app/src/main"
 STRINGS="${ANDROID}/res/values/strings.xml"
 SRC="$(mktemp)"
 # We start out by getting the list of source strings...
-grep -e "string name" $STRINGS | cut -d'"' -f2 > "$SRC"
+grep -e "string name" "$STRINGS" | cut -d'"' -f2 > "$SRC"
 # ... then search for each string as R.string. or @string/
 while IFS= read -r str; do
 	grep -qre "R.string.${str}\|@string/${str}" "$ANDROID" && continue

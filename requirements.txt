@@ -1,0 +1,2 @@
+orjson==3.11.5
+python-minifier==3.1.1
