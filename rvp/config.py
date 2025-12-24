@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 
 # ⚡ Perf: Use orjson (~6x faster) with fallback to stdlib json
 try:
-  from typing import Any, TextIO
+  from typing import Any
+  from typing import TextIO
 
   import orjson
 
@@ -26,7 +28,8 @@ try:
 
 except ImportError:
   import json
-  from typing import Any, TextIO
+  from typing import Any
+  from typing import TextIO
 
   def _load_json(file_handle: TextIO) -> Any:
     """Load JSON using stdlib json (fallback)."""

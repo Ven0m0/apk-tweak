@@ -7,11 +7,13 @@ import os
 import shutil
 import subprocess
 import zipfile
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import as_completed
 from pathlib import Path
 
 from ..context import Context
-from ..utils import check_dependencies, require_input_apk
+from ..utils import check_dependencies
+from ..utils import require_input_apk
 
 # Constants
 DPI_FOLDERS = {

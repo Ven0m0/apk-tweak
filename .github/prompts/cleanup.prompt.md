@@ -13,7 +13,9 @@ Reduce tokens via dedup/pruning; maintain info density.
 
 1. **Prune (Highest):** Delete obsolete/tmp files. Clean refs.
 2. **Consolidate (High):** Merge overlapping (Sec, Perf, Arch) → `*-comprehensive.md`.
-  - *Reqs:* Keep impl details, snippets, troubleshooting.
+
+- _Reqs:_ Keep impl details, snippets, troubleshooting.
+
 3. **Streamline (Med):** Summarize `CLAUDE.md`. Remove verbose arch/setup.
 4. **Archive (Med):** Move resolved/historic → `archive/`. Index in `archive/README.md`.
 

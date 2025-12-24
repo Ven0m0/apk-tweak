@@ -14,15 +14,14 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
+from typing import cast
 
 from ..context import Context
-from ..utils import (
-  TIMEOUT_PATCH,
-  check_dependencies,
-  require_input_apk,
-  run_command,
-)
+from ..utils import TIMEOUT_PATCH
+from ..utils import check_dependencies
+from ..utils import require_input_apk
+from ..utils import run_command
 
 
 def _run_apktool(

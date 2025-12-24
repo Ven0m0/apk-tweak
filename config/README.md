@@ -9,6 +9,7 @@ Ready-to-use pipeline configurations for different use cases.
 Basic single-engine configuration for quick ReVanced patching.
 
 **Usage:**
+
 ```bash
 ./bin/rvp youtube.apk --config config/simple_pipeline.json
 ```
@@ -18,6 +19,7 @@ Basic single-engine configuration for quick ReVanced patching.
 Complete production pipeline with multiple engines and plugins.
 
 **Features:**
+
 - Pre-analysis with DTL-X
 - Media optimization
 - ReVanced patching
@@ -25,6 +27,7 @@ Complete production pipeline with multiple engines and plugins.
 - Logging and metrics
 
 **Usage:**
+
 ```bash
 ./bin/rvp youtube.apk --config config/full_pipeline.json -o output/
 ```
@@ -34,6 +37,7 @@ Complete production pipeline with multiple engines and plugins.
 Development/testing configuration with verbose logging and no cleanup.
 
 **Usage:**
+
 ```bash
 ./bin/rvp test.apk --config config/development_pipeline.json
 ```
@@ -74,15 +78,15 @@ Development/testing configuration with verbose logging and no cleanup.
 
 ```json
 {
-  "verbose": true,            // Verbose output
-  "debug": false,             // Debug mode
-  "cleanup": true,            // Remove temp files
-  "cleanup_on_error": false,  // Cleanup even on failure
-  "temp_dir": "/tmp/rvp",     // Temporary working directory
+  "verbose": true, // Verbose output
+  "debug": false, // Debug mode
+  "cleanup": true, // Remove temp files
+  "cleanup_on_error": false, // Cleanup even on failure
+  "temp_dir": "/tmp/rvp", // Temporary working directory
   "parallel_processing": false, // Run engines in parallel (experimental)
-  "timeout": 3600,            // Max execution time (seconds)
-  "retry_on_failure": true,   // Retry failed engines
-  "max_retries": 3            // Maximum retry attempts
+  "timeout": 3600, // Max execution time (seconds)
+  "retry_on_failure": true, // Retry failed engines
+  "max_retries": 3 // Maximum retry attempts
 }
 ```
 
@@ -139,10 +143,10 @@ ${EDITOR} config/my_custom.json
 ```json
 {
   "plugins": [
-    "logging",        // Comprehensive logging
-    "metrics",        // Performance metrics
-    "validation",     // Input/output validation
-    "notification"    // Build notifications
+    "logging", // Comprehensive logging
+    "metrics", // Performance metrics
+    "validation", // Input/output validation
+    "notification" // Build notifications
   ]
 }
 ```

@@ -96,7 +96,7 @@ jobs:
           - YAML: yamlfmt + yamllint
           - JSON: prettier
           - Shell: shfmt + shellcheck
-          - Python: ruff + black
+          - Python: ruff
           - Markdown: prettier + markdownlint
           - TOML: taplo
           - Actions: actionlint
