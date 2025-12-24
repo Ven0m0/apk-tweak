@@ -208,18 +208,23 @@ apk-tweak/
 ## Best Practices
 
 1. **Engine Development**:
-  - Accept `Context` as sole parameter
-  - Update `ctx.current_apk` after modification
-  - Use `ctx.log()` for output
-  - Raise exceptions on failure
+
+- Accept `Context` as sole parameter
+- Update `ctx.current_apk` after modification
+- Use `ctx.log()` for output
+- Raise exceptions on failure
+
 2. **Plugin Development**:
-  - Implement `handle_hook(ctx, stage)`
-  - Use lightweight operations
-  - Catch exceptions internally
+
+- Implement `handle_hook(ctx, stage)`
+- Use lightweight operations
+- Catch exceptions internally
+
 3. **Testing**:
-  - Use `tmp_path` fixture
-  - Test both success and failure paths
-  - Verify state changes in context
+
+- Use `tmp_path` fixture
+- Test both success and failure paths
+- Verify state changes in context
 
 ## Contributing
 

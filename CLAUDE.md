@@ -29,11 +29,11 @@ This document contains critical information about working with this codebase. Fo
    - Bug fixes require regression tests
 
 4. Code Style
-    - PEP 8 naming (snake_case for functions/variables)
-    - Class names in PascalCase
-    - Constants in UPPER_SNAKE_CASE
-    - Document with docstrings
-    - Use f-strings for formatting
+   - PEP 8 naming (snake_case for functions/variables)
+   - Class names in PascalCase
+   - Constants in UPPER_SNAKE_CASE
+   - Document with docstrings
+   - Use f-strings for formatting
 
 ## Development Philosophy
 
@@ -67,8 +67,6 @@ This document contains critical information about working with this codebase. Fo
 
 - use pydantic and langchain
 - this project is a very simple chatbot. Keep files to a minimum
-
-
 
 ## Pull Requests
 
@@ -121,13 +119,13 @@ This document contains critical information about working with this codebase. Fo
      - Imports: split into multiple lines
 
 2. Type Checking
-  - run `pyrefly init` to start
-  - run `pyrefly check` after every change and fix resultings errors
-   - Requirements:
-     - Explicit None checks for Optional
-     - Type narrowing for strings
-     - Version warnings can be ignored if checks pass
 
+- run `pyrefly init` to start
+- run `pyrefly check` after every change and fix resultings errors
+- Requirements:
+  - Explicit None checks for Optional
+  - Type narrowing for strings
+  - Version warnings can be ignored if checks pass
 
 ## Error Resolution
 

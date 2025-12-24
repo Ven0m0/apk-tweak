@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import cast
 
 from ..context import Context
-from ..utils import check_dependencies, clone_repository, require_input_apk
+from ..utils import check_dependencies
+from ..utils import clone_repository
+from ..utils import require_input_apk
 
 # Constants
 DISCORD_PATCHER_REPO = "https://github.com/CyberL1/discord-apk-patcher"

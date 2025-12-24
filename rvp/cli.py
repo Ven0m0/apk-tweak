@@ -7,7 +7,8 @@ import dataclasses
 import logging
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
+from typing import cast
 
 from .config import Config
 from .core import run_pipeline

@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import os
 import shutil
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from fnmatch import fnmatch
 from pathlib import Path
 
-from .ad_patterns import AD_PATTERNS, AdPattern
-from .constants import (
-  APKTOOL_PATH_KEY,
-  DEFAULT_APKTOOL,
-  DEFAULT_CPU_MULTIPLIER,
-  DEFAULT_ZIPALIGN,
-  MAX_WORKER_THREADS,
-  ZIPALIGN_PATH_KEY,
-)
+from .ad_patterns import AD_PATTERNS
+from .ad_patterns import AdPattern
+from .constants import APKTOOL_PATH_KEY
+from .constants import DEFAULT_APKTOOL
+from .constants import DEFAULT_CPU_MULTIPLIER
+from .constants import DEFAULT_ZIPALIGN
+from .constants import MAX_WORKER_THREADS
+from .constants import ZIPALIGN_PATH_KEY
 from .context import Context
 from .utils import run_command
 

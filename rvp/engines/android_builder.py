@@ -9,12 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from ..context import Context
-from ..utils import (
-  TIMEOUT_BUILD,
-  check_dependencies,
-  find_latest_apk,
-  run_command,
-)
+from ..utils import TIMEOUT_BUILD
+from ..utils import check_dependencies
+from ..utils import find_latest_apk
+from ..utils import run_command
 
 
 def run(ctx: Context) -> None:

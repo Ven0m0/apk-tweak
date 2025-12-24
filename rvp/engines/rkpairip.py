@@ -8,7 +8,9 @@ import subprocess
 from pathlib import Path
 
 from ..context import Context
-from ..utils import check_dependencies, find_latest_apk, require_input_apk
+from ..utils import check_dependencies
+from ..utils import find_latest_apk
+from ..utils import require_input_apk
 
 
 def run(ctx: Context) -> None:

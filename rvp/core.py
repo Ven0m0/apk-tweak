@@ -8,13 +8,12 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from . import (
-  engines as engines_pkg,
-  plugins as plugins_pkg,
-)
+from . import engines as engines_pkg
+from . import plugins as plugins_pkg
 from .context import Context
 from .types import PipelineOptions
-from .validators import validate_apk_path, validate_output_dir
+from .validators import validate_apk_path
+from .validators import validate_output_dir
 
 EngineFn = Callable[[Context], None]
 PluginHandler = Callable[[Context, str], None]
