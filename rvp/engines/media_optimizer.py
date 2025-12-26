@@ -38,7 +38,7 @@ def _get_tool_availability(ctx: Context) -> dict[str, bool]:
   Returns:
       dict with tool availability status.
   """
-  tool_list = ["pngquant", "jpegoptim", "ffmpeg"]
+  tool_list = ["pngquant", "optipng", "jpegoptim", "ffmpeg"]
   _, missing = check_dependencies(tool_list)
 
   tools = {tool: tool not in missing for tool in tool_list}
@@ -46,7 +46,7 @@ def _get_tool_availability(ctx: Context) -> dict[str, bool]:
   if missing:
     ctx.log(f"media_optimizer: missing tools: {', '.join(missing)}")
     ctx.log(
-      "media_optimizer: install via package manager (Arch: pacman -S pngquant jpegoptim ffmpeg)"
+      "media_optimizer: install via package manager (Arch: pacman -S pngquant optipng jpegoptim ffmpeg)"
     )
 
   return tools
@@ -89,7 +89,7 @@ def _optimize_png(ctx: Context, png_path: Path, quality: str = "65-80") -> bool:
 
 def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, bool]:
   """
-  Worker function for parallel PNG optimization.
+  Worker function for parallel PNG optimization using pngquant.
 
   Args:
       png_path: Path to PNG file.
@@ -112,6 +112,35 @@ def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, 
       capture_output=True,
       text=True,
       timeout=30,
+      check=False,
+    )
+    return (png_path, result.returncode == 0)
+  except (subprocess.TimeoutExpired, Exception):
+    return (png_path, False)
+
+
+def _optimize_png_optipng_worker(
+  png_path: Path, optimization_level: int = 7
+) -> tuple[Path, bool]:
+  """
+  Worker function for parallel PNG optimization using optipng.
+
+  Uses optipng for lossless compression with configurable optimization level.
+  Level 7 provides maximum compression with reasonable processing time.
+
+  Args:
+      png_path: Path to PNG file.
+      optimization_level: Optimization level (0-7, default 7 for maximum).
+
+  Returns:
+      Tuple of (path, success).
+  """
+  try:
+    result = subprocess.run(
+      ["optipng", f"-o{optimization_level}", str(png_path)],
+      capture_output=True,
+      text=True,
+      timeout=60,
       check=False,
     )
     return (png_path, result.returncode == 0)
@@ -357,6 +386,7 @@ def _process_images(
   Process and optimize images in extracted APK.
 
   ⚡ Optimized: Shared process pool for better worker utilization.
+  Supports both pngquant (lossy) and optipng (lossless) for PNG optimization.
 
   Args:
       ctx: Pipeline context.
@@ -379,9 +409,13 @@ def _process_images(
 
   # Check tool availability
   has_pngquant = tools.get("pngquant", False)
+  has_optipng = tools.get("optipng", False)
   has_jpegoptim = tools.get("jpegoptim", False)
 
-  if not has_pngquant and not has_jpegoptim:
+  # Get PNG optimizer preference from options (default: optipng if available)
+  png_optimizer = ctx.options.get("png_optimizer", "optipng")
+
+  if not has_pngquant and not has_optipng and not has_jpegoptim:
     ctx.log(
       "media_optimizer: no optimization tools available, skipping image optimization"
     )
@@ -398,11 +432,44 @@ def _process_images(
   with ProcessPoolExecutor(max_workers=max_workers) as executor:
     futures = {}
 
-    # Submit PNG optimization tasks
-    if has_pngquant and png_files:
-      for png in png_files:
-        future = executor.submit(_optimize_png_worker, png)
-        futures[future] = ("png", png)
+    # Submit PNG optimization tasks based on available tools and preference
+    if png_files:
+      if png_optimizer == "optipng" and has_optipng:
+        ctx.log("media_optimizer: using optipng for PNG optimization (lossless)")
+        optimization_level_opt = ctx.options.get("optipng_level", 7)
+        optimization_level = (
+          optimization_level_opt if isinstance(optimization_level_opt, int) else 7
+        )
+        for png in png_files:
+          future = executor.submit(
+            _optimize_png_optipng_worker, png, optimization_level
+          )
+          futures[future] = ("png", png)
+      elif png_optimizer == "pngquant" and has_pngquant:
+        ctx.log("media_optimizer: using pngquant for PNG optimization (lossy)")
+        for png in png_files:
+          future = executor.submit(_optimize_png_worker, png)
+          futures[future] = ("png", png)
+      elif has_optipng:
+        # Fallback to optipng if available
+        ctx.log("media_optimizer: using optipng for PNG optimization (lossless)")
+        optimization_level_opt = ctx.options.get("optipng_level", 7)
+        optimization_level = (
+          optimization_level_opt if isinstance(optimization_level_opt, int) else 7
+        )
+        for png in png_files:
+          future = executor.submit(
+            _optimize_png_optipng_worker, png, optimization_level
+          )
+          futures[future] = ("png", png)
+      elif has_pngquant:
+        # Fallback to pngquant if available
+        ctx.log("media_optimizer: using pngquant for PNG optimization (lossy)")
+        for png in png_files:
+          future = executor.submit(_optimize_png_worker, png)
+          futures[future] = ("png", png)
+      else:
+        ctx.log("media_optimizer: no PNG optimization tools available")
 
     # Submit JPEG optimization tasks
     if has_jpegoptim and jpg_files:
@@ -417,8 +484,6 @@ def _process_images(
       if success:
         stats[file_type] += 1
 
-  if not has_pngquant:
-    ctx.log("media_optimizer: pngquant not available, skipped PNG optimization")
   if not has_jpegoptim:
     ctx.log("media_optimizer: jpegoptim not available, skipped JPEG optimization")
 
