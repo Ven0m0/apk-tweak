@@ -187,3 +187,111 @@ def find_latest_apk(directory: Path) -> Path | None:
 
   # Return the most recently modified APK
   return max(apk_files, key=lambda p: p.stat().st_mtime)
+
+
+def build_tool_command(
+  tool_name: str,
+  ctx: Context,
+  jar_key: str,
+  default_jar: str,
+  base_args: list[str] | None = None,
+) -> list[str]:
+  """
+  Build command for tool that supports both binary CLI and JAR modes.
+
+  Args:
+      tool_name: Name of the binary tool (e.g., "revanced-cli", "lspatch").
+      ctx: Pipeline context.
+      jar_key: Key in tools config for JAR path (e.g., "revanced_cli").
+      default_jar: Default JAR filename.
+      base_args: Base arguments to append after tool/jar invocation.
+
+  Returns:
+      Command list starting with binary or java -jar.
+  """
+  if shutil.which(tool_name):
+    cmd = [tool_name]
+  else:
+    tools = ctx.options.get("tools", {})
+    jar_path = Path(tools.get(jar_key, default_jar))
+    cmd = ["java", "-jar", str(jar_path)]
+
+  if base_args:
+    cmd.extend(base_args)
+
+  return cmd
+
+
+def run_cli_tool(
+  cmd: list[str],
+  ctx: Context,
+  tool_name: str,
+  output_path: Path,
+  timeout: int = TIMEOUT_PATCH,
+) -> bool:
+  """
+  Execute CLI tool and check if output was created successfully.
+
+  Args:
+      cmd: Command list to execute.
+      ctx: Pipeline context.
+      tool_name: Tool name for logging (e.g., "revanced", "lspatch").
+      output_path: Expected output file or directory.
+      timeout: Command timeout in seconds.
+
+  Returns:
+      True if command succeeded and output exists, False otherwise.
+  """
+  ctx.log(f"{tool_name}: running CLI → {output_path.name}")
+
+  try:
+    result = run_command(cmd, ctx, timeout=timeout, check=False)
+
+    if result.returncode == 0 and output_path.exists():
+      ctx.log(f"{tool_name}: CLI execution successful")
+      return True
+
+    ctx.log(f"{tool_name}: CLI failed (exit code: {result.returncode})")
+    return False
+
+  except (OSError, subprocess.SubprocessError) as e:
+    ctx.log(f"{tool_name}: CLI error: {e}")
+    return False
+
+
+def validate_and_require_dependencies(
+  ctx: Context,
+  required: list[str],
+  tool_name: str,
+  install_msg: str,
+  fallback: bool = False,
+) -> bool:
+  """
+  Check dependencies and log errors with install instructions.
+
+  Args:
+      ctx: Pipeline context.
+      required: List of required tool names.
+      tool_name: Tool name for logging.
+      install_msg: Installation instructions message.
+      fallback: If True, log fallback message instead of raising.
+
+  Returns:
+      True if all dependencies found, False otherwise.
+
+  Raises:
+      FileNotFoundError: If dependencies missing and fallback=False.
+  """
+  deps_ok, missing_deps = check_dependencies(required)
+
+  if not deps_ok:
+    ctx.log(f"{tool_name}: Missing dependencies: {', '.join(missing_deps)}")
+    ctx.log(f"{tool_name}: {install_msg}")
+
+    if fallback:
+      ctx.log(f"{tool_name}: Falling back to stub/alternative mode")
+      return False
+
+    raise FileNotFoundError(f"{tool_name} dependencies missing: {missing_deps}")
+
+  return True

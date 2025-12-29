@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import cast
 
 from ..context import Context
-from ..utils import check_dependencies
 from ..utils import clone_repository
 from ..utils import require_input_apk
+from ..utils import validate_and_require_dependencies
 
 # Constants
 DISCORD_PATCHER_REPO = "https://github.com/CyberL1/discord-apk-patcher"
@@ -95,11 +95,16 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check dependencies
-  deps_ok, missing_deps = check_dependencies(REQUIRED_TOOLS)
-  if not deps_ok:
-    ctx.log(f"discord: ERROR - Missing dependencies: {', '.join(missing_deps)}")
-    ctx.log("discord: Install with: pacman -S android-tools apktool jdk-openjdk")
-    ctx.log("discord: Or: apt-get install -y android-sdk apktool openjdk-17-jdk")
+  if not validate_and_require_dependencies(
+    ctx,
+    REQUIRED_TOOLS,
+    "discord",
+    (
+      "Install with: pacman -S android-tools apktool jdk-openjdk | "
+      "Or: apt-get install -y android-sdk apktool openjdk-17-jdk"
+    ),
+    fallback=True,
+  ):
     return
 
   # Locate or clone patcher

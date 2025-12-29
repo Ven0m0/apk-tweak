@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import cast
 
 from ..context import Context
-from ..utils import check_dependencies
 from ..utils import clone_repository
 from ..utils import require_input_apk
+from ..utils import validate_and_require_dependencies
 
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
@@ -54,12 +54,13 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check Java dependency
-  deps_ok, _ = check_dependencies(["java"])
-  if not deps_ok:
-    ctx.log("whatsapp: ERROR - Java runtime not found")
-    ctx.log(
-      "whatsapp: Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre"
-    )
+  if not validate_and_require_dependencies(
+    ctx,
+    ["java"],
+    "whatsapp",
+    "Install with: pacman -S jdk-openjdk or apt-get install openjdk-17-jre",
+    fallback=True,
+  ):
     return
 
   # Locate or clone patcher

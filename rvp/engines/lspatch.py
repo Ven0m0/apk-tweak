@@ -10,10 +10,11 @@ from typing import cast
 
 from ..context import Context
 from ..utils import TIMEOUT_PATCH
-from ..utils import check_dependencies
+from ..utils import build_tool_command
 from ..utils import find_latest_apk
 from ..utils import require_input_apk
 from ..utils import run_command
+from ..utils import validate_and_require_dependencies
 
 
 def _build_lspatch_cmd(ctx: Context, input_apk: Path, output_dir: Path) -> list[str]:
@@ -30,14 +31,13 @@ def _build_lspatch_cmd(ctx: Context, input_apk: Path, output_dir: Path) -> list[
   Returns:
       Command list for subprocess execution.
   """
-  # Check if using binary or JAR
+  # Build base command with shared utility
+  base_args = ["-l", "2", "-o", str(output_dir)]
   if shutil.which("lspatch"):
-    cmd = ["lspatch", "-v", "-l", "2", "-f", "-o", str(output_dir)]
-  else:
-    tools = ctx.options.get("tools", {})
-    tools_dict = cast(dict[str, Any], tools)
-    lspatch_jar = Path(tools_dict.get("lspatch_jar", "lspatch.jar"))
-    cmd = ["java", "-jar", str(lspatch_jar), "-l", "2", "-o", str(output_dir)]
+    # Binary CLI has additional flags
+    base_args = ["-v", "-l", "2", "-f", "-o", str(output_dir)]
+
+  cmd = build_tool_command("lspatch", ctx, "lspatch_jar", "lspatch.jar", base_args)
 
   # Modules
   modules = ctx.options.get("lspatch_modules", [])
@@ -83,7 +83,7 @@ def _run_lspatch_cli(ctx: Context, input_apk: Path, output_dir: Path) -> Path | 
       # LSPatch outputs as {package_name}.apk or *-lspatched.apk
       patched = find_latest_apk(output_dir)
       if patched:
-        ctx.log("lspatch: CLI patching successful")
+        ctx.log("lspatch: CLI execution successful")
         return patched
 
     ctx.log(f"lspatch: CLI failed (exit code: {result.returncode})")
@@ -121,11 +121,12 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check dependencies
-  deps_ok, missing_deps = check_dependencies(["lspatch", "java"])
-  if not deps_ok:
-    ctx.log(f"lspatch: Missing dependencies: {', '.join(missing_deps)}")
-    ctx.log("lspatch: Install from: https://github.com/LSPosed/LSPatch")
-    raise FileNotFoundError(f"LSPatch dependencies missing: {missing_deps}")
+  validate_and_require_dependencies(
+    ctx,
+    ["lspatch", "java"],
+    "lspatch",
+    "Install from: https://github.com/LSPosed/LSPatch",
+  )
 
   # Try binary CLI approach first (luniume-style)
   use_cli = ctx.options.get("lspatch_use_cli", True)

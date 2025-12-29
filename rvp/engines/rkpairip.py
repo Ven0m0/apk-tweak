@@ -8,9 +8,9 @@ import subprocess
 from pathlib import Path
 
 from ..context import Context
-from ..utils import check_dependencies
 from ..utils import find_latest_apk
 from ..utils import require_input_apk
+from ..utils import validate_and_require_dependencies
 
 
 def run(ctx: Context) -> None:
@@ -41,13 +41,12 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check if RKPairip is installed
-  deps_ok, _ = check_dependencies(["RKPairip"])
-  if not deps_ok:
-    ctx.log(
-      "rkpairip: RKPairip not found. Install via: pip install Pairip",
-      level=logging.ERROR,
-    )
-    raise FileNotFoundError("RKPairip not installed. Run: pip install Pairip")
+  validate_and_require_dependencies(
+    ctx,
+    ["RKPairip"],
+    "rkpairip",
+    "Install via: pip install Pairip",
+  )
 
   # Get configuration options
   options = ctx.options.get("rkpairip", {})
