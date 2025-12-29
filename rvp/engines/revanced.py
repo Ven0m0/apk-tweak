@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 from typing import cast
 
 from ..context import Context
 from ..optimizer import optimize_apk
-from ..utils import TIMEOUT_PATCH
-from ..utils import check_dependencies
+from ..utils import build_tool_command
 from ..utils import require_input_apk
+from ..utils import run_cli_tool
 from ..utils import run_command
+from ..utils import validate_and_require_dependencies
 
 
 def _build_revanced_cli_cmd(
@@ -32,13 +32,10 @@ def _build_revanced_cli_cmd(
   Returns:
       Command list for subprocess execution.
   """
-  # Check if using binary CLI or JAR
-  if shutil.which("revanced-cli"):
-    cmd = ["revanced-cli", "patch"]
-  else:
-    tools = ctx.options.get("tools", {})
-    cli_jar = Path(tools.get("revanced_cli", "revanced-cli.jar"))
-    cmd = ["java", "-jar", str(cli_jar), "patch"]
+  # Use shared command builder
+  cmd = build_tool_command(
+    "revanced-cli", ctx, "revanced_cli", "revanced-cli.jar", ["patch"]
+  )
 
   # Patches
   patches: Any = ctx.options.get("revanced_patches", [])
@@ -99,20 +96,7 @@ def _run_revanced_cli(ctx: Context, input_apk: Path, output_apk: Path) -> bool:
       True if successful, False otherwise.
   """
   cmd = _build_revanced_cli_cmd(ctx, input_apk, output_apk)
-  ctx.log(f"revanced: running CLI → {output_apk.name}")
-
-  try:
-    result = run_command(cmd, ctx, timeout=TIMEOUT_PATCH, check=False)
-
-    if result.returncode == 0 and output_apk.exists():
-      ctx.log("revanced: CLI patching successful")
-      return True
-    ctx.log(f"revanced: CLI failed (exit code: {result.returncode})")
-    return False
-
-  except (OSError, subprocess.SubprocessError) as e:
-    ctx.log(f"revanced: CLI error: {e}")
-    return False
+  return run_cli_tool(cmd, ctx, "revanced", output_apk)
 
 
 def _create_stub_apk(ctx: Context, input_apk: Path, patch_bundles_count: int) -> None:
@@ -168,11 +152,13 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check dependencies
-  deps_ok, missing_deps = check_dependencies(["revanced-cli", "java"])
-  if not deps_ok:
-    ctx.log(f"revanced: Missing dependencies: {', '.join(missing_deps)}")
-    ctx.log("revanced: Install with: yay -S revanced-cli-bin jdk17-openjdk")
-    ctx.log("revanced: Falling back to stub mode")
+  if not validate_and_require_dependencies(
+    ctx,
+    ["revanced-cli", "java"],
+    "revanced",
+    "Install with: yay -S revanced-cli-bin jdk17-openjdk",
+    fallback=True,
+  ):
     _create_stub_apk(ctx, input_apk, 0)
     return
 

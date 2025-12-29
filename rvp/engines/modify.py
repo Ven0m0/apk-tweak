@@ -19,9 +19,9 @@ from typing import cast
 
 from ..context import Context
 from ..utils import TIMEOUT_PATCH
-from ..utils import check_dependencies
 from ..utils import require_input_apk
 from ..utils import run_command
+from ..utils import validate_and_require_dependencies
 
 
 def _run_apktool(
@@ -344,15 +344,15 @@ def run(ctx: Context) -> None:
   input_apk = require_input_apk(ctx)
 
   # Check dependencies
-  required_deps = ["apktool", "java", "keytool", "apksigner"]
-  deps_ok, missing_deps = check_dependencies(required_deps)
-
-  if not deps_ok:
-    raise RuntimeError(
-      f"modify: Missing dependencies: {', '.join(missing_deps)}\n"
-      f"Install with: apt-get install -y apktool default-jdk apksigner\n"
-      f"Or on Arch: pacman -S android-tools jdk-openjdk"
-    )
+  validate_and_require_dependencies(
+    ctx,
+    ["apktool", "java", "keytool", "apksigner"],
+    "modify",
+    (
+      "Install with: apt-get install -y apktool default-jdk apksigner | "
+      "Or on Arch: pacman -S android-tools jdk-openjdk"
+    ),
+  )
 
   # Create work directory
   modify_work = ctx.work_dir / "modify"
