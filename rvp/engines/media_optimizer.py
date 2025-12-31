@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import itertools
-import os
 import shutil
 import subprocess
 import zipfile
@@ -11,6 +10,7 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed
 from pathlib import Path
 
+from ..constants import get_optimal_process_workers
 from ..context import Context
 from ..utils import check_dependencies
 from ..utils import require_input_apk
@@ -50,41 +50,6 @@ def _get_tool_availability(ctx: Context) -> dict[str, bool]:
     )
 
   return tools
-
-
-def _optimize_png(ctx: Context, png_path: Path, quality: str = "65-80") -> bool:
-  """
-  Optimize PNG file using pngquant.
-
-  Args:
-      ctx: Pipeline context.
-      png_path: Path to PNG file.
-      quality: Quality range (default: 65-80 for good compression).
-
-  Returns:
-      True if optimization succeeded, False otherwise.
-  """
-  try:
-    # pngquant overwrites with -f flag, quality range ensures good compression
-    result = subprocess.run(
-      [
-        "pngquant",
-        "--quality",
-        quality,
-        "--ext",
-        ".png",
-        "--force",
-        str(png_path),
-      ],
-      capture_output=True,
-      text=True,
-      timeout=30,
-      check=False,
-    )
-    return result.returncode == 0
-  except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: PNG optimization failed for {png_path.name}: {e}")
-    return False
 
 
 def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, bool]:
@@ -148,33 +113,6 @@ def _optimize_png_optipng_worker(
     return (png_path, False)
 
 
-def _optimize_jpg(ctx: Context, jpg_path: Path, quality: int = 85) -> bool:
-  """
-  Optimize JPEG file using jpegoptim.
-
-  Args:
-      ctx: Pipeline context.
-      jpg_path: Path to JPEG file.
-      quality: Quality level (default: 85 for good balance).
-
-  Returns:
-      True if optimization succeeded, False otherwise.
-  """
-  try:
-    # jpegoptim with --max=quality and --strip-all for metadata removal
-    result = subprocess.run(
-      ["jpegoptim", f"--max={quality}", "--strip-all", str(jpg_path)],
-      capture_output=True,
-      text=True,
-      timeout=30,
-      check=False,
-    )
-    return result.returncode == 0
-  except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: JPEG optimization failed for {jpg_path.name}: {e}")
-    return False
-
-
 def _optimize_jpg_worker(jpg_path: Path, quality: int = 85) -> tuple[Path, bool]:
   """
   Worker function for parallel JPEG optimization.
@@ -197,60 +135,6 @@ def _optimize_jpg_worker(jpg_path: Path, quality: int = 85) -> tuple[Path, bool]
     return (jpg_path, result.returncode == 0)
   except (subprocess.TimeoutExpired, Exception):
     return (jpg_path, False)
-
-
-def _optimize_audio(
-  ctx: Context, audio_path: Path, output_path: Path, bitrate: str = "96k"
-) -> bool:
-  """
-  Optimize audio file using ffmpeg.
-
-  Args:
-      ctx: Pipeline context.
-      audio_path: Path to input audio file.
-      output_path: Path to output audio file.
-      bitrate: Target bitrate (default: 96k for good quality).
-
-  Returns:
-      True if optimization succeeded, False otherwise.
-  """
-  try:
-    # Detect format and use appropriate codec
-    suffix = audio_path.suffix.lower()
-    if suffix == ".mp3":
-      codec = "libmp3lame"
-    elif suffix == ".ogg":
-      codec = "libvorbis"
-    else:
-      return False
-
-    result = subprocess.run(
-      [
-        "ffmpeg",
-        "-i",
-        str(audio_path),
-        "-codec:a",
-        codec,
-        "-b:a",
-        bitrate,
-        "-y",  # Overwrite output
-        str(output_path),
-      ],
-      capture_output=True,
-      text=True,
-      timeout=60,
-      check=False,
-    )
-
-    if result.returncode == 0 and output_path.exists():
-      # Replace original with optimized version
-      shutil.move(output_path, audio_path)
-      return True
-    return False
-
-  except (subprocess.TimeoutExpired, Exception) as e:
-    ctx.log(f"media_optimizer: Audio optimization failed for {audio_path.name}: {e}")
-    return False
 
 
 def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path, bool]:
@@ -421,9 +305,8 @@ def _process_images(
     )
     return stats
 
-  # ⚡ Perf: Calculate optimal worker count for CPU-bound operations
-  cpu_count = os.cpu_count() or 1
-  max_workers = min(cpu_count, 8)  # Cap at 8 to avoid overhead
+  # ⚡ Perf: Use centralized worker calculation
+  max_workers = get_optimal_process_workers()
 
   # ⚡ Perf: Use single shared process pool for both PNG and JPEG optimization
   # This avoids process creation/teardown overhead and maximizes worker utilization
@@ -518,9 +401,8 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
   if not audio_files:
     return 0
 
-  # ⚡ Perf: Calculate optimal worker count for CPU-bound operations
-  cpu_count = os.cpu_count() or 1
-  max_workers = min(cpu_count, 8)  # Cap at 8 to avoid overhead
+  # ⚡ Perf: Use centralized worker calculation
+  max_workers = get_optimal_process_workers()
 
   ctx.log(f"media_optimizer: optimizing audio with {max_workers} workers")
 
