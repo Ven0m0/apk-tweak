@@ -14,12 +14,9 @@ DEFAULT_APKTOOL = "apktool"
 DEFAULT_ZIPALIGN = "zipalign"
 
 # Engine names
-ENGINE_ANDROID_BUILDER = "android_builder"
-ENGINE_DISCORD = "discord"
 ENGINE_DTLX = "dtlx"
 ENGINE_LSPATCH = "lspatch"
 ENGINE_MEDIA_OPTIMIZER = "media_optimizer"
-ENGINE_MODIFY = "modify"
 ENGINE_REVANCED = "revanced"
 ENGINE_RKPAIRIP = "rkpairip"
 ENGINE_STRING_CLEANER = "string_cleaner"
