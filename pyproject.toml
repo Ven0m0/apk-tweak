@@ -1,7 +1,7 @@
 [project]
 name = "revanced-pipeline"
 version = "0.1.2"
-description = "Extensible pipeline for ReVanced, Magisk modules, LSPatch, and DTL-X"
+description = "Extensible pipeline for ReVanced, LSPatch, DTL-X, and APK optimization"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -68,7 +68,6 @@ extend-exclude = [
   "site-packages",
   "vendor",
   ".vscode",
-  "minified",
 ]
 
 [tool.ruff.lint]
@@ -152,7 +151,3 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 
-[dependency-groups]
-dev = [
-    "python-minifier>=3.1.1",
-]

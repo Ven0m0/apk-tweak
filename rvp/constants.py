@@ -14,11 +14,16 @@ DEFAULT_APKTOOL = "apktool"
 DEFAULT_ZIPALIGN = "zipalign"
 
 # Engine names
-ENGINE_REVANCED = "revanced"
-ENGINE_MAGISK = "magisk"
-ENGINE_LSPATCH = "lspatch"
+ENGINE_ANDROID_BUILDER = "android_builder"
+ENGINE_DISCORD = "discord"
 ENGINE_DTLX = "dtlx"
+ENGINE_LSPATCH = "lspatch"
+ENGINE_MEDIA_OPTIMIZER = "media_optimizer"
+ENGINE_MODIFY = "modify"
+ENGINE_REVANCED = "revanced"
 ENGINE_RKPAIRIP = "rkpairip"
+ENGINE_STRING_CLEANER = "string_cleaner"
+ENGINE_WHATSAPP = "whatsapp"
 
 # Performance thresholds (bytes)
 MMAP_FILE_SIZE_THRESHOLD = 102_400  # 100 KiB - use mmap for larger files
