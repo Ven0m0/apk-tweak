@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -13,10 +12,9 @@ from .ad_patterns import AD_PATTERNS
 from .ad_patterns import AdPattern
 from .constants import APKTOOL_PATH_KEY
 from .constants import DEFAULT_APKTOOL
-from .constants import DEFAULT_CPU_MULTIPLIER
 from .constants import DEFAULT_ZIPALIGN
-from .constants import MAX_WORKER_THREADS
 from .constants import ZIPALIGN_PATH_KEY
+from .constants import get_optimal_thread_workers
 from .context import Context
 from .utils import run_command
 
@@ -63,8 +61,6 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
 
   # ⚡ Perf: Single directory traversal instead of N rglob() calls
   # For 50 patterns + 10k files: 1 traversal vs 50 traversals = 40x speedup
-  from fnmatch import fnmatch
-
   seen_paths: set[Path] = set()
 
   # Single traversal of entire tree
@@ -214,9 +210,8 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
 
   total_patched = 0
 
-  # ⚡ Perf: Calculate optimal pool size (min of max workers or CPU-based)
-  cpu_count = os.cpu_count() or 1
-  optimal_workers = min(MAX_WORKER_THREADS, cpu_count + DEFAULT_CPU_MULTIPLIER)
+  # ⚡ Perf: Use centralized worker calculation
+  optimal_workers = get_optimal_thread_workers()
 
   ctx.log(f"optimizer: Using {optimal_workers} worker threads")
 

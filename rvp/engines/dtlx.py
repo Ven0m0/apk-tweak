@@ -1,4 +1,16 @@
-"""DTL-X analysis and optimization engine."""
+"""DTL-X analysis and optimization engine.
+
+Integrates with Gameye98/DTL-X - Python APK reverser and patcher tool.
+Supports comprehensive APK modification including ad removal, tracker removal,
+security bypasses, and code optimization.
+
+Available DTL-X flags:
+  Ad Removal: rmads1-5, rmtrackers
+  Security: sslbypass, rmcopy, rmvpndet, rmusbdebug, rmssrestrict, rmrootxposedvpn
+  Protection: rmpairip, bppairip
+  Code: rmnop, rmnown, nokill
+  Modification: customfont, changepackagename, changeactivity, cloneapk
+"""
 
 from __future__ import annotations
 
@@ -6,6 +18,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from ..context import Context
 from ..utils import require_input_apk
@@ -13,6 +26,45 @@ from ..utils import require_input_apk
 # Constants
 DTLX_REPO_URL = "https://github.com/Gameye98/DTL-X"
 DTLX_NOT_FOUND_MSG = f"dtlx: DTL-X not found. Install from {DTLX_REPO_URL}"
+
+# All available DTL-X flags mapped to pipeline option names
+DTLX_FLAGS: dict[str, str] = {
+  # Ad removal options
+  "rmads1": "--rmads1",  # Remove Google Mobile Services ad activities
+  "rmads2": "--rmads2",  # Remove internet and ad-related permissions
+  "rmads3": "--rmads3",  # Replace ad publisher IDs in smali
+  "rmads4": "--rmads4",  # Patch ad loader invocations
+  "rmads5": "--rmads5",  # Replace CA ad IDs with dummy values
+  "rmtrackers": "--rmtrackers",  # Remove known tracker classes
+  # Code cleaning options
+  "rmnop": "--rmnop",  # Strip no-operation instructions
+  "rmnown": "--rmnown",  # Delete unknown directories
+  # Security bypass options
+  "sslbypass": "--sslbypass",  # SSL certificate pinning bypass
+  "rmcopy": "--rmcopy",  # Remove copy protection
+  "rmvpndet": "--rmvpndet",  # Remove VPN detection
+  "rmusbdebug": "--rmusbdebug",  # Remove USB debugging detection
+  "rmssrestrict": "--rmssrestrict",  # Disable screenshot restrictions
+  "rmrootxposedvpn": "--rmrootxposedvpn",  # Remove root/Xposed/VPN checks
+  "rmexportdata": "--rmexportdata",  # Suppress data export notifications
+  # Protection bypass options
+  "rmpairip": "--rmpairip",  # Remove Pairip protection
+  "bppairip": "--bppairip",  # Bypass Pairip through library spoofing
+  "rmprop": "--rmprop",  # Delete .properties files
+  # Modification options
+  "nokill": "--nokill",  # Prevent system exit calls
+  "fixinstall": "--fixinstall",  # Repair installer detection
+  "obfuscatemethods": "--obfuscatemethods",  # Rename methods randomly
+  "mergeobb": "--mergeobb",  # Consolidate OBB files
+  "injectdocsprovider": "--injectdocsprovider",  # Add document provider
+  "il2cppdumper": "--il2cppdumper",  # Inject IL2CPP dumper
+  "cloneapk": "--cloneapk",  # Duplicate application
+  "cleanrun": "--cleanrun",  # Delete project after compilation
+  "nocompile": "--nocompile",  # Skip recompilation
+}
+
+# Default optimization preset
+DEFAULT_OPTIMIZATION_FLAGS = ["rmads4", "rmtrackers", "rmnop", "cleanrun"]
 
 
 def _write_report(report_file: Path, apk_name: str, status: str, details: str) -> None:
@@ -133,7 +185,33 @@ def _run_dtlx_analyze(ctx: Context, apk: Path, report_file: Path) -> bool:
     return False
 
 
-def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
+def _build_flags_from_options(options: dict[str, Any]) -> list[str]:
+  """
+  Build DTL-X command line flags from pipeline options.
+
+  Args:
+      options: Pipeline options dictionary.
+
+  Returns:
+      List of command line flags to pass to DTL-X.
+  """
+  flags: list[str] = []
+
+  # Check each known flag in options
+  for opt_name, flag in DTLX_FLAGS.items():
+    if options.get(opt_name):
+      flags.append(flag)
+
+  # If no specific flags, use defaults
+  if not flags:
+    flags = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
+
+  return flags
+
+
+def _run_dtlx_optimize(
+  ctx: Context, apk: Path, output_apk: Path, flags: list[str]
+) -> bool:
   """
   Run DTL-X in optimization mode.
 
@@ -141,6 +219,7 @@ def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
       ctx: Pipeline context.
       apk: Input APK file.
       output_apk: Output APK file.
+      flags: Command line flags to pass to DTL-X.
 
   Returns:
       True if optimization succeeded, False otherwise.
@@ -150,15 +229,7 @@ def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
     ctx.log(DTLX_NOT_FOUND_MSG)
     return False
 
-  # Define optimization flags
-  optimization_flags = [
-    "--rmads4",  # Remove ad loaders
-    "--rmtrackers",  # Remove trackers
-    "--rmnop",  # Remove NOP instructions
-    "--cleanrun",  # Clean up after patching
-  ]
-
-  ctx.log(f"dtlx: optimizing {apk.name} with flags: {' '.join(optimization_flags)}")
+  ctx.log(f"dtlx: optimizing {apk.name} with flags: {' '.join(flags)}")
 
   try:
     # Create working directory for DTL-X
@@ -170,7 +241,7 @@ def _run_dtlx_optimize(ctx: Context, apk: Path, output_apk: Path) -> bool:
     shutil.copy2(apk, work_apk)
 
     # Run DTL-X with optimization flags
-    cmd = [sys.executable, str(dtlx)] + optimization_flags + [str(work_apk)]
+    cmd = [sys.executable, str(dtlx)] + flags + [str(work_apk)]
     result = subprocess.run(
       cmd,
       capture_output=True,
@@ -209,12 +280,33 @@ def run(ctx: Context) -> None:
   Execute DTL-X analysis/optimization.
 
   Integrates with Gameye98/DTL-X for APK analysis and optimization.
-  Supports ad removal, tracker removal, and code optimization.
+  Supports comprehensive modifications via context options.
+
+  Pipeline options (ctx.options):
+      dtlx_analyze: bool - Run analysis mode
+      dtlx_optimize: bool - Run optimization mode
+
+  DTL-X flags (all bool, set True to enable):
+      rmads1-5: Ad removal (levels 1-5)
+      rmtrackers: Remove tracker classes
+      rmnop: Strip NOP instructions
+      sslbypass: SSL pinning bypass
+      rmcopy: Remove copy protection
+      rmvpndet: Remove VPN detection
+      rmusbdebug: Remove USB debug detection
+      rmssrestrict: Disable screenshot restrictions
+      rmrootxposedvpn: Remove root/Xposed/VPN checks
+      rmpairip/bppairip: Pairip protection removal/bypass
+      nokill: Prevent exit calls
+      fixinstall: Fix installer detection
+      obfuscatemethods: Randomize method names
+      mergeobb: Consolidate OBB files
+      cleanrun: Delete project after build
+      nocompile: Skip recompilation
 
   Args:
       ctx: Pipeline context.
   """
-  # Performance: Direct truthiness check instead of bool() conversion
   analyze = ctx.options.get("dtlx_analyze", False)
   optimize = ctx.options.get("dtlx_optimize", False)
 
@@ -225,7 +317,6 @@ def run(ctx: Context) -> None:
   apk = require_input_apk(ctx)
   ctx.log(f"dtlx: starting (analyze={analyze}, optimize={optimize}) on {apk}.")
 
-  # Performance: Use direct dict access pattern instead of setdefault
   if "dtlx" not in ctx.metadata:
     ctx.metadata["dtlx"] = {}
 
@@ -237,8 +328,12 @@ def run(ctx: Context) -> None:
 
   # Run optimization if requested
   if optimize:
+    # Build flags from options or use defaults
+    flags = _build_flags_from_options(ctx.options)
+    ctx.metadata["dtlx"]["flags_used"] = flags
+
     output_apk = ctx.output_dir / f"{apk.stem}.dtlx-optimized.apk"
-    if _run_dtlx_optimize(ctx, apk, output_apk):
+    if _run_dtlx_optimize(ctx, apk, output_apk, flags):
       ctx.metadata["dtlx"]["optimized_apk"] = str(output_apk)
       # Update current APK for next engine in pipeline
       ctx.set_current_apk(output_apk)
