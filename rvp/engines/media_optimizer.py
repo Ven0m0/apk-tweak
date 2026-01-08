@@ -376,7 +376,8 @@ def _process_images(
         futures[future] = ("jpg", jpg)
 
     # Process results as they complete with timeout for stuck processes
-    for future in as_completed(futures, timeout=len(futures) * 60 if futures else 1):  # 1 minute timeout per file
+    total_timeout = 900 if futures else 1  # overall timeout to avoid hanging indefinitely
+    for future in as_completed(futures, timeout=total_timeout):
       file_type, _ = futures[future]
       try:
         _, success = future.result(timeout=60)  # 60 second timeout per future
