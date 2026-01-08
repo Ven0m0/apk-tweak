@@ -70,6 +70,18 @@ class PipelineOptions(TypedDict, total=False):
   optimize_audio: bool
   target_dpi: str
 
+  # String cleaner options
+  clean_unused_strings: bool
+  remove_unused_strings: bool
+  android_source_path: str
+
+  # General optimizer options
+  optimize_general: bool
+  remove_debug_symbols: bool
+  minimize_manifest: bool
+  optimize_resources: bool
+  keep_locales: list[str]
+
   # Nested configuration
   rkpairip: RkPairipOptions
   tools: ToolPaths

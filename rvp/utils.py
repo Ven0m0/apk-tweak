@@ -56,6 +56,10 @@ def run_command(
   if timeout:
     ctx.log(f"  Timeout: {timeout}s")
 
+  # Import time here for performance
+  import time
+  start_time = time.time()
+
   try:
     # ⚡ Perf: Use 8KB buffer instead of line buffering for better performance
     # Still provides real-time feedback with reduced overhead
@@ -71,20 +75,20 @@ def run_command(
       errors="replace",
     ) as proc:
       if proc.stdout:
-        # Batch log lines for efficiency
+        # Batch log lines for efficiency with larger batch size for performance
         output_lines = []
         for line in proc.stdout:
           stripped = line.strip()
           if stripped:
             output_lines.append(stripped)
-            # Log in small batches to maintain real-time feel
-            if len(output_lines) >= 10:
+            # Log in larger batches to reduce logging overhead while maintaining responsiveness
+            if len(output_lines) >= 20:  # Increased from 10 to 20 for better performance
               for out_line in output_lines:
-                ctx.log(f"  {out_line}")
+                ctx.log(f"  {out_line}", level=15)  # Lower log level for subprocess output
               output_lines = []
         # Log remaining lines
         for out_line in output_lines:
-          ctx.log(f"  {out_line}")
+          ctx.log(f"  {out_line}", level=15)
 
     # ⚡ Perf: Use timeout-aware wait
     try:
@@ -92,8 +96,15 @@ def run_command(
     except subprocess.TimeoutExpired:
       proc.kill()  # Ensure process is terminated
       proc.wait()  # Clean up zombie process
-      ctx.log(f"ERR: Command timed out after {timeout}s")
+      elapsed = time.time() - start_time
+      ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
       raise
+
+    elapsed = time.time() - start_time
+    if retcode == 0:
+      ctx.log(f"CMD SUCCESS in {elapsed:.2f}s: {cmd[0]}")
+    else:
+      ctx.log(f"CMD FAILED with code {retcode} in {elapsed:.2f}s: {cmd[0]}")
 
     if check and retcode != 0:
       raise subprocess.CalledProcessError(retcode, cmd)
@@ -104,7 +115,8 @@ def run_command(
     # Re-raise timeout exceptions
     raise
   except (OSError, ValueError) as e:
-    ctx.log(f"ERR: Command failed: {e}")
+    elapsed = time.time() - start_time
+    ctx.log(f"ERR: Command failed after {elapsed:.2f}s: {e}")
     if check:
       raise
     return subprocess.CompletedProcess(cmd, 1)
