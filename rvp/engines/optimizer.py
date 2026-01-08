@@ -6,7 +6,6 @@ import re
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any
 
 from ..context import Context
 from ..utils import require_input_apk
