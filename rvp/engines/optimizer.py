@@ -69,13 +69,15 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     
     for pattern in debug_patterns:
         compiled_pattern = re.compile(pattern, re.IGNORECASE)
-        for file_path in extract_dir.rglob("*"):
-            if file_path.is_file() and compiled_pattern.match(str(file_path)):
-                try:
-                    file_path.unlink()
-                    removed_count += 1
-                except OSError:
-                    continue
+    compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in debug_patterns]
+    # Create a list of files to iterate over to avoid issues with deleting files during iteration.
+    for file_path in list(extract_dir.rglob("*")):
+        if file_path.is_file() and any(p.match(str(file_path)) for p in compiled_patterns):
+            try:
+                file_path.unlink()
+                removed_count += 1
+            except OSError:
+                continue
     
     if removed_count > 0:
         ctx.log(f"optimizer: removed {removed_count} debug/symbol files")
