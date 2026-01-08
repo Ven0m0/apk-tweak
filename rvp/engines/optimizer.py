@@ -16,7 +16,16 @@ def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
     """Extract APK to directory for processing."""
     try:
         with zipfile.ZipFile(apk_path, "r") as zf:
-            zf.extractall(extract_dir)
+            base_path = extract_dir.resolve()
+            for member in zf.infolist():
+                member_path = (extract_dir / member.filename).resolve()
+                try:
+                    # Ensure the target path is within the extraction directory
+                    member_path.relative_to(base_path)
+                except ValueError:
+                    # Detected a path traversal attempt or invalid path
+                    raise OSError("Illegal file path in APK archive")
+                zf.extract(member, extract_dir)
         return True
     except (OSError, zipfile.BadZipFile):
         return False
