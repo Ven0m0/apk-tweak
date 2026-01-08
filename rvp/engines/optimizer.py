@@ -77,24 +77,37 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
 
 
 def _minimize_manifest(ctx: Context, extract_dir: Path) -> bool:
-    """Minimize AndroidManifest.xml by removing unnecessary attributes."""
+    """Minimize AndroidManifest.xml by safely removing comments in text manifests."""
     manifest_path = extract_dir / "AndroidManifest.xml"
     if not manifest_path.exists():
         return False
-    
+
     try:
-        content = manifest_path.read_text(encoding="utf-8", errors="ignore")
-        
-        # Remove comments
-        content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
-        
-        # Remove extra whitespace
-        content = re.sub(r"\s+", " ", content)
-        
+        # Read raw bytes first so we do not accidentally corrupt binary AXML manifests.
+        raw_content = manifest_path.read_bytes()
+    except OSError:
+        return False
+
+    try:
+        # Decode as UTF-8 without ignoring errors. If this fails, treat it as binary and skip.
+        content = raw_content.decode("utf-8")
+    except UnicodeDecodeError:
+        ctx.log("optimizer: skipping non-text AndroidManifest.xml")
+        return False
+
+    # Basic sanity check: only process if it looks like XML text.
+    if not content.lstrip().startswith("<"):
+        ctx.log("optimizer: AndroidManifest.xml is not plain XML, skipping minimization")
+        return False
+
+    # Remove XML comments but leave other whitespace intact to avoid changing semantics.
+    content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
+
+    try:
         manifest_path.write_text(content, encoding="utf-8")
-        ctx.log("optimizer: minimized AndroidManifest.xml")
+        ctx.log("optimizer: minimized AndroidManifest.xml (comments removed)")
         return True
-    except (OSError, UnicodeDecodeError):
+    except OSError:
         return False
 
 
