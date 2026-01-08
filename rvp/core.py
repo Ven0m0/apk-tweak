@@ -153,6 +153,8 @@ def run_pipeline(
   work_dir = output_dir / "tmp"
   work_dir.mkdir(parents=True, exist_ok=True)
   output_dir.mkdir(parents=True, exist_ok=True)
+  
+  # Initialize context with performance metrics
   ctx = Context(
     work_dir=work_dir,
     input_apk=input_apk,
@@ -163,21 +165,49 @@ def run_pipeline(
 
   ctx.log(f"Starting pipeline for: {input_apk}")
   ctx.set_current_apk(input_apk)
+  
+  # Pre-load all engines and plugins to avoid repeated lookups
   all_engines = get_engines()  # Dynamic discovery
   plugin_handlers = load_plugins()
+  
+  # Record start time for performance tracking
+  import time
+  start_time = time.time()
+  
   dispatch_hooks(ctx, "pre_pipeline", plugin_handlers)
+  
+  # Track engine execution times
+  engine_times = {}
   for name in engines:
     if name not in all_engines:
       ctx.log(f"⚠️ Skipping unknown engine: {name}")
       continue
+    
+    engine_start = time.time()
     dispatch_hooks(ctx, f"pre_engine:{name}", plugin_handlers)
     ctx.log(f"Running engine: {name}")
+    
     try:
       all_engines[name](ctx)
     except (OSError, ValueError, RuntimeError) as e:
       ctx.log(f"❌ Engine {name} failed: {e}")
       raise RuntimeError(f"Engine {name} failed") from e
+    finally:
+      engine_time = time.time() - engine_start
+      engine_times[name] = engine_time
+      ctx.log(f"Engine {name} completed in {engine_time:.2f}s")
+    
     dispatch_hooks(ctx, f"post_engine:{name}", plugin_handlers)
+  
   dispatch_hooks(ctx, "post_pipeline", plugin_handlers)
-  ctx.log(f"Pipeline finished. Final APK: {ctx.current_apk}")
+  
+  total_time = time.time() - start_time
+  ctx.log(f"Pipeline finished in {total_time:.2f}s. Final APK: {ctx.current_apk}")
+  
+  # Store performance metrics in context
+  ctx.metadata["performance"] = {
+    "total_time": total_time,
+    "engine_times": engine_times
+  }
+  
   return ctx
