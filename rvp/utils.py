@@ -58,6 +58,7 @@ def run_command(
 
   # Import time here for performance
   import time
+
   start_time = time.time()
 
   try:
@@ -82,9 +83,13 @@ def run_command(
           if stripped:
             output_lines.append(stripped)
             # Log in larger batches to reduce logging overhead while maintaining responsiveness
-            if len(output_lines) >= 20:  # Increased from 10 to 20 for better performance
+            if (
+              len(output_lines) >= 20
+            ):  # Increased from 10 to 20 for better performance
               for out_line in output_lines:
-                ctx.log(f"  {out_line}", level=15)  # Lower log level for subprocess output
+                ctx.log(
+                  f"  {out_line}", level=15
+                )  # Lower log level for subprocess output
               output_lines = []
         # Log remaining lines
         for out_line in output_lines:

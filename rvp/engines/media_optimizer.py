@@ -242,13 +242,13 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
 
     # Get all files first to avoid repeated directory scans
     all_files = [f for f in extract_dir.rglob("*") if f.is_file()]
-    
+
     with zipfile.ZipFile(output_apk, "w") as zf:
       # Process files in batches to reduce memory usage
       batch_size = 100
       for i in range(0, len(all_files), batch_size):
-        batch = all_files[i:i + batch_size]
-        
+        batch = all_files[i : i + batch_size]
+
         for file_path in batch:
           arcname = file_path.relative_to(extract_dir)
 
@@ -376,7 +376,9 @@ def _process_images(
         futures[future] = ("jpg", jpg)
 
     # Process results as they complete with timeout for stuck processes
-    total_timeout = 900 if futures else 1  # overall timeout to avoid hanging indefinitely
+    total_timeout = (
+      900 if futures else 1
+    )  # overall timeout to avoid hanging indefinitely
     for future in as_completed(futures, timeout=total_timeout):
       file_type, _ = futures[future]
       try:
