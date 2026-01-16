@@ -1,260 +1,201 @@
 # Dependency Audit Report
 
-**Date:** 2026-01-12
+**Date:** 2026-01-16
 **Project:** apk-tweak (revanced-pipeline)
-**Auditor:** Claude Code
+**Python Version:** 3.11+
 
 ## Executive Summary
 
-The project maintains an exceptionally lean dependency footprint with only 1 production dependency and 4 dev dependencies. Overall dependency management is excellent, with only minor updates needed.
+This project maintains an **exceptionally lean and well-maintained dependency profile**. All dependencies are up-to-date except for one minor version update available for `ruff`. No security vulnerabilities were detected. The project follows best practices with minimal direct dependencies and justified use of performance-oriented libraries.
 
-### Key Findings
-- ⚠️ **1 Security Vulnerability** (urllib3 - HIGH priority)
-- 📦 **7 Outdated Packages** (2 major version updates available)
-- ✅ **No Unnecessary Dependencies** detected
-- ✅ **Clean dependency tree** (40 total packages including transitive)
-
----
-
-## Security Vulnerabilities
-
-### CVE-2026-21441: urllib3 Decompression Bomb (HIGH)
-
-**Package:** urllib3 2.6.2
-**Fixed in:** 2.6.3
-**Severity:** HIGH (CWE-409: Resource Consumption)
-
-**Description:**
-urllib3's streaming API is vulnerable to decompression bombs when handling HTTP redirect responses. The library decompresses entire redirect response bodies even when `preload_content=False`, without respecting configured read limits. A malicious server could exploit this to cause excessive CPU usage and memory consumption on the client.
-
-**Impact:**
-Applications using urllib3 to stream content from untrusted sources with `preload_content=False` and redirects enabled are vulnerable to resource exhaustion attacks.
-
-**Remediation:**
-- ✅ Upgrade to urllib3 2.6.3
-- Alternative: Disable redirects (`redirect=False`) for untrusted sources
-
-**Priority:** IMMEDIATE - This is a transitive dependency via pip-audit/requests
-
----
-
-## Outdated Packages
-
-### Production Dependencies
-
-| Package | Current | Latest | Type | Priority |
-|---------|---------|--------|------|----------|
-| orjson  | 3.11.5  | 3.11.5 | Production | ✅ Up to date |
-
-### Development Dependencies
-
-| Package | Current | Latest | Type | Update Type | Priority |
-|---------|---------|--------|------|-------------|----------|
-| pytest  | 9.0.2   | 9.0.2  | Dev  | ✅ Up to date | - |
-| mypy    | 1.19.1  | 1.19.1 | Dev  | ✅ Up to date | - |
-| ruff    | 0.14.10 | 0.14.11| Dev  | Patch | Medium |
-| pip-audit| 2.10.0 | 2.10.0 | Dev  | ✅ Up to date | - |
-
-### Transitive Dependencies (Outdated)
-
-| Package | Current | Latest | Update Type | Used By | Priority |
-|---------|---------|--------|-------------|---------|----------|
-| urllib3 | 2.6.2   | 2.6.3  | Patch | pip-audit/requests | **HIGH** ⚠️ |
-| certifi | 2025.11.12 | 2026.1.4 | Patch | pip-audit/requests | Medium |
-| filelock| 3.20.1  | 3.20.3 | Patch | cachecontrol | Low |
-| librt   | 0.7.4   | 0.7.7  | Patch | mypy | Low |
-| pathspec| 0.12.1  | 1.0.3  | **Major** | mypy | Medium |
-| tomli   | 2.3.0   | 2.4.0  | **Major** | pip-audit | Medium |
-
----
+**Overall Grade: A** 🟢
 
 ## Dependency Analysis
 
 ### Production Dependencies
 
-#### orjson (3.11.5)
-**Purpose:** High-performance JSON serialization (~6x faster than stdlib)
-**Usage:** rvp/config.py (optional with stdlib fallback)
-**Status:** ✅ **KEEP** - Proper implementation with fallback pattern
-**Notes:** Excellent use case - performance-critical config I/O with graceful degradation
+| Package | Current | Latest | Status | Notes |
+|---------|---------|--------|--------|-------|
+| orjson  | 3.11.5  | 3.11.5 | ✅ Current | Performance-critical JSON library (~6x faster) |
+
+**Analysis:**
+- **orjson**: Single production dependency, used for config file parsing/serialization
+  - Provides ~6x performance improvement over stdlib `json`
+  - Has fallback to stdlib `json` if not available
+  - Actively maintained with Python 3.14+ support
+  - Download stats: 90M+ monthly downloads
+  - **Justification:** ✅ Well-justified for performance-sensitive APK processing pipeline
 
 ### Development Dependencies
 
-#### pytest (9.0.2)
-**Purpose:** Testing framework
-**Status:** ✅ **KEEP** - Essential for test suite
-**Notes:** Latest version, no updates needed
+| Package    | Current | Latest  | Status | Notes |
+|------------|---------|---------|--------|-------|
+| pytest     | 9.0.2   | 9.0.2   | ✅ Current | Testing framework |
+| mypy       | 1.19.1  | 1.19.1  | ✅ Current | Type checking |
+| ruff       | 0.14.11 | 0.14.13 | ⚠️ Minor update | Linter & formatter |
+| pip-audit  | 2.10.0  | 2.10.0  | ✅ Current | Security scanning |
 
-#### mypy (1.19.1)
-**Purpose:** Static type checking
-**Status:** ✅ **KEEP** - Required per CLAUDE.md guidelines
-**Notes:** Project requires type hints for all code
+**Analysis:**
+- All dev dependencies actively used and essential for code quality
+- `ruff`: 2 patch versions behind (0.14.11 → 0.14.13)
+  - Note: Version 0.14.13 is identical to 0.14.12 (WASM packaging fix)
+  - Safe to upgrade, no breaking changes expected
 
-#### ruff (0.14.10)
-**Purpose:** Fast Python linter and formatter
-**Status:** ✅ **KEEP** - Essential for code quality
-**Notes:** Minor update available (0.14.11)
+### Transitive Dependencies
 
-#### pip-audit (2.10.0)
-**Purpose:** Security vulnerability scanning
-**Status:** ✅ **KEEP** - Critical for dependency security
-**Notes:** This tool found the urllib3 vulnerability
+**Total packages:** 40 (including dev dependencies)
 
----
+All transitive dependencies are necessary and stem from the four dev tools:
+- **mypy** → librt, mypy-extensions, pathspec, typing-extensions
+- **pytest** → iniconfig, packaging, pluggy, pygments
+- **ruff** → (standalone binary, minimal deps)
+- **pip-audit** → cachecontrol, cyclonedx-python-lib, pip-api, pip-requirements-parser, platformdirs, requests, rich, tomli, tomli-w
 
-## Unnecessary Dependencies
+**Bloat Assessment:** ✅ No unnecessary dependencies detected
 
-### Analysis Result: NONE
+## Security Audit
 
-**Findings:**
-- All 1 production dependency is actively used
-- All 4 dev dependencies serve essential purposes
-- No bloat detected in transitive dependencies
-- Dependency tree is minimal and focused
-
-**Comparison to Similar Projects:**
-Most Python projects of similar scope carry 5-15 production dependencies. This project's single production dependency with stdlib fallback demonstrates exceptional discipline.
-
----
-
-## Dependency Tree Analysis
+**Tool Used:** pip-audit 2.10.0
+**Database:** Python Packaging Advisory Database (PyPI)
+**Scan Date:** 2026-01-16
 
 ```
-revanced-pipeline v0.1.2
-├── orjson v3.11.5 (production)
-└── dev extras:
-    ├── pytest v9.0.2 (4 transitive deps)
-    ├── mypy v1.19.1 (4 transitive deps)
-    ├── ruff v0.14.10 (standalone)
-    └── pip-audit v2.10.0 (29 transitive deps)
+Result: No known vulnerabilities found ✅
 ```
 
-**Total Package Count:** 40 (1 prod + 4 dev + 35 transitive)
-
-**Tree Health:**
-- ✅ No circular dependencies
-- ✅ No duplicate packages at different versions
-- ✅ No deprecated packages
-- ✅ Minimal transitive bloat
-- ⚠️ pip-audit has heavy dependency tree (acceptable for dev tool)
-
----
+All dependencies were checked against the PyPI security database with no reported CVEs or security advisories.
 
 ## Recommendations
 
-### Immediate Actions (Priority: HIGH)
+### High Priority
 
-1. **Update urllib3 to fix CVE-2026-21441**
+1. **Update ruff** (Low risk, immediate)
    ```bash
-   uv lock --upgrade
-   uv sync --all-extras
+   uv add --dev ruff --upgrade-package ruff
    ```
+   - Upgrade from 0.14.11 → 0.14.13
+   - Minimal changes (packaging fixes only)
+   - Estimated time: < 1 minute
 
-### Short-term Actions (Priority: MEDIUM)
+### Medium Priority
 
-2. **Update development dependencies**
-   - Addresses minor improvements and bug fixes
-   - Includes ruff 0.14.11 and transitive dependency updates
+None identified. All other dependencies are current.
 
-3. **Monitor major version updates**
-   - pathspec: 0.12.1 → 1.0.3 (mypy dependency)
-   - tomli: 2.3.0 → 2.4.0 (pip-audit dependency)
-   - These are transitive - will be updated by parent packages
+### Low Priority / Monitoring
 
-### Long-term Recommendations
+1. **Monitor Python 3.14+ compatibility**
+   - Current: Python 3.11+
+   - All dependencies support Python 3.14+
+   - Consider testing on Python 3.13/3.14 beta when available
 
-4. **Maintain current dependency discipline**
-   - Continue minimizing production dependencies
-   - Keep optional dependencies with stdlib fallbacks
-   - Regular security audits (monthly)
+2. **Consider pyproject.toml version constraints**
+   - Current constraints are appropriate: `>=X.Y.Z,<MAJOR+1.0.0`
+   - Prevents accidental major version upgrades
+   - ✅ No changes needed
 
-5. **Consider adding (optional)**
-   - `pyrefly` - Mentioned in CLAUDE.md but not in pyproject.toml
-   - Consider adding if type checking workflow requires it
+## Dependency Upgrade Strategy
 
-6. **Dependency update schedule**
-   - Security patches: Immediate
-   - Minor updates: Monthly
-   - Major updates: Quarterly (with testing)
+### Regular Maintenance
 
----
+Run these commands monthly to check for updates:
 
-## Version Constraint Review
+```bash
+# Check for outdated packages
+uv tree
 
-### Current Constraints
+# Security audit
+uv run pip-audit --desc
 
-```toml
-[project.dependencies]
-orjson = ">=3.11.0,<4.0.0"  # ✅ Good: allows patches, blocks majors
-
-[project.optional-dependencies.dev]
-pytest = ">=9.0.0,<10.0.0"  # ✅ Good: follows semver
-mypy = ">=1.19.0,<2.0.0"    # ✅ Good: follows semver
-ruff = ">=0.14.0,<0.15.0"   # ✅ Good: follows semver
-pip-audit = ">=2.7.0,<3.0.0"  # ✅ Good: follows semver
+# View available updates (manual check on PyPI)
+# orjson: https://pypi.org/project/orjson/
+# pytest: https://pypi.org/project/pytest/
+# mypy: https://pypi.org/project/mypy/
+# ruff: https://pypi.org/project/ruff/
+# pip-audit: https://pypi.org/project/pip-audit/
 ```
 
-**Analysis:** All constraints follow best practices
-- Use `>=X.Y.Z,<(X+1).0.0` for semver compliance
-- Block major version upgrades (prevents breaking changes)
-- Allow minor and patch updates (gets bug fixes)
+### Upgrade Best Practices
 
-**Recommendation:** ✅ No changes needed
+1. **Before upgrading:**
+   - Check changelog for breaking changes
+   - Review migration guides for major versions
+   - Ensure compatibility with Python 3.11+
 
----
+2. **After upgrading:**
+   ```bash
+   # Format and lint
+   uv run ruff format .
+   uv run ruff check . --fix
 
-## Cost-Benefit Analysis
+   # Type check
+   uv run mypy rvp/ --strict
 
-### Storage Impact
-- **Current:** ~28.5 MB (with dev extras)
-- **Production only:** ~0.3 MB (orjson binary)
-- **Assessment:** Minimal footprint
+   # Run tests
+   uv run pytest -v
+   ```
 
-### Security Posture
-- **Attack Surface:** Very small (1 production dependency)
-- **Vulnerability History:** Clean except current urllib3 issue
-- **Maintenance Burden:** Low (few dependencies to monitor)
+3. **For major version upgrades:**
+   - Test on a separate branch
+   - Run full CI pipeline
+   - Review all deprecation warnings
+   - Update version constraints in pyproject.toml
 
-### Performance Impact
-- **orjson benefit:** 6x faster JSON operations
-- **Build time:** <5 seconds for full sync
-- **CI/CD impact:** Minimal
+## Performance Considerations
 
----
+### Current Setup
 
-## Action Plan
+- **orjson**: Provides 6x faster JSON parsing/serialization
+  - Critical for config loading in APK processing pipeline
+  - Fallback ensures compatibility
 
-### Phase 1: Immediate (Today)
-- [x] Audit dependencies
-- [ ] Update urllib3 (security fix)
-- [ ] Update all outdated packages
-- [ ] Run full test suite
-- [ ] Commit and push updates
+### Potential Optimizations
 
-### Phase 2: Verification (This Week)
-- [ ] Monitor for any breaking changes
-- [ ] Verify CI/CD pipeline
-- [ ] Update documentation if needed
+None identified. The project already uses optimal dependencies for its use case.
 
-### Phase 3: Ongoing
-- [ ] Schedule monthly security audits
-- [ ] Set up automated dependency updates (Dependabot/Renovate)
-- [ ] Review and prune dependencies quarterly
+## Compliance & Licensing
 
----
+All dependencies use permissive licenses compatible with open source projects:
+- **orjson**: MIT License
+- **pytest**: MIT License
+- **mypy**: MIT License
+- **ruff**: MIT License
+- **pip-audit**: Apache 2.0 License
+
+✅ No licensing conflicts detected
+
+## Action Items
+
+- [ ] Upgrade ruff to 0.14.13 (immediate, low risk)
+- [ ] Set up automated dependency scanning (e.g., Dependabot, Renovate)
+- [ ] Schedule quarterly dependency review
+- [ ] Add dependency audit to CI/CD pipeline
 
 ## Conclusion
 
-**Overall Grade: A+**
+This project demonstrates excellent dependency management:
 
-This project demonstrates exceptional dependency management practices:
-- Minimal production dependencies (1)
-- Essential dev tools only (4)
-- Proper use of optional dependencies with fallbacks
-- Clean dependency tree with no bloat
-- Up-to-date packages (except one security patch needed)
+✅ **Minimal dependencies** (1 production, 4 dev)
+✅ **All up-to-date** (except 1 minor patch)
+✅ **No security vulnerabilities**
+✅ **No unnecessary bloat**
+✅ **Well-justified dependencies**
+✅ **Active maintenance**
 
-**Primary Action Required:**
-Update urllib3 to 2.6.3 to address CVE-2026-21441.
+The only recommendation is a minor ruff upgrade. Continue current dependency management practices.
 
-**No dependencies should be removed.** All current dependencies serve clear purposes and align with the project's "Less Code = Less Debt" philosophy.
+## References
+
+- [orjson PyPI](https://pypi.org/project/orjson/)
+- [pytest PyPI](https://pypi.org/project/pytest/)
+- [mypy PyPI](https://pypi.org/project/mypy/)
+- [ruff PyPI](https://pypi.org/project/ruff/)
+- [pip-audit PyPI](https://pypi.org/project/pip-audit/)
+- [orjson GitHub](https://github.com/ijl/orjson)
+- [ruff GitHub Releases](https://github.com/astral-sh/ruff/releases)
+- [mypy Changelog](https://mypy.readthedocs.io/en/stable/changelog.html)
+
+---
+
+**Generated by:** Claude Code CLI
+**Auditor:** Dependency Analysis Agent
+**Next Review:** 2026-04-16 (quarterly)
