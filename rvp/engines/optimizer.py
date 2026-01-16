@@ -23,7 +23,7 @@ def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
           member_path.relative_to(base_path)
         except ValueError:
           # Detected a path traversal attempt or invalid path
-          raise OSError("Illegal file path in APK archive")
+          raise OSError("Illegal file path in APK archive") from None
         zf.extract(member, extract_dir)
     return True
   except (OSError, zipfile.BadZipFile):
@@ -85,8 +85,6 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*/test.*",
   ]
 
-  for pattern in debug_patterns:
-    compiled_pattern = re.compile(pattern, re.IGNORECASE)
   compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in debug_patterns]
   # Create a list of files to iterate over to avoid issues with deleting files during iteration.
   for file_path in list(extract_dir.rglob("*")):
@@ -247,11 +245,10 @@ def run(ctx: Context) -> None:
       )
 
   # Minimize manifest
-  if minimize_manifest:
-    if _minimize_manifest(ctx, extract_dir):
-      optimization_results["operations_performed"].append(
-        {"type": "manifest_minimization", "success": True}
-      )
+  if minimize_manifest and _minimize_manifest(ctx, extract_dir):
+    optimization_results["operations_performed"].append(
+      {"type": "manifest_minimization", "success": True}
+    )
 
   # Optimize resources
   if optimize_resources:
