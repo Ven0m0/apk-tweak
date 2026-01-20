@@ -1,159 +1,176 @@
 # Development Guidelines
 
-This document contains critical information about working with this codebase. Follow these guidelines precisely.
+Critical information for working with this codebase. Follow these guidelines precisely.
 
-## Core Development Rules
+## Package Management
 
-1. Package Management
-   - ONLY use uv, NEVER pip
-   - Installation: `uv add package`
-   - Running tools: `uv run tool`
-   - Upgrading: `uv add --dev package --upgrade-package package`
-   - FORBIDDEN: `uv pip install`, `@latest` syntax
+**ONLY use uv, NEVER pip**
 
-2. Code Quality
-   - Type hints required for all code
-   - use pyrefly for type checking
-     - run `pyrefly init` to start
-     - run `pyrefly check` after every change and fix resultings errors
-   - Public APIs must have docstrings
-   - Functions must be focused and small
-   - Follow existing patterns exactly
-   - Line length: 88 chars maximum
+```bash
+uv add package              # Install package
+uv add --dev package        # Install dev package
+uv run tool                 # Run tool
+uv add package --upgrade-package package  # Upgrade package
+```
 
-3. Testing Requirements
-   - Framework: `uv run pytest`
-   - Async testing: use anyio, not asyncio
-   - Coverage: test edge cases and errors
-   - New features require tests
-   - Bug fixes require regression tests
+**FORBIDDEN**: `uv pip install`, `@latest` syntax
 
-4. Code Style
-   - PEP 8 naming (snake_case for functions/variables)
-   - Class names in PascalCase
-   - Constants in UPPER_SNAKE_CASE
-   - Document with docstrings
-   - Use f-strings for formatting
+## Code Quality
+
+### Type Checking
+- Type hints required for all code
+- Run `pyrefly init` to initialize
+- Run `pyrefly check` after every change and fix resulting errors
+- Explicit None checks for Optional types
+- Type narrowing for strings
+- Version warnings can be ignored if checks pass
+
+### Code Standards
+- Line length: 88 chars maximum
+- Public APIs must have docstrings
+- Functions must be focused and small
+- Follow existing patterns exactly
+
+### Naming Conventions (PEP 8)
+- Functions/variables: `snake_case`
+- Classes: `PascalCase`
+- Constants: `UPPER_SNAKE_CASE`
+- Handlers: prefix with `handle_`
+
+### Formatting
+- Use f-strings for string formatting
+- Use Ruff for code formatting
+
+## Testing
+
+```bash
+uv run pytest               # Run tests
+```
+
+- Framework: pytest with anyio (NOT asyncio) for async tests
+- Coverage: test edge cases and errors
+- New features require tests
+- Bug fixes require regression tests
+- Test frequently with realistic inputs
 
 ## Development Philosophy
 
-- **Simplicity**: Write simple, straightforward code
-- **Readability**: Make code easy to understand
-- **Performance**: Consider performance without sacrificing readability
-- **Maintainability**: Write code that's easy to update
-- **Testability**: Ensure code is testable
-- **Reusability**: Create reusable components and functions
-- **Less Code = Less Debt**: Minimize code footprint
+Core principles in order of priority:
 
-## Coding Best Practices
+1. **Simplicity**: Write straightforward code, avoid clever solutions
+2. **Readability**: Make code easy to understand
+3. **Less Code = Less Debt**: Minimize code footprint
+4. **Maintainability**: Write code that's easy to update
+5. **Testability**: Ensure code is testable
+6. **Performance**: Consider performance without sacrificing readability
 
-- **Early Returns**: Use to avoid nested conditions
-- **Descriptive Names**: Use clear variable/function names (prefix handlers with "handle")
-- **Constants Over Functions**: Use constants where possible
-- **DRY Code**: Don't repeat yourself
-- **Functional Style**: Prefer functional, immutable approaches when not verbose
-- **Minimal Changes**: Only modify code related to the task at hand
-- **Function Ordering**: Define composing functions before their components
-- **TODO Comments**: Mark issues in existing code with "TODO:" prefix
-- **Simplicity**: Prioritize simplicity and readability over clever solutions
-- **Build Iteratively** Start with minimal functionality and verify it works before adding complexity
-- **Run Tests**: Test your code frequently with realistic inputs and validate outputs
-- **Build Test Environments**: Create testing environments for components that are difficult to validate directly
-- **Functional Code**: Use functional and stateless approaches where they improve clarity
-- **Clean logic**: Keep core logic clean and push implementation details to the edges
-- **File Organsiation**: Balance file organization with simplicity - use an appropriate number of files for the project scale
+## Best Practices
+
+### Code Organization
+- Early returns to avoid nested conditions
+- Define composing functions before their components
+- Keep core logic clean, push implementation details to edges
+- Balance file organization with simplicity
+- Keep files to a minimum (this is a simple chatbot)
+
+### Coding Style
+- DRY (Don't Repeat Yourself)
+- Use constants over functions where possible
+- Prefer functional, immutable approaches when clear
+- Only modify code related to the task
+- Mark issues with `TODO:` prefix
+
+### Iterative Development
+1. Start with minimal functionality
+2. Verify it works before adding complexity
+3. Test frequently with realistic inputs
+4. Create test environments for hard-to-validate components
 
 ## System Architecture
 
-- use pydantic and langchain
-- this project is a very simple chatbot. Keep files to a minimum
-
-## Pull Requests
-
-- Create a detailed message of what changed. Focus on the high level description of
-  the problem it tries to solve, and how it is solved. Don't go into the specifics of the
-  code unless it adds clarity.
+- Use Pydantic and LangChain
+- This is a simple chatbot - keep minimal files
+- Use context7 MCP to check library details
 
 ## Git Workflow
 
-- Always use feature branches; do not commit directly to `main`
-  - Name branches descriptively: `fix/auth-timeout`, `feat/api-pagination`, `chore/ruff-fixes`
-  - Keep one logical change per branch to simplify review and rollback
-- Create pull requests for all changes
-  - Open a draft PR early for visibility; convert to ready when complete
-  - Ensure tests pass locally before marking ready for review
-  - Use PRs to trigger CI/CD and enable async reviews
-- Link issues
-  - Before starting, reference an existing issue or create one
-  - Use commit/PR messages like `Fixes #123` for auto-linking and closure
-- Commit practices
-  - Make atomic commits (one logical change per commit)
-  - Prefer conventional commit style: `type(scope): short description`
-    - Examples: `feat(eval): group OBS logs per test`, `fix(cli): handle missing API key`
-  - Squash only when merging to `main`; keep granular history on the feature branch
-- Practical workflow
-  1. Create or reference an issue
-  2. `git checkout -b feat/issue-123-description`
-  3. Commit in small, logical increments
-  4. `git push` and open a draft PR early
-  5. Convert to ready PR when functionally complete and tests pass
-  6. Merge after reviews and checks pass
+### Branch Strategy
+- Always use feature branches, never commit directly to `main`
+- Branch naming: `fix/auth-timeout`, `feat/api-pagination`, `chore/ruff-fixes`
+- One logical change per branch
 
-## Python Tools
+### Commit Practices
+- Atomic commits (one logical change per commit)
+- Conventional commit style: `type(scope): short description`
+- Examples: `feat(eval): group logs per test`, `fix(cli): handle missing key`
+- Keep granular history on feature branch, squash when merging to `main`
 
-- use context7 mcp to check details of libraries
+### Pull Requests
+- Open draft PR early for visibility
+- Convert to ready when complete and tests pass
+- Create detailed PR description focusing on:
+  - High-level problem description
+  - How it's solved
+  - Avoid code specifics unless they add clarity
 
-## Code Formatting
+### Issue Linking
+- Reference existing issue or create one before starting
+- Use `Fixes #123` in commit/PR messages for auto-linking
 
-1. Ruff
-   - Format: `uv run ruff format .`
-   - Check: `uv run ruff check .`
-   - Fix: `uv run ruff check . --fix`
-   - Critical issues:
-     - Line length (88 chars)
-     - Import sorting (I001)
-     - Unused imports
-   - Line wrapping:
-     - Strings: use parentheses
-     - Function calls: multi-line with proper indent
-     - Imports: split into multiple lines
+### Workflow Steps
+1. Create or reference an issue
+2. `git checkout -b feat/issue-123-description`
+3. Commit in small, logical increments
+4. `git push` and open draft PR early
+5. Convert to ready when functionally complete and tests pass
+6. Merge after reviews and checks pass
 
-2. Type Checking
+## Code Formatting & Linting
 
-- run `pyrefly init` to start
-- run `pyrefly check` after every change and fix resultings errors
-- Requirements:
-  - Explicit None checks for Optional
-  - Type narrowing for strings
-  - Version warnings can be ignored if checks pass
+### Ruff
+```bash
+uv run ruff format .        # Format code
+uv run ruff check .         # Check for issues
+uv run ruff check . --fix   # Auto-fix issues
+```
+
+**Critical issues**:
+- Line length (88 chars)
+- Import sorting (I001)
+- Unused imports
+
+**Line wrapping**:
+- Strings: use parentheses
+- Function calls: multi-line with proper indent
+- Imports: split into multiple lines
 
 ## Error Resolution
 
-1. CI Failures
-   - Fix order:
-     1. Formatting
-     2. Type errors
-     3. Linting
-   - Type errors:
-     - Get full line context
-     - Check Optional types
-     - Add type narrowing
-     - Verify function signatures
+### CI Failure Fix Order
+1. Formatting (`ruff format`)
+2. Type errors (`pyrefly check`)
+3. Linting (`ruff check`)
 
-2. Common Issues
-   - Line length:
-     - Break strings with parentheses
-     - Multi-line function calls
-     - Split imports
-   - Types:
-     - Add None checks
-     - Narrow string types
-     - Match existing patterns
+### Common Issues
 
-3. Best Practices
-   - Check git status before commits
-   - Run formatters before type checks
-   - Keep changes minimal
-   - Follow existing patterns
-   - Document public APIs
-   - Test thoroughly
+**Line Length**:
+- Break strings with parentheses
+- Multi-line function calls
+- Split imports
+
+**Type Errors**:
+- Get full line context
+- Check Optional types
+- Add type narrowing
+- Verify function signatures
+- Add explicit None checks
+- Narrow string types
+- Match existing patterns
+
+### Pre-Commit Checklist
+- [ ] Check git status
+- [ ] Run formatters before type checks
+- [ ] Keep changes minimal
+- [ ] Follow existing patterns
+- [ ] Document public APIs
+- [ ] Test thoroughly
