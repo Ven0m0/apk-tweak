@@ -92,11 +92,11 @@ max_line_length = 100
 indent_style = space
 indent_size = 4
 
-# Python (2-space indent per project standard)
+# Python
 [**.{py,pyw,pyi}]
 indent_style = space
 indent_size = 2
-max_line_length = 120
+max_line_length = 100
 quote_type = double
 
 # Ruby
