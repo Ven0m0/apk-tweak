@@ -19,6 +19,14 @@ class StringUsage(NamedTuple):
   locations: list[str]
 
 
+# Pattern: <string name="resource_name">value</string>
+_STRING_DEF_PATTERN = re.compile(r'<string\s+name="([^"]+)"')
+# Pattern 1: R.string.resource_name (Kotlin/Java)
+_R_STRING_PATTERN = re.compile(r"R\.string\.([a-zA-Z0-9_]+)")
+# Pattern 2: @string/resource_name (XML)
+_XML_STRING_PATTERN = re.compile(r"@string/([a-zA-Z0-9_]+)")
+
+
 def _extract_string_names(xml_content: str) -> set[str]:
   """
   Extract string resource names from strings.xml content.
@@ -29,9 +37,7 @@ def _extract_string_names(xml_content: str) -> set[str]:
   Returns:
       Set of string resource names.
   """
-  # Pattern: <string name="resource_name">value</string>
-  pattern = re.compile(r'<string\s+name="([^"]+)"')
-  return {match.group(1) for match in pattern.finditer(xml_content)}
+  return {match.group(1) for match in _STRING_DEF_PATTERN.finditer(xml_content)}
 
 
 def _find_string_references(content: str) -> set[str]:
@@ -46,13 +52,8 @@ def _find_string_references(content: str) -> set[str]:
   """
   references: set[str] = set()
 
-  # Pattern 1: R.string.resource_name (Kotlin/Java)
-  r_string_pattern = re.compile(r"R\.string\.([a-zA-Z0-9_]+)")
-  references.update(match.group(1) for match in r_string_pattern.finditer(content))
-
-  # Pattern 2: @string/resource_name (XML)
-  xml_string_pattern = re.compile(r"@string/([a-zA-Z0-9_]+)")
-  references.update(match.group(1) for match in xml_string_pattern.finditer(content))
+  references.update(match.group(1) for match in _R_STRING_PATTERN.finditer(content))
+  references.update(match.group(1) for match in _XML_STRING_PATTERN.finditer(content))
 
   return references
 
