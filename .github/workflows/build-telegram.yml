@@ -1,3 +1,4 @@
+---
 name: Download and Patch Modules
 permissions:
   contents: read
@@ -69,10 +70,13 @@ jobs:
       - name: Delete all tags
         run: |
           git fetch --tags
-          git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||' | while read -r tag; do
-            echo "Deleting tag: $tag"
-            git push origin --delete "$tag" || true
-          done
+          git ls-remote --tags origin | \
+            awk '{print $2}' | \
+            sed 's|refs/tags/||' | \
+            while read -r tag; do
+              echo "Deleting tag: $tag"
+              git push origin --delete "$tag" || true
+            done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -131,7 +135,8 @@ jobs:
       - name: Download AAPT Tool
         if: steps.cache-aapt.outputs.cache-hit != 'true'
         run: |
-          curl -sSL https://dl.google.com/android/repository/build-tools_r33.0.2-linux.zip -o build-tools.zip
+          URL="https://dl.google.com/android/repository"
+          curl -sSL "${URL}/build-tools_r33.0.2-linux.zip" -o build-tools.zip
           unzip -q build-tools.zip -d build-tools
 
       - name: Create module list

@@ -4,12 +4,14 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
 
-Extensible pipeline for APK modifications using ReVanced, Magisk modules, LSPatch, DTL-X, and media optimization.
+Extensible pipeline for APK modifications using ReVanced, Magisk modules,
+LSPatch, DTL-X, and media optimization.
 
 ## Features
 
 - **🔧 Multi-Engine Support**: ReVanced, Magisk, LSPatch, DTL-X, Media Optimizer
-- **🖼️ Media Optimization**: PNG/JPG compression, MP3/OGG re-encoding, DPI-aware resource filtering
+- **🖼️ Media Optimization**: PNG/JPG compression, MP3/OGG re-encoding,
+  DPI-aware resource filtering
 - **🔌 Plugin System**: Extensible hook-based plugin architecture
 - **⚡ Performance**: O(n) complexity, efficient caching
 - **📦 Type Safe**: Full mypy strict mode compliance
@@ -72,7 +74,7 @@ Create a `config.json` file:
 
 ### Pipeline Flow
 
-```
+```text
 Input APK → Engine 1 → Engine 2 → ... → Output APK
              ↓          ↓              ↓
           Plugins    Plugins        Plugins
@@ -84,7 +86,8 @@ Input APK → Engine 1 → Engine 2 → ... → Output APK
 - **Magisk**: Package APK as Magisk module
 - **LSPatch**: Apply LSPatch modifications
 - **DTL-X**: Analyze/optimize with DTL-X
-- **Media Optimizer**: Compress images (PNG/JPG), optimize audio (MP3/OGG), filter DPI-specific resources
+- **Media Optimizer**: Compress images (PNG/JPG), optimize audio (MP3/OGG),
+  filter DPI-specific resources
 
 ### Plugin System
 
@@ -172,7 +175,7 @@ ruff check . && ruff format . && mypy rvp/ --strict && pytest tests/
 
 ## Project Structure
 
-```
+```text
 apk-tweak/
 ├── rvp/                    # Main package
 │   ├── __init__.py         # Package exports
@@ -253,4 +256,5 @@ This project is open source. See repository for details.
 
 ---
 
-**Note**: This is a pipeline framework. Actual tool binaries (revanced-cli.jar, etc.) must be obtained separately.
+**Note**: This is a pipeline framework. Actual tool binaries
+(revanced-cli.jar, etc.) must be obtained separately.
