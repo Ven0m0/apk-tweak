@@ -4,7 +4,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
 
-Extensible pipeline for APK modifications using ReVanced, Magisk modules, LSPatch, DTL-X, and media optimization.
+Extensible pipeline for APK modifications using ReVanced, Magisk modules,
+LSPatch, DTL-X, and media optimization.
 
 ## Features
 
@@ -49,7 +50,8 @@ rvp input.apk -e media_optimizer --optimize-images --optimize-audio
 rvp input.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
 
 # Combine media optimization with other engines
-rvp input.apk -e media_optimizer -e revanced --optimize-images --target-dpi xxhdpi
+rvp input.apk -e media_optimizer -e revanced --optimize-images \
+  --target-dpi xxhdpi
 ```
 
 ## Configuration
@@ -72,7 +74,7 @@ Create a `config.json` file:
 
 ### Pipeline Flow
 
-```
+```text
 Input APK → Engine 1 → Engine 2 → ... → Output APK
              ↓          ↓              ↓
           Plugins    Plugins        Plugins
@@ -134,7 +136,8 @@ Remove drawable resources for non-target screen densities:
 
 ```bash
 # Optimize everything for xxhdpi devices
-rvp app.apk -e media_optimizer --optimize-images --optimize-audio --target-dpi xxhdpi
+rvp app.apk -e media_optimizer --optimize-images --optimize-audio \
+  --target-dpi xxhdpi
 
 # Keep multiple DPIs (comma-separated)
 rvp app.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
@@ -173,6 +176,8 @@ ruff check . && ruff format . && mypy rvp/ --strict && pytest tests/
 ## Project Structure
 
 ```
+apk-tweak/
+```text
 apk-tweak/
 ├── rvp/                    # Main package
 │   ├── __init__.py         # Package exports
@@ -253,4 +258,5 @@ This project is open source. See repository for details.
 
 ---
 
-**Note**: This is a pipeline framework. Actual tool binaries (revanced-cli.jar, etc.) must be obtained separately.
+**Note**: This is a pipeline framework. Actual tool binaries (revanced-cli.jar,
+etc.) must be obtained separately.

@@ -1,3 +1,4 @@
+---
 name: Download and Patch Modules
 permissions:
   contents: read
@@ -7,24 +8,24 @@ on:
     inputs:
       enable_televip_module:
         description: 'Enable TeleVip module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_speedhook_module:
         description: 'Enable SpeedHook module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_killergram_module:
         description: 'Enable Killergram module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_userid_module:
         description: 'Enable UserID Viewer module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       enable_televip_module:
@@ -144,14 +145,17 @@ jobs:
             echo "- TeleVip" >> release_body.txt
           fi
           if [[ "${{ github.event.inputs.enable_speedhook_module }}" == "true" ]]; then
+            # shellcheck disable=SC2035
             modules="$modules -m Telegram.Speed.Hook-*.apk"
             echo "- SpeedHook" >> release_body.txt
           fi
           if [[ "${{ github.event.inputs.enable_killergram_module }}" == "true" ]]; then
+            # shellcheck disable=SC2035
             modules="$modules -m Killergram*.apk"
             echo "- Killergram" >> release_body.txt
           fi
           if [[ "${{ github.event.inputs.enable_userid_module }}" == "true" ]]; then
+            # shellcheck disable=SC2035
             modules="$modules -m com.alex193a.tguseridviewer_v*_*.apk"
             echo "- UserID Viewer" >> release_body.txt
           fi

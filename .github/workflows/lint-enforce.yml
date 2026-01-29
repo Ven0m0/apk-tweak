@@ -1,3 +1,4 @@
+---
 name: Lint & Format Enforcement
 
 on:
@@ -58,6 +59,7 @@ jobs:
         run: |
           # shfmt
           SHFMT_VERSION="3.8.0"
+          # shellcheck disable=SC2086
           curl -fsSL "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64" -o /tmp/shfmt
           chmod +x /tmp/shfmt
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
@@ -68,11 +70,13 @@ jobs:
         run: |
           pip install yamllint
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+          # shellcheck disable=SC2086
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Install taplo (TOML formatter)
         run: |
           cargo install taplo-cli --locked
+          # shellcheck disable=SC2086
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install actionlint

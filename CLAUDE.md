@@ -4,7 +4,7 @@ Critical information for working with this codebase. Follow these guidelines pre
 
 ## Package Management
 
-**ONLY use uv, NEVER pip**
+## **ONLY use uv, NEVER pip**
 
 ```bash
 uv add package              # Install package
