@@ -175,8 +175,6 @@ ruff check . && ruff format . && mypy rvp/ --strict && pytest tests/
 
 ## Project Structure
 
-```
-apk-tweak/
 ```text
 apk-tweak/
 ├── rvp/                    # Main package
