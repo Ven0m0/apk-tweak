@@ -85,10 +85,13 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*/test.*",
   ]
 
-  compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in debug_patterns]
+  # Optimize regex matching by compiling a single pattern
+  combined_pattern = "|".join(f"(?:{p})" for p in debug_patterns)
+  compiled_pattern = re.compile(combined_pattern, re.IGNORECASE)
+
   # Create a list of files to iterate over to avoid issues with deleting files during iteration.
   for file_path in list(extract_dir.rglob("*")):
-    if file_path.is_file() and any(p.match(str(file_path)) for p in compiled_patterns):
+    if file_path.is_file() and compiled_pattern.match(str(file_path)):
       try:
         file_path.unlink()
         removed_count += 1
