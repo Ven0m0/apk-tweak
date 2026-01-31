@@ -86,7 +86,7 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
   ]
 
   # Optimize regex matching by compiling a single pattern
-  combined_pattern = "|".join(f"({p})" for p in debug_patterns)
+  combined_pattern = "|".join(f"(?:{p})" for p in debug_patterns)
   compiled_pattern = re.compile(combined_pattern, re.IGNORECASE)
 
   # Create a list of files to iterate over to avoid issues with deleting files during iteration.
