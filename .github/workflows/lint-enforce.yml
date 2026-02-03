@@ -43,7 +43,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-          cache: false
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -60,7 +59,9 @@ jobs:
         run: |
           # shfmt
           SHFMT_VERSION="3.8.0"
-          curl -fsSL "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64" -o /tmp/shfmt
+          URL="https://github.com/mvdan/sh/releases/download"
+          FILE="shfmt_v${SHFMT_VERSION}_linux_amd64"
+          curl -fsSL "${URL}/v${SHFMT_VERSION}/${FILE}" -o /tmp/shfmt
           chmod +x /tmp/shfmt
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
           # shellcheck
@@ -79,7 +80,8 @@ jobs:
 
       - name: Install actionlint
         run: |
-          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          URL="https://raw.githubusercontent.com/rhysd/actionlint/main/scripts"
+          bash <(curl "${URL}/download-actionlint.bash")
           sudo mv actionlint /usr/local/bin/
 
       - name: Run lint-all script

@@ -10,7 +10,8 @@ LSPatch, DTL-X, and media optimization.
 ## Features
 
 - **🔧 Multi-Engine Support**: ReVanced, Magisk, LSPatch, DTL-X, Media Optimizer
-- **🖼️ Media Optimization**: PNG/JPG compression, MP3/OGG re-encoding, DPI-aware resource filtering
+- **🖼️ Media Optimization**: PNG/JPG compression, MP3/OGG re-encoding,
+  DPI-aware resource filtering
 - **🔌 Plugin System**: Extensible hook-based plugin architecture
 - **⚡ Performance**: O(n) complexity, efficient caching
 - **📦 Type Safe**: Full mypy strict mode compliance
@@ -86,7 +87,8 @@ Input APK → Engine 1 → Engine 2 → ... → Output APK
 - **Magisk**: Package APK as Magisk module
 - **LSPatch**: Apply LSPatch modifications
 - **DTL-X**: Analyze/optimize with DTL-X
-- **Media Optimizer**: Compress images (PNG/JPG), optimize audio (MP3/OGG), filter DPI-specific resources
+- **Media Optimizer**: Compress images (PNG/JPG), optimize audio (MP3/OGG),
+  filter DPI-specific resources
 
 ### Plugin System
 
@@ -256,5 +258,5 @@ This project is open source. See repository for details.
 
 ---
 
-**Note**: This is a pipeline framework. Actual tool binaries (revanced-cli.jar,
-etc.) must be obtained separately.
+**Note**: This is a pipeline framework. Actual tool binaries
+(revanced-cli.jar, etc.) must be obtained separately.
