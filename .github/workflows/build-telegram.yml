@@ -1,3 +1,4 @@
+---
 name: Download and Patch Modules
 permissions:
   contents: read
@@ -7,45 +8,45 @@ on:
     inputs:
       enable_televip_module:
         description: 'Enable TeleVip module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_speedhook_module:
         description: 'Enable SpeedHook module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_killergram_module:
         description: 'Enable Killergram module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
       enable_userid_module:
         description: 'Enable UserID Viewer module'
-        default: true
-        required: true
+        required: false
         type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       enable_televip_module:
         description: 'Enable TeleVip module'
         default: true
-        required: true
+        required: false
         type: boolean
       enable_speedhook_module:
         description: 'Enable SpeedHook module'
         default: true
-        required: true
+        required: false
         type: boolean
       enable_killergram_module:
         description: 'Enable Killergram module'
         default: true
-        required: true
+        required: false
         type: boolean
       enable_userid_module:
         description: 'Enable UserID Viewer module'
         default: true
-        required: true
+        required: false
         type: boolean
 
 jobs:
