@@ -71,12 +71,12 @@ jobs:
         run: |
           pip install yamllint
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
       - name: Install taplo (TOML formatter)
         run: |
           cargo install taplo-cli --locked
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Install actionlint
         run: |

@@ -51,7 +51,8 @@ rvp input.apk -e media_optimizer --optimize-images --optimize-audio
 rvp input.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
 
 # Combine media optimization with other engines
-rvp input.apk -e media_optimizer -e revanced --optimize-images --target-dpi xxhdpi
+rvp input.apk -e media_optimizer -e revanced --optimize-images \
+  --target-dpi xxhdpi
 ```
 
 ## Configuration
@@ -137,7 +138,8 @@ Remove drawable resources for non-target screen densities:
 
 ```bash
 # Optimize everything for xxhdpi devices
-rvp app.apk -e media_optimizer --optimize-images --optimize-audio --target-dpi xxhdpi
+rvp app.apk -e media_optimizer --optimize-images --optimize-audio \
+  --target-dpi xxhdpi
 
 # Keep multiple DPIs (comma-separated)
 rvp app.apk -e media_optimizer --target-dpi xhdpi,xxhdpi
