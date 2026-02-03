@@ -156,9 +156,9 @@ def _clean_xml_content(content: str, unused_strings: set[str]) -> str:
   Returns:
       Cleaned XML content.
   """
-  # Pattern to match string definition and potential surrounding whitespace/newlines
-  # ^\s* matches preceding empty lines and indentation
-  # [ \t]*\n? matches trailing whitespace and the line's own newline
+  # Pattern to match a string definition line and its trailing whitespace/newline
+  # ^\s* matches the start of the line and any indentation/whitespace on that line
+  # [ \t]*\n? matches trailing spaces/tabs on that line and its newline (if present)
   pattern = re.compile(
     r'^\s*<string\s+name="([^"]+)"[^>]*>.*?</string>[ \t]*\n?', re.MULTILINE
   )
