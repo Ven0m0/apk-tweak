@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import zipfile
@@ -74,7 +75,18 @@ def _repack_apk_optimized(extract_dir: Path, output_apk: Path) -> bool:
 def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
   """Remove debug symbols and unnecessary files."""
   removed_count = 0
-  debug_patterns = [
+
+  # Patterns that indicate a directory (and all contents) should be removed
+  dir_patterns = [
+    r".*proguard.*",
+    r".*debug.*",
+    r".*Debug.*",
+    r".*/tests?",
+    r".*/test.*",
+  ]
+
+  # Patterns for individual files
+  file_patterns = [
     r".*\.map$",
     r".*\.log$",
     r".*proguard.*",
@@ -85,18 +97,50 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*/test.*",
   ]
 
-  # Optimize regex matching by compiling a single pattern
-  combined_pattern = "|".join(f"(?:{p})" for p in debug_patterns)
-  compiled_pattern = re.compile(combined_pattern, re.IGNORECASE)
+  # Compile regexes
+  dir_combined = "|".join(f"(?:{p})" for p in dir_patterns)
+  dir_regex = re.compile(dir_combined, re.IGNORECASE)
 
-  # Create a list of files to iterate over to avoid issues with deleting files during iteration.
-  for file_path in list(extract_dir.rglob("*")):
-    if file_path.is_file() and compiled_pattern.match(str(file_path)):
-      try:
-        file_path.unlink()
-        removed_count += 1
-      except OSError:
-        continue
+  file_combined = "|".join(f"(?:{p})" for p in file_patterns)
+  file_regex = re.compile(file_combined, re.IGNORECASE)
+
+  extract_dir_str = str(extract_dir)
+
+  # Use os.walk for efficiency
+  for root, dirs, files in os.walk(extract_dir_str, topdown=True):
+    # Iterate backwards to allow safely modifying dirs list
+    for i in range(len(dirs) - 1, -1, -1):
+      d_name = dirs[i]
+      d_path = os.path.join(root, d_name)  # noqa: PTH118
+
+      # Check against dir regex
+      # We append separator to match patterns expecting trailing slash (like .../tests/...)
+      # We check both d_path and d_path + sep to cover various pattern styles
+      if dir_regex.match(d_path) or dir_regex.match(d_path + os.sep):
+        try:
+          # Remove directory tree and count removed files in a single traversal
+          count = 0
+          for r_root, r_dirs, r_files in os.walk(d_path, topdown=False):
+            for f in r_files:
+              f_path_inner = os.path.join(r_root, f)  # noqa: PTH118
+              os.unlink(f_path_inner)  # noqa: PTH108
+              count += 1
+            for d in r_dirs:
+              os.rmdir(os.path.join(r_root, d))  # noqa: PTH118
+          os.rmdir(d_path)
+          removed_count += count
+          del dirs[i]  # Stop recursing into this dir
+        except OSError:
+          continue
+
+    for f_name in files:
+      f_path = os.path.join(root, f_name)  # noqa: PTH118
+      if file_regex.match(f_path):
+        try:
+          os.unlink(f_path)  # noqa: PTH108
+          removed_count += 1
+        except OSError:
+          continue
 
   if removed_count > 0:
     ctx.log(f"optimizer: removed {removed_count} debug/symbol files")
@@ -148,23 +192,18 @@ def _optimize_resources(ctx: Context, extract_dir: Path) -> int:
   # Look for potentially unused resource files
   removed_count = 0
 
-  # Remove backup files
-  for backup_file in res_dir.rglob("*~"):
-    if backup_file.is_file():
-      try:
-        backup_file.unlink()
-        removed_count += 1
-      except OSError:
-        continue
-
-  # Remove .DS_Store files (macOS)
-  for ds_store in res_dir.rglob(".DS_Store"):
-    if ds_store.is_file():
-      try:
-        ds_store.unlink()
-        removed_count += 1
-      except OSError:
-        continue
+  # Walk directory once to remove unwanted files
+  # This is significantly faster than using rglob multiple times
+  # or even a single rglob("*") which instantiates Path objects for everything
+  for root, _, files in os.walk(res_dir):
+    for name in files:
+      if name == ".DS_Store" or name.endswith("~"):
+        file_path = os.path.join(root, name)  # noqa: PTH118
+        try:
+          os.unlink(file_path)  # noqa: PTH108
+          removed_count += 1
+        except OSError:
+          continue
 
   if removed_count > 0:
     ctx.log(f"optimizer: removed {removed_count} unnecessary resource files")
