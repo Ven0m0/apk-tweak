@@ -81,9 +81,17 @@ def test_optimize_resources_mixed(mock_context, tmp_path):
   assert not (res_dir / ".DS_Store").exists()
 
 
-def test_optimize_resources_handles_missing_file_race(mock_context, tmp_path):
-  # This is hard to simulate deterministically, but we can verify the function
-  # doesn't crash if os.unlink raises OSError (simulated via mock if needed,
-  # but the logic is simple: try/except).
-  # Since we can't easily race it, we trust the code review.
-  pass
+def test_optimize_resources_handles_os_error_on_unlink(mock_context, tmp_path):
+  """Verify that an OSError during unlink is caught and does not crash."""
+  res_dir = tmp_path / "res"
+  res_dir.mkdir()
+  (res_dir / "file.txt~").touch()
+
+  with patch("rvp.engines.optimizer.os.unlink", side_effect=OSError("Permission denied")) as mock_unlink:
+    count = _optimize_resources(mock_context, tmp_path)
+
+  # Unlink was called, but it failed and was caught.
+  mock_unlink.assert_called_once()
+  assert count == 0
+  # No success log should be present.
+  mock_context.log.assert_not_called()
