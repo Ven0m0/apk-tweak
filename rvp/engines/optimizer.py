@@ -192,23 +192,18 @@ def _optimize_resources(ctx: Context, extract_dir: Path) -> int:
   # Look for potentially unused resource files
   removed_count = 0
 
-  # Remove backup files
-  for backup_file in res_dir.rglob("*~"):
-    if backup_file.is_file():
-      try:
-        backup_file.unlink()
-        removed_count += 1
-      except OSError:
-        continue
-
-  # Remove .DS_Store files (macOS)
-  for ds_store in res_dir.rglob(".DS_Store"):
-    if ds_store.is_file():
-      try:
-        ds_store.unlink()
-        removed_count += 1
-      except OSError:
-        continue
+  # Walk directory once to remove unwanted files
+  # This is significantly faster than using rglob multiple times
+  # or even a single rglob("*") which instantiates Path objects for everything
+  for root, _, files in os.walk(res_dir):
+    for name in files:
+      if name == ".DS_Store" or name.endswith("~"):
+        file_path = os.path.join(root, name)  # noqa: PTH118
+        try:
+          os.unlink(file_path)  # noqa: PTH108
+          removed_count += 1
+        except OSError:
+          continue
 
   if removed_count > 0:
     ctx.log(f"optimizer: removed {removed_count} unnecessary resource files")
