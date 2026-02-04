@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 
-def setup_test_data(base_dir, num_files=5000, depth=5):
+def setup_test_data(base_dir: Path, num_files: int = 5000, depth: int = 5) -> None:
   """Creates a deep directory structure with mix of files."""
   base = Path(base_dir)
   res = base / "res"
