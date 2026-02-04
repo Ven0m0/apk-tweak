@@ -11,7 +11,7 @@ class MockContext:
     pass
 
 
-def test_remove_debug_symbols(tmp_path):
+def test_remove_debug_symbols(tmp_path: Path) -> None:
   # Setup directory structure
   root = tmp_path / "app"
   root.mkdir()
