@@ -118,9 +118,16 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
       # We check both d_path and d_path + sep to cover various pattern styles
       if dir_regex.match(d_path) or dir_regex.match(d_path + os.sep):
         try:
-          # Efficiently count files inside before removing
-          count = sum(1 for _, _, files in os.walk(d_path) for _ in files)
-          shutil.rmtree(d_path)
+          # Remove directory tree and count removed files in a single traversal
+          count = 0
+          for r_root, r_dirs, r_files in os.walk(d_path, topdown=False):
+            for f in r_files:
+              f_path_inner = os.path.join(r_root, f)  # noqa: PTH118
+              os.unlink(f_path_inner)  # noqa: PTH108
+              count += 1
+            for d in r_dirs:
+              os.rmdir(os.path.join(r_root, d))  # noqa: PTH118
+          os.rmdir(d_path)  # noqa: PTH118
           removed_count += count
           del dirs[i]  # Stop recursing into this dir
         except OSError:
