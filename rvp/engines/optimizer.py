@@ -81,7 +81,7 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*proguard.*",
     r".*debug.*",
     r".*Debug.*",
-    r".*/tests?/.*",
+    r".*/tests?",
     r".*/test.*",
   ]
 
