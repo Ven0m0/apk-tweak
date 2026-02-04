@@ -127,7 +127,7 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
               count += 1
             for d in r_dirs:
               os.rmdir(os.path.join(r_root, d))  # noqa: PTH118
-          os.rmdir(d_path)  # noqa: PTH118
+          os.rmdir(d_path)
           removed_count += count
           del dirs[i]  # Stop recursing into this dir
         except OSError:
