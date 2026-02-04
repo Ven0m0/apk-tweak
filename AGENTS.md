@@ -4,11 +4,12 @@ Critical information for working with this codebase. Follow these guidelines pre
 
 ## Project Overview
 
-**APK Tweak (ReVanced Pipeline)** - An extensible Python pipeline for APK modifications supporting ReVanced, LSPatch, DTL-X, and media optimization engines.
+**APK Tweak (ReVanced Pipeline)** - An extensible Python pipeline for APK modifications
+supporting ReVanced, LSPatch, DTL-X, and media optimization engines.
 
 ## Package Management
 
-**ONLY use uv, NEVER pip**
+### ONLY use uv, NEVER pip
 
 ```bash
 uv add package              # Install package
@@ -22,6 +23,7 @@ uv add package --upgrade-package package  # Upgrade package
 ## Code Quality
 
 ### Type Checking
+
 - Type hints required for all code
 - Run `uv run mypy rvp/` after every change and fix resulting errors
 - Use mypy strict mode (configured in pyproject.toml)
@@ -30,6 +32,7 @@ uv add package --upgrade-package package  # Upgrade package
 - Use TypedDict for configuration options (see `rvp/types.py`)
 
 ### Code Standards
+
 - Line length: 88 chars maximum
 - Indent width: 2 spaces
 - Public APIs must have docstrings
@@ -37,6 +40,7 @@ uv add package --upgrade-package package  # Upgrade package
 - Follow existing patterns exactly
 
 ### Naming Conventions (PEP 8)
+
 - Functions/variables: `snake_case`
 - Classes: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
@@ -44,6 +48,7 @@ uv add package --upgrade-package package  # Upgrade package
 - Engine entry points: `run(ctx: Context) -> None`
 
 ### Formatting
+
 - Use f-strings for string formatting
 - Use Ruff for code formatting
 - Double quotes for strings
@@ -116,6 +121,7 @@ apk-tweak/
 ### Core Concepts
 
 **Pipeline Flow**:
+
 ```text
 Input APK → Engine 1 → Engine 2 → ... → Output APK
              ↓          ↓              ↓
@@ -123,12 +129,14 @@ Input APK → Engine 1 → Engine 2 → ... → Output APK
 ```
 
 **Context (`rvp/context.py`)**: Runtime state passed to all engines
+
 - `ctx.current_apk`: Path to current APK in pipeline
 - `ctx.options`: PipelineOptions TypedDict
 - `ctx.log()`: Logging method
 - `ctx.metadata`: Dict for storing engine results
 
 **Engine Pattern** (`rvp/engines/*.py`):
+
 ```python
 def run(ctx: Context) -> None:
     """Engine entry point. Must update ctx.current_apk on success."""
@@ -142,17 +150,18 @@ def run(ctx: Context) -> None:
 
 ### Key Files to Understand
 
-| File | Purpose |
-|------|---------|
-| `rvp/core.py` | Pipeline orchestration, module discovery |
-| `rvp/context.py` | Runtime state container |
-| `rvp/types.py` | TypedDict definitions for options |
-| `rvp/utils.py` | Subprocess execution with logging |
-| `rvp/cli.py` | CLI argument parsing |
+| File             | Purpose                                  |
+| ---------------- | ---------------------------------------- |
+| `rvp/core.py`    | Pipeline orchestration, module discovery |
+| `rvp/context.py` | Runtime state container                  |
+| `rvp/types.py`   | TypedDict definitions for options        |
+| `rvp/utils.py`   | Subprocess execution with logging        |
+| `rvp/cli.py`     | CLI argument parsing                     |
 
 ## Best Practices
 
 ### Code Organization
+
 - Early returns to avoid nested conditions
 - Keep core logic clean, push implementation details to edges
 - Use `require_input_apk(ctx)` to get current APK
@@ -160,6 +169,7 @@ def run(ctx: Context) -> None:
 - Store engine results in `ctx.metadata`
 
 ### Engine Development
+
 - Accept `Context` as sole parameter
 - Update `ctx.current_apk` after modification
 - Use `ctx.log()` for output
@@ -167,6 +177,7 @@ def run(ctx: Context) -> None:
 - Use `validate_and_require_dependencies()` for tool checks
 
 ### Coding Style
+
 - DRY (Don't Repeat Yourself)
 - Use constants over functions where possible
 - Prefer functional, immutable approaches when clear
@@ -174,6 +185,7 @@ def run(ctx: Context) -> None:
 - Mark issues with `TODO:` prefix
 
 ### Iterative Development
+
 1. Start with minimal functionality
 2. Verify it works before adding complexity
 3. Test frequently with realistic inputs
@@ -182,17 +194,20 @@ def run(ctx: Context) -> None:
 ## Git Workflow
 
 ### Branch Strategy
+
 - Always use feature branches, never commit directly to `main`
 - Branch naming: `fix/auth-timeout`, `feat/api-pagination`, `chore/ruff-fixes`
 - One logical change per branch
 
 ### Commit Practices
+
 - Atomic commits (one logical change per commit)
 - Conventional commit style: `type(scope): short description`
 - Examples: `feat(revanced): add multi-patch support`, `fix(cli): handle missing key`
 - Keep granular history on feature branch, squash when merging to `main`
 
 ### Pull Requests
+
 - Open draft PR early for visibility
 - Convert to ready when complete and tests pass
 - Create detailed PR description focusing on:
@@ -201,10 +216,12 @@ def run(ctx: Context) -> None:
   - Avoid code specifics unless they add clarity
 
 ### Issue Linking
+
 - Reference existing issue or create one before starting
 - Use `Fixes #123` in commit/PR messages for auto-linking
 
 ### Workflow Steps
+
 1. Create or reference an issue
 2. `git checkout -b feat/issue-123-description`
 3. Commit in small, logical increments
@@ -215,6 +232,7 @@ def run(ctx: Context) -> None:
 ## Code Formatting & Linting
 
 ### Quick Commands
+
 ```bash
 uv run ruff format .        # Format code
 uv run ruff check .         # Check for issues
@@ -223,6 +241,7 @@ uv run mypy rvp/            # Type check (strict mode)
 ```
 
 ### Full Lint Script
+
 ```bash
 ./lint-all.sh               # Run all linters/formatters
 ```
@@ -230,6 +249,7 @@ uv run mypy rvp/            # Type check (strict mode)
 This runs: ruff, yamlfmt, yamllint, prettier, markdownlint, shfmt, shellcheck, taplo, actionlint
 
 ### Critical Ruff Rules (from pyproject.toml)
+
 - `E`, `W`: pycodestyle
 - `F`: pyflakes
 - `I`: isort (import sorting)
@@ -239,6 +259,7 @@ This runs: ruff, yamlfmt, yamllint, prettier, markdownlint, shfmt, shellcheck, t
 - `PT`: flake8-pytest-style
 
 ### Line Wrapping
+
 - Strings: use parentheses for multi-line
 - Function calls: multi-line with proper indent
 - Imports: split into multiple lines (force-single-line enabled)
@@ -256,6 +277,7 @@ All jobs must pass before merging.
 ## Error Resolution
 
 ### CI Failure Fix Order
+
 1. Formatting (`uv run ruff format .`)
 2. Linting (`uv run ruff check . --fix`)
 3. Type errors (`uv run mypy rvp/`)
@@ -264,11 +286,13 @@ All jobs must pass before merging.
 ### Common Issues
 
 **Line Length**:
+
 - Break strings with parentheses
 - Multi-line function calls
 - Split imports
 
 **Type Errors**:
+
 - Get full line context
 - Check Optional types
 - Add type narrowing
@@ -279,10 +303,12 @@ All jobs must pass before merging.
 - Use `cast()` for TypedDict access when needed
 
 **Import Errors (I001)**:
+
 - Run `ruff check . --fix` to auto-sort
 - First-party imports: `rvp`
 
 ### Pre-Commit Checklist
+
 - [ ] Check git status
 - [ ] Run formatters (`uv run ruff format .`)
 - [ ] Run linting (`uv run ruff check . --fix`)

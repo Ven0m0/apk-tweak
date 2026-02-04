@@ -52,6 +52,7 @@ on:
 jobs:
   Clean:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -90,6 +91,7 @@ jobs:
 
   build-clients:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -144,19 +146,23 @@ jobs:
         run: |
           echo "Used modules:" > release_body.txt
           modules=""
-          if [[ "${{ github.event.inputs.enable_televip_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_televip_module }}" == \
+              "true" ]]; then
             modules="$modules -m TeleVip.apk"
             echo "- TeleVip" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == \
+              "true" ]]; then
             modules="$modules -m Telegram.Speed.Hook-*.apk"
             echo "- SpeedHook" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_killergram_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_killergram_module }}" == \
+              "true" ]]; then
             modules="$modules -m Killergram*.apk"
             echo "- Killergram" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_userid_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_userid_module }}" == \
+              "true" ]]; then
             modules="$modules -m com.alex193a.tguseridviewer_v*_*.apk"
             echo "- UserID Viewer" >> release_body.txt
           fi
