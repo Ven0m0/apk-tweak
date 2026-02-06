@@ -224,7 +224,7 @@ jobs:
           curl -sSL -o telegram.apk https://telegram.org/dl/android/apk
           # Patch Telegram Client With Modules
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 telegram.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 telegram.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download ForkGram Client
@@ -237,7 +237,7 @@ jobs:
       - name: Patch ForkGram Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 ForkClient*.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 ./ForkClient*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download And Patch TelegramFOSS Client
@@ -250,7 +250,7 @@ jobs:
       - name: Patch TelegramFOSS Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 TF*.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 ./TF*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Create Release Info

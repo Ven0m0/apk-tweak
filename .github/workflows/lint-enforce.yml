@@ -101,9 +101,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add -A
-          git commit -m "chore: auto-format code via lint-enforce workflow
-
-          Applied automated formatting and linting fixes:
+          git commit -m "chore: auto-format code via lint-enforce workflow" -m "Applied automated formatting and linting fixes:
           - YAML: yamlfmt + yamllint
           - JSON: prettier
           - Shell: shfmt + shellcheck
@@ -118,7 +116,8 @@ jobs:
       - name: Fail on unresolved errors
         if: failure()
         run: |
-          echo "::error::Linting failed with errors. Please fix the issues listed above."
+          echo "::error::Linting failed with errors."
+          echo "::error::Please fix the issues listed above."
           exit 1
   python-type-check:
     name: Python Type Checking
