@@ -5,13 +5,12 @@ precisely.
 
 ## Project Overview
 
-**APK Tweak (ReVanced Pipeline)** - An extensible Python pipeline for APK
-modifications supporting ReVanced, LSPatch, DTL-X, and media optimization
-engines.
+**APK Tweak (ReVanced Pipeline)** - An extensible Python pipeline for APK modifications
+supporting ReVanced, LSPatch, DTL-X, and media optimization engines.
 
 ## Package Management
 
-## ONLY use uv, NEVER pip
+### ONLY use uv, NEVER pip
 
 ```bash
 uv add package              # Install package

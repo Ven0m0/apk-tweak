@@ -81,7 +81,7 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*proguard.*",
     r".*debug.*",
     r".*Debug.*",
-    r".*/tests?",
+    r".*/tests?/.*",
     r".*/test.*",
   ]
 
@@ -104,40 +104,34 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
   file_combined = "|".join(f"(?:{p})" for p in file_patterns)
   file_regex = re.compile(file_combined, re.IGNORECASE)
 
-  extract_dir_str = str(extract_dir)
-
   # Use os.walk for efficiency
-  for root, dirs, files in os.walk(extract_dir_str, topdown=True):
+  # We convert to str for os.walk but convert back to Path for operations to satisfy linters
+  for root, dirs, files in os.walk(extract_dir, topdown=True):
+    root_path = Path(root)
+
     # Iterate backwards to allow safely modifying dirs list
     for i in range(len(dirs) - 1, -1, -1):
       d_name = dirs[i]
-      d_path = os.path.join(root, d_name)  # noqa: PTH118
+      d_path = root_path / d_name
 
       # Check against dir regex
-      # We append separator to match patterns expecting trailing slash (like .../tests/...)
-      # We check both d_path and d_path + sep to cover various pattern styles
-      if dir_regex.match(d_path) or dir_regex.match(d_path + os.sep):
+      # We check both str(d_path) and str(d_path) + sep to cover various pattern styles
+      d_path_str = str(d_path)
+      if dir_regex.match(d_path_str) or dir_regex.match(d_path_str + os.sep):
         try:
-          # Remove directory tree and count removed files in a single traversal
-          count = 0
-          for r_root, r_dirs, r_files in os.walk(d_path, topdown=False):
-            for f in r_files:
-              f_path_inner = os.path.join(r_root, f)  # noqa: PTH118
-              os.unlink(f_path_inner)  # noqa: PTH108
-              count += 1
-            for d in r_dirs:
-              os.rmdir(os.path.join(r_root, d))  # noqa: PTH118
-          os.rmdir(d_path)
+          # Efficiently count files inside before removing
+          count = sum(1 for _, _, files in os.walk(d_path) for _ in files)
+          shutil.rmtree(d_path)
           removed_count += count
           del dirs[i]  # Stop recursing into this dir
         except OSError:
           continue
 
     for f_name in files:
-      f_path = os.path.join(root, f_name)  # noqa: PTH118
-      if file_regex.match(f_path):
+      f_path = root_path / f_name
+      if file_regex.match(str(f_path)):
         try:
-          os.unlink(f_path)  # noqa: PTH108
+          f_path.unlink()
           removed_count += 1
         except OSError:
           continue

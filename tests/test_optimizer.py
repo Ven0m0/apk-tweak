@@ -11,7 +11,7 @@ class MockContext:
     pass
 
 
-def test_remove_debug_symbols(tmp_path: Path) -> None:
+def test_remove_debug_symbols(tmp_path):
   # Setup directory structure
   root = tmp_path / "app"
   root.mkdir()
@@ -93,10 +93,8 @@ def test_remove_debug_symbols(tmp_path: Path) -> None:
   assert not (root / "mapping.txt").exists()
   assert not (root / "proguard-rules.pro").exists()
 
-  # For directories, the implementation may either leave them empty or remove
-  # them entirely (for example, via shutil.rmtree in the optimized path).
-  # This test only asserts that the debug/test files themselves are gone.
-  assert not (debug_dir / "internal.txt").exists()
-  assert not (test_dir / "unit_test.py").exists()
-  assert not (deep_debug / "sym.so").exists()
+  # The new implementation removes entire directories, so we assert they no longer exist.
+  assert not debug_dir.exists()
+  assert not test_dir.exists()
+  assert not deep_debug.exists()
   assert not (root / "test_utils.py").exists()
