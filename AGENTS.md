@@ -1,6 +1,7 @@
 # Development Guidelines
 
-Critical information for working with this codebase. Follow these guidelines precisely.
+Critical information for working with this codebase. Follow these guidelines
+precisely.
 
 ## Project Overview
 
@@ -146,7 +147,8 @@ def run(ctx: Context) -> None:
     ctx.metadata["engine_name"] = {"result": "data"}
 ```
 
-**Auto-Discovery**: Engines/plugins are discovered via `pkgutil.iter_modules()` in `core.py`
+**Auto-Discovery**: Engines/plugins are discovered via `pkgutil.iter_modules()`
+in `core.py`
 
 ### Key Files to Understand
 
@@ -246,7 +248,8 @@ uv run mypy rvp/            # Type check (strict mode)
 ./lint-all.sh               # Run all linters/formatters
 ```
 
-This runs: ruff, yamlfmt, yamllint, prettier, markdownlint, shfmt, shellcheck, taplo, actionlint
+This runs: ruff, yamlfmt, yamllint, prettier, markdownlint, shfmt, shellcheck,
+taplo, actionlint
 
 ### Critical Ruff Rules (from pyproject.toml)
 
@@ -343,4 +346,5 @@ Runtime: `orjson>=3.11.0` (fast JSON serialization)
 
 Dev: `pytest`, `mypy`, `ruff`, `pip-audit`
 
-External tools (for engines): `revanced-cli`, `java`, `pngquant`, `jpegoptim`, `ffmpeg`
+External tools (for engines): `revanced-cli`, `java`, `pngquant`, `jpegoptim`,
+`ffmpeg`
