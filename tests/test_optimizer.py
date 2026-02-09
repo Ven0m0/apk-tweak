@@ -93,10 +93,8 @@ def test_remove_debug_symbols(tmp_path):
   assert not (root / "mapping.txt").exists()
   assert not (root / "proguard-rules.pro").exists()
 
-  # For directories, the current implementation leaves them empty.
-  # The optimized implementation might remove them.
-  # We just check the files inside are gone.
-  assert not (debug_dir / "internal.txt").exists()
-  assert not (test_dir / "unit_test.py").exists()
-  assert not (deep_debug / "sym.so").exists()
+  # The new implementation removes entire directories, so we assert they no longer exist.
+  assert not debug_dir.exists()
+  assert not test_dir.exists()
+  assert not deep_debug.exists()
   assert not (root / "test_utils.py").exists()
