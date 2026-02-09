@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import itertools
+import os
 import shutil
 import subprocess
 import zipfile
@@ -286,13 +286,17 @@ def _process_images(
   """
   stats = {"png": 0, "jpg": 0}
 
-  # ⚡ Perf: Use itertools.chain for lazy concatenation of JPEG files
-  # Materialize only when needed for counting and iteration
-  # Use a more efficient approach that scans only once per file type
-  png_files = list(extract_dir.rglob("*.png"))
-  jpg_files = list(
-    itertools.chain(extract_dir.rglob("*.jpg"), extract_dir.rglob("*.jpeg"))
-  )
+  # ⚡ Perf: Single directory traversal for all image types
+  png_files = []
+  jpg_files = []
+  for root, _, files in os.walk(extract_dir):
+    root_path = Path(root)
+    for file in files:
+      lower_name = file.lower()
+      if lower_name.endswith(".png"):
+        png_files.append(root_path / file)
+      elif lower_name.endswith((".jpg", ".jpeg")):
+        jpg_files.append(root_path / file)
 
   ctx.log(f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files")
 
@@ -408,10 +412,14 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
     ctx.log("media_optimizer: ffmpeg not available, skipping audio optimization")
     return 0
 
-  # ⚡ Perf: Use itertools.chain for lazy concatenation of audio files
-  audio_files = list(
-    itertools.chain(extract_dir.rglob("*.mp3"), extract_dir.rglob("*.ogg"))
-  )
+  # ⚡ Perf: Single directory traversal for all audio types
+  audio_files = []
+  for root, _, files in os.walk(extract_dir):
+    root_path = Path(root)
+    for file in files:
+      lower_name = file.lower()
+      if lower_name.endswith((".mp3", ".ogg")):
+        audio_files.append(root_path / file)
   ctx.log(f"media_optimizer: found {len(audio_files)} audio files")
 
   if not audio_files:
