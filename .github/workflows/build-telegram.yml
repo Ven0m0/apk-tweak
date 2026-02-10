@@ -60,7 +60,8 @@ jobs:
 
       - name: Delete all releases
         run: |
-          gh release list --limit 1000 | awk '{print $1}' | while read -r tag; do
+          gh release list --limit 1000 | \
+            awk '{print $1}' | while read -r tag; do
             echo "Deleting release: $tag"
             gh release delete "$tag" -y || true
           done
@@ -111,7 +112,8 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{
+             hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -144,19 +146,23 @@ jobs:
         run: |
           echo "Used modules:" > release_body.txt
           modules=""
-          if [[ "${{ github.event.inputs.enable_televip_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_televip_module }}" == \
+                "true" ]]; then
             modules="$modules -m TeleVip.apk"
             echo "- TeleVip" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == \
+                "true" ]]; then
             modules="$modules -m Telegram.Speed.Hook-*.apk"
             echo "- SpeedHook" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_killergram_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_killergram_module }}" == \
+                "true" ]]; then
             modules="$modules -m Killergram*.apk"
             echo "- Killergram" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_userid_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_userid_module }}" == \
+                "true" ]]; then
             modules="$modules -m com.alex193a.tguseridviewer_v*_*.apk"
             echo "- UserID Viewer" >> release_body.txt
           fi
@@ -206,7 +212,7 @@ jobs:
         if: steps.cache-lspatch.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
-          fileName: "*.jar"
+          fileName: '*.jar'
           repository: JingMatrix/LSPatch
           latest: true
           out-file-path: lspatch-cache
@@ -215,7 +221,7 @@ jobs:
       - name: Use cached LSPatch JAR
         run: |
           mkdir -p lspatch-cache
-          cp lspatch-cache/*.jar . 2>/dev/null || true
+          cp lspatch-cache/"*.jar" . 2>/dev/null || true
         shell: bash
 
       - name: Download and Patch Telegram Client
@@ -224,33 +230,33 @@ jobs:
           curl -sSL -o telegram.apk https://telegram.org/dl/android/apk
           # Patch Telegram Client With Modules
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 telegram.apk $(cat module_list.txt)
+          java -jar "*.jar" -l 2 telegram.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download ForkGram Client
         uses: robinraju/release-downloader@v1
         with:
-          fileName: "ForkClient*.apk"
+          fileName: ""ForkClient"*.apk"
           repository: forkgram/TelegramAndroid
           latest: true
 
       - name: Patch ForkGram Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 ForkClient*.apk $(cat module_list.txt)
+          java -jar "*.jar" -l 2 "ForkClient"*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download And Patch TelegramFOSS Client
         uses: robinraju/release-downloader@v1
         with:
-          fileName: "TF*.apk"
+          fileName: ""TF"*.apk"
           repository: Telegram-FOSS-Team/Telegram-FOSS
           latest: true
 
       - name: Patch TelegramFOSS Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 TF*.apk $(cat module_list.txt)
+          java -jar "*.jar" -l 2 "TF"*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Create Release Info
@@ -262,18 +268,21 @@ jobs:
           get_apk_version() {
             local apk="$1"
             local info
-            info=$("$AAPT" dump badging "$apk" 2>/dev/null | grep -E "versionName|versionCode" | head -1)
+            info=$("$AAPT" dump badging "$apk" 2>/dev/null | \
+              grep -E "versionName|versionCode" | head -1)
             local ver_name ver_code
-            ver_name=$(echo "$info" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
-            ver_code=$(echo "$info" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
+            ver_name=$(echo "$info" | \
+              sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+            ver_code=$(echo "$info" | \
+              sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
             echo "$ver_name $ver_code"
           }
 
           TG_Version=$(get_apk_version "telegram.apk")
           # shellcheck disable=SC2086
-          FORK_Version=$(get_apk_version ForkClient*.apk)
+          FORK_Version=$(get_apk_version ""ForkClient"*.apk")
           # shellcheck disable=SC2086
-          TGFOSS_Version=$(get_apk_version TF*.apk)
+          TGFOSS_Version=$(get_apk_version ""TF"*.apk")
 
           {
             echo "Clients:"
