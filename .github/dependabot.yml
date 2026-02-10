@@ -36,19 +36,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-  - package-ecosystem: "uv"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "pip"
-    groups:
-      uv-all:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -56,18 +43,6 @@ updates:
     versioning-strategy: "increase-if-necessary"
     groups:
       npm-all:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: "bun"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    versioning-strategy: "increase-if-necessary"
-    groups:
-      bun-all:
         patterns:
           - "*"
         update-types:
