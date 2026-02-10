@@ -213,7 +213,7 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
   Repackage directory contents into APK.
 
   ⚡ Optimized: Smart compression - level 6 for compressible files, STORED for pre-compressed.
-  ⚡ Optimized: Uses a more efficient algorithm to process files in batches.
+  ⚡ Optimized: Stream files using a generator to minimize memory usage.
 
   Args:
       ctx: Pipeline context.
@@ -240,29 +240,24 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
       ".woff2",
     }
 
-    # Get all files first to avoid repeated directory scans
-    all_files = [f for f in extract_dir.rglob("*") if f.is_file()]
-
     with zipfile.ZipFile(output_apk, "w") as zf:
-      # Process files in batches to reduce memory usage
-      batch_size = 100
-      for i in range(0, len(all_files), batch_size):
-        batch = all_files[i : i + batch_size]
+      for file_path in extract_dir.rglob("*"):
+        if not file_path.is_file():
+          continue
 
-        for file_path in batch:
-          arcname = file_path.relative_to(extract_dir)
+        arcname = file_path.relative_to(extract_dir)
 
-          # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
-          # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
-          if file_path.suffix.lower() in no_compress_exts:
-            zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
-          else:
-            zf.write(
-              file_path,
-              arcname,
-              compress_type=zipfile.ZIP_DEFLATED,
-              compresslevel=6,
-            )
+        # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
+        # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
+        if file_path.suffix.lower() in no_compress_exts:
+          zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
+        else:
+          zf.write(
+            file_path,
+            arcname,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=6,
+          )
 
     ctx.log(f"media_optimizer: repackaged to {output_apk.name}")
     return True
