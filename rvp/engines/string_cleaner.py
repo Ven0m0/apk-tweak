@@ -33,14 +33,6 @@ class StringUsage(NamedTuple):
   locations: list[str]
 
 
-# Pattern: <string name="resource_name">value</string>
-_STRING_DEF_PATTERN = re.compile(r'<string\s+name="([^"]+)"')
-# Pattern 1: R.string.resource_name (Kotlin/Java)
-_R_STRING_PATTERN = re.compile(r"R\.string\.([a-zA-Z0-9_]+)")
-# Pattern 2: @string/resource_name (XML)
-_XML_STRING_PATTERN = re.compile(r"@string/([a-zA-Z0-9_]+)")
-
-
 def _extract_string_names(xml_content: str) -> set[str]:
   """
   Extract string resource names from strings.xml content.

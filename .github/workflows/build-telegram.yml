@@ -52,6 +52,7 @@ on:
 jobs:
   Clean:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -90,6 +91,7 @@ jobs:
 
   build-clients:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -144,19 +146,23 @@ jobs:
         run: |
           echo "Used modules:" > release_body.txt
           modules=""
-          if [[ "${{ github.event.inputs.enable_televip_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_televip_module }}" == \
+              "true" ]]; then
             modules="$modules -m TeleVip.apk"
             echo "- TeleVip" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_speedhook_module }}" == \
+              "true" ]]; then
             modules="$modules -m Telegram.Speed.Hook-*.apk"
             echo "- SpeedHook" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_killergram_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_killergram_module }}" == \
+              "true" ]]; then
             modules="$modules -m Killergram*.apk"
             echo "- Killergram" >> release_body.txt
           fi
-          if [[ "${{ github.event.inputs.enable_userid_module }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.enable_userid_module }}" == \
+              "true" ]]; then
             modules="$modules -m com.alex193a.tguseridviewer_v*_*.apk"
             echo "- UserID Viewer" >> release_body.txt
           fi
@@ -224,7 +230,7 @@ jobs:
           curl -sSL -o telegram.apk https://telegram.org/dl/android/apk
           # Patch Telegram Client With Modules
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 telegram.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 telegram.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download ForkGram Client
@@ -237,7 +243,7 @@ jobs:
       - name: Patch ForkGram Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 ForkClient*.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 ./ForkClient*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Download And Patch TelegramFOSS Client
@@ -250,7 +256,7 @@ jobs:
       - name: Patch TelegramFOSS Client With Modules
         run: |
           # shellcheck disable=SC2046
-          java -jar *.jar -l 2 TF*.apk $(cat module_list.txt)
+          java -jar ./*.jar -l 2 ./TF*.apk $(cat module_list.txt)
         shell: bash
 
       - name: Create Release Info
