@@ -19,7 +19,10 @@ _R_STRING_PATTERN = re.compile(r"R\.string\.([a-zA-Z0-9_]+)")
 _XML_STRING_PATTERN = re.compile(r"@string/([a-zA-Z0-9_]+)")
 
 # Pattern to match a complete single-line string definition for removal
-_CLEAN_STRING_PATTERN = re.compile(r"^\s*<string\s+name=\"([^\"]+)\"[^>]*>.*?</string>")
+# Only matches lines that end with </string> followed by optional whitespace
+_CLEAN_STRING_PATTERN = re.compile(
+  r"^\s*<string\s+name=\"([^\"]+)\"[^>]*>.*?</string>[ \t]*$"
+)
 
 
 class StringUsage(NamedTuple):
