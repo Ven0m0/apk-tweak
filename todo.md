@@ -8,7 +8,9 @@ integrate https://github.com/Graywizard888/Enhancify
         ! -name "$ARCH" -exec rm -rf {} + &>/dev/null
     notify info "Removing old signature blocks..."
     if [[ -d "$TEMP_DIR/META-INF" ]]; then
-        find "$TEMP_DIR/META-INF" \( -iname "*.SF" -o -iname "*.MF" -o -iname "*.RSA" -o -iname "*.DSA" -o -iname "*.EC" \) -delete
+        find "$TEMP_DIR/META-INF" \
+          \( -iname "*.SF" -o -iname "*.MF" -o -iname "*.RSA" -o -iname "*.DSA" -o -iname "*.EC" \) \
+          -delete
     fi
 ```
 
