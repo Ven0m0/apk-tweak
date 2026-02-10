@@ -1,7 +1,7 @@
 ---
 name: Lint & Format Enforcement
 
-on:
+"on":
   push:
     branches:
       - main
@@ -64,7 +64,7 @@ jobs:
           curl -fsSL "${URL}/v${SHFMT_VERSION}/${FILE}" -o /tmp/shfmt
           chmod +x /tmp/shfmt
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
-          # shellcheck
+          # Install shellcheck
           sudo apt-get update
 
       - name: Install yamllint & yamlfmt
@@ -97,7 +97,8 @@ jobs:
           git diff --exit-code || echo "changes_detected=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes (auto-fix)
-        if: steps.git-check.outputs.changes_detected == 'true' && github.event_name == 'push'
+        if: >-
+          steps.git-check.outputs.changes_detected == 'true' && github.event_name == 'push'
         run: |
           git config --local user.email \
             "github-actions[bot]@users.noreply.github.com"
@@ -118,8 +119,8 @@ jobs:
       - name: Fail on unresolved errors
         if: failure()
         run: |
-          echo "::error::Linting failed with errors."
-          echo "::error::Please fix the issues listed above."
+          echo "::error::" \
+            "Linting failed with errors. Please fix the issues listed above.""
           exit 1
   python-type-check:
     name: Python Type Checking

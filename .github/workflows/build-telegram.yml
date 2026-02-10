@@ -3,7 +3,7 @@ name: Download and Patch Modules
 permissions:
   contents: read
 
-on:
+"on":
   workflow_call:
     inputs:
       enable_televip_module:
@@ -61,7 +61,9 @@ jobs:
 
       - name: Delete all releases
         run: |
-          gh release list --limit 1000 | awk '{print $1}' | while read -r tag; do
+          gh release list --limit 1000 \
+            | awk '{print $1}' \
+            | while read -r tag; do
             echo "Deleting release: $tag"
             gh release delete "$tag" -y || true
           done

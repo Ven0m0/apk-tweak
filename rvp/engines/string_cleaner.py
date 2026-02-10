@@ -18,10 +18,11 @@ _R_STRING_PATTERN = re.compile(r"R\.string\.([a-zA-Z0-9_]+)")
 # Pattern 2: @string/resource_name (XML)
 _XML_STRING_PATTERN = re.compile(r"@string/([a-zA-Z0-9_]+)")
 
-# Pattern to match a complete single-line string definition for removal
-# Only matches lines that end with </string> followed by optional whitespace
-_CLEAN_STRING_PATTERN = re.compile(
-  r"^\s*<string\s+name=\"([^\"]+)\"[^>]*>.*?</string>[ \t]*$"
+# Pattern to match a string definition line and its trailing whitespace/newline
+# ^\s* matches the start of the line and any indentation/whitespace on that line
+# [ \t]*\n? matches trailing spaces/tabs on that line and its newline (if present)
+_XML_CLEANUP_PATTERN = re.compile(
+    r'^\s*<string\s+name="([^"]+)"[^>]*>.*?</string>[ \t]*\n?', re.MULTILINE
 )
 
 
@@ -163,16 +164,13 @@ def _clean_xml_content(content: str, unused_strings: set[str]) -> str:
   Returns:
       Cleaned XML content.
   """
-  output_lines = []
+  def replacer(match: re.Match[str]) -> str:
+    name = match.group(1)
+    if name in unused_strings:
+      return ""
+    return match.group(0)
 
-  for line in content.splitlines(keepends=True):
-    match = _CLEAN_STRING_PATTERN.match(line)
-    if match and match.group(1) in unused_strings:
-      continue
-
-    output_lines.append(line)
-
-  return "".join(output_lines)
+  return _XML_CLEANUP_PATTERN.sub(replacer, content)
 
 
 def _remove_unused_strings(
