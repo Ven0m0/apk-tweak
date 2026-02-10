@@ -80,7 +80,8 @@ jobs:
 
       - name: Install actionlint
         run: |
-          URL="https://raw.githubusercontent.com/rhysd/actionlint/main/scripts"
+          URL="https://raw.githubusercontent.com/rhysd/"
+          URL+="actionlint/main/scripts" # noqa
           bash <(curl "${URL}/download-actionlint.bash")
           sudo mv actionlint /usr/local/bin/
 
@@ -103,9 +104,7 @@ jobs:
             "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add -A
-          git commit -m "chore: auto-format code via lint-enforce workflow
-
-          Applied automated formatting and linting fixes:
+          git commit -m "chore: auto-format code via lint-enforce workflow" -m "Applied automated formatting and linting fixes:
           - YAML: yamlfmt + yamllint
           - JSON: prettier
           - Shell: shfmt + shellcheck
