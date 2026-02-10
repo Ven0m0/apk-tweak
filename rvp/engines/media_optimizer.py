@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import itertools
+import os
 import shutil
 import subprocess
 import zipfile
@@ -213,7 +213,7 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
   Repackage directory contents into APK.
 
   ⚡ Optimized: Smart compression - level 6 for compressible files, STORED for pre-compressed.
-  ⚡ Optimized: Uses a more efficient algorithm to process files in batches.
+  ⚡ Optimized: Stream files using a generator to minimize memory usage.
 
   Args:
       ctx: Pipeline context.
@@ -240,29 +240,24 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
       ".woff2",
     }
 
-    # Get all files first to avoid repeated directory scans
-    all_files = [f for f in extract_dir.rglob("*") if f.is_file()]
-
     with zipfile.ZipFile(output_apk, "w") as zf:
-      # Process files in batches to reduce memory usage
-      batch_size = 100
-      for i in range(0, len(all_files), batch_size):
-        batch = all_files[i : i + batch_size]
+      for file_path in extract_dir.rglob("*"):
+        if not file_path.is_file():
+          continue
 
-        for file_path in batch:
-          arcname = file_path.relative_to(extract_dir)
+        arcname = file_path.relative_to(extract_dir)
 
-          # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
-          # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
-          if file_path.suffix.lower() in no_compress_exts:
-            zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
-          else:
-            zf.write(
-              file_path,
-              arcname,
-              compress_type=zipfile.ZIP_DEFLATED,
-              compresslevel=6,
-            )
+        # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
+        # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
+        if file_path.suffix.lower() in no_compress_exts:
+          zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
+        else:
+          zf.write(
+            file_path,
+            arcname,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=6,
+          )
 
     ctx.log(f"media_optimizer: repackaged to {output_apk.name}")
     return True
@@ -291,13 +286,17 @@ def _process_images(
   """
   stats = {"png": 0, "jpg": 0}
 
-  # ⚡ Perf: Use itertools.chain for lazy concatenation of JPEG files
-  # Materialize only when needed for counting and iteration
-  # Use a more efficient approach that scans only once per file type
-  png_files = list(extract_dir.rglob("*.png"))
-  jpg_files = list(
-    itertools.chain(extract_dir.rglob("*.jpg"), extract_dir.rglob("*.jpeg"))
-  )
+  # ⚡ Perf: Single directory traversal for all image types
+  png_files = []
+  jpg_files = []
+  for root, _, files in os.walk(extract_dir):
+    root_path = Path(root)
+    for file in files:
+      lower_name = file.lower()
+      if lower_name.endswith(".png"):
+        png_files.append(root_path / file)
+      elif lower_name.endswith((".jpg", ".jpeg")):
+        jpg_files.append(root_path / file)
 
   ctx.log(f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files")
 
@@ -413,10 +412,14 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
     ctx.log("media_optimizer: ffmpeg not available, skipping audio optimization")
     return 0
 
-  # ⚡ Perf: Use itertools.chain for lazy concatenation of audio files
-  audio_files = list(
-    itertools.chain(extract_dir.rglob("*.mp3"), extract_dir.rglob("*.ogg"))
-  )
+  # ⚡ Perf: Single directory traversal for all audio types
+  audio_files = []
+  for root, _, files in os.walk(extract_dir):
+    root_path = Path(root)
+    for file in files:
+      lower_name = file.lower()
+      if lower_name.endswith((".mp3", ".ogg")):
+        audio_files.append(root_path / file)
   ctx.log(f"media_optimizer: found {len(audio_files)} audio files")
 
   if not audio_files:
