@@ -108,3 +108,16 @@ def test_clean_xml_content_multiline_definition() -> None:
   # So it fails to match.
 
   assert _clean_xml_content(content, unused) == content
+
+
+def test_clean_xml_content_trailing_content() -> None:
+  # Test that lines with trailing content after </string> are NOT removed
+  # (preserving original behavior)
+  content = """<resources>
+    <string name="unused">Value</string><!-- comment -->
+    <string name="used">Value</string>
+</resources>"""
+  unused = {"unused"}
+
+  # The "unused" line has trailing content after </string>, so it should NOT be removed
+  assert _clean_xml_content(content, unused) == content
