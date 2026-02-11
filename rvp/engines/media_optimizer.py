@@ -418,7 +418,7 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
     return 0
 
   # ⚡ Perf: Single directory traversal for all audio types
-  audio_files = []
+  audio_files: list[Path] = []
   for root, _, files in os.walk(extract_dir):
     root_path = Path(root)
     for file in files:
