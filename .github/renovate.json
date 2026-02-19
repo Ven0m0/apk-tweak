@@ -1,102 +1,42 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": [
-		"schedule:automergeDaily",
-		":dependencyDashboard",
-		"config:recommended",
-		"config:best-practices",
-		":maintainLockFilesWeekly",
-		":semanticPrefixFixDepsChoreOthers",
-		":preserveSemverRanges",
-		"group:all",
-		"replacements:all",
-		"workarounds:all",
-		"schedule:weekly"
-	],
-	"pinDigests": false,
 	"automerge": true,
-	"automergeType": "branch",
-	"platformAutomerge": true,
-	"prConcurrentLimit": 10,
-	"enabledManagers": [
-		"github-actions",
-		"npm",
-		"bun"
-	],
-	"ignoreDeps": [
-		"renovate"
-	],
-	"customManagers": [
-		{
-			"description": "actionlint version in workflows",
-			"customType": "regex",
-			"managerFilePatterns": [
-				"/^\\.github/workflows/[^/]+\\.ya?ml$/"
-			],
-			"matchStrings": [
-				"actionlint@(?<currentValue>[^\\s\"']+)"
-			],
-			"depNameTemplate": "rhysd/actionlint",
-			"datasourceTemplate": "github-releases"
-		}
-	],
+	"separateMajorMinor": false,
+	"lockFileMaintenance": {
+		"enabled": true,
+		"automerge": true,
+		"automergeType": "pr",
+		"commitMessageAction": "Update"
+	},
 	"packageRules": [
 		{
-			"description": "Forbid digest/SHA pinning",
-			"matchUpdateTypes": [
-				"digest"
-			],
-			"enabled": false
-		},
-		{
-			"description": "Automerge non-major stable deps via branch push",
-			"matchUpdateTypes": [
-				"minor",
-				"patch",
-				"pin"
-			],
+			"matchUpdateTypes": ["minor", "patch", "pin", "digest", "major"],
 			"matchCurrentVersion": "!/^0/",
 			"automerge": true,
-			"automergeType": "branch"
-		},
-		{
-			"description": "Major updates and 0.x require PR review",
-			"matchUpdateTypes": [
-				"major"
-			],
-			"automerge": false,
-			"dependencyDashboardApproval": true
-		},
-		{
-			"description": "0.x deps require PR review for all update types",
-			"matchCurrentVersion": "/^0/",
-			"automerge": false,
-			"dependencyDashboardApproval": true
-		},
-		{
-			"description": "Automerge linter updates including major",
-			"matchCategories": [
-				"linters"
-			],
-			"automerge": true,
-			"automergeType": "branch"
-		},
-		{
-			"description": "Treat Biome as a linter — automerge all",
-			"matchPackageNames": [
-				"@biomejs/biome"
-			],
-			"automerge": true,
 			"automergeType": "branch",
-			"dependencyDashboardApproval": false
-		},
-		{
-			"description": "Lock file maintenance",
-			"matchUpdateTypes": [
-				"lockFileMaintenance"
-			],
-			"automerge": true,
-			"automergeType": "branch"
+			"dependencyDashboardApproval": true,
+			"extends": ["packages:linters"]
 		}
+	],
+	"digest": {
+		"automerge": false
+	},
+	"extends": [
+		"config:recommended",
+		":configMigration",
+		"abandonments:recommended",
+		":maintainLockFilesWeekly",
+		":dependencyDashboard",
+		":semanticPrefixFixDepsChoreOthers",
+		":preserveSemverRanges",
+		":ignoreModulesAndTests",
+		"group:all",
+		"mergeConfidence:age-confidence-badges",
+		"replacements:all",
+		"workarounds:all",
+		"helpers:goXPackagesChangelogLink",
+		"helpers:goXPackagesNameLink",
+		"schedule:weekly",
+		"packages:eslint"
 	]
 }
