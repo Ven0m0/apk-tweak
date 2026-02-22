@@ -22,7 +22,7 @@ _XML_STRING_PATTERN = re.compile(r"@string/([a-zA-Z0-9_]+)")
 # ^\s* matches the start of the line and any indentation/whitespace on that line
 # [ \t]*\n? matches trailing spaces/tabs on that line and its newline (if present)
 _XML_CLEANUP_PATTERN = re.compile(
-    r'^\s*<string\s+name="([^"]+)"[^>]*>.*?</string>[ \t]*\n?', re.MULTILINE
+  r'^\s*<string\s+name="([^"]+)"[^>]*>.*?</string>[ \t]*\n?', re.MULTILINE
 )
 
 
@@ -164,6 +164,7 @@ def _clean_xml_content(content: str, unused_strings: set[str]) -> str:
   Returns:
       Cleaned XML content.
   """
+
   def replacer(match: re.Match[str]) -> str:
     name = match.group(1)
     if name in unused_strings:
