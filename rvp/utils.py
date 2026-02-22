@@ -230,7 +230,7 @@ def build_tool_command(
     cmd = [tool_name]
   else:
     tools = ctx.options.get("tools", {})
-    jar_path = Path(tools.get(jar_key, default_jar))
+    jar_path = Path(str(tools.get(jar_key, default_jar)))
     cmd = ["java", "-jar", str(jar_path)]
 
   if base_args:
