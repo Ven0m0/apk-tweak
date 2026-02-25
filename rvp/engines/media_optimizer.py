@@ -52,89 +52,31 @@ def _get_tool_availability(ctx: Context) -> dict[str, bool]:
   return tools
 
 
-def _optimize_png_worker(png_path: Path, quality: str = "65-80") -> tuple[Path, bool]:
-  """
-  Worker function for parallel PNG optimization using pngquant.
-
-  Args:
-      png_path: Path to PNG file.
-      quality: Quality range.
-
-  Returns:
-      Tuple of (path, success).
-  """
-  try:
-    result = subprocess.run(
-      [
-        "pngquant",
-        "--quality",
-        quality,
-        "--ext",
-        ".png",
-        "--force",
-        str(png_path),
-      ],
-      capture_output=True,
-      text=True,
-      timeout=30,
-      check=False,
-    )
-    return (png_path, result.returncode == 0)
-  except (subprocess.TimeoutExpired, Exception):
-    return (png_path, False)
-
-
-def _optimize_png_optipng_worker(
-  png_path: Path, optimization_level: int = 7
+def _run_optimizer_worker(
+  path: Path, command: list[str], timeout: int = 30
 ) -> tuple[Path, bool]:
   """
-  Worker function for parallel PNG optimization using optipng.
-
-  Uses optipng for lossless compression with configurable optimization level.
-  Level 7 provides maximum compression with reasonable processing time.
+  Worker function for executing optimization commands.
 
   Args:
-      png_path: Path to PNG file.
-      optimization_level: Optimization level (0-7, default 7 for maximum).
+      path: Path to file being optimized.
+      command: Command to execute.
+      timeout: Execution timeout in seconds.
 
   Returns:
       Tuple of (path, success).
   """
   try:
     result = subprocess.run(
-      ["optipng", f"-o{optimization_level}", str(png_path)],
+      command,
       capture_output=True,
       text=True,
-      timeout=60,
+      timeout=timeout,
       check=False,
     )
-    return (png_path, result.returncode == 0)
+    return (path, result.returncode == 0)
   except (subprocess.TimeoutExpired, Exception):
-    return (png_path, False)
-
-
-def _optimize_jpg_worker(jpg_path: Path, quality: int = 85) -> tuple[Path, bool]:
-  """
-  Worker function for parallel JPEG optimization.
-
-  Args:
-      jpg_path: Path to JPEG file.
-      quality: Quality level.
-
-  Returns:
-      Tuple of (path, success).
-  """
-  try:
-    result = subprocess.run(
-      ["jpegoptim", f"--max={quality}", "--strip-all", str(jpg_path)],
-      capture_output=True,
-      text=True,
-      timeout=30,
-      check=False,
-    )
-    return (jpg_path, result.returncode == 0)
-  except (subprocess.TimeoutExpired, Exception):
-    return (jpg_path, False)
+    return (path, False)
 
 
 def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path, bool]:
@@ -377,14 +319,22 @@ def _process_images(
           optimization_level_opt if isinstance(optimization_level_opt, int) else 7
         )
         for png in png_files:
-          future = executor.submit(
-            _optimize_png_optipng_worker, png, optimization_level
-          )
+          cmd = ["optipng", f"-o{optimization_level}", str(png)]
+          future = executor.submit(_run_optimizer_worker, png, cmd, 60)
           futures[future] = ("png", png)
       elif png_optimizer == "pngquant" and has_pngquant:
         ctx.log("media_optimizer: using pngquant for PNG optimization (lossy)")
         for png in png_files:
-          future = executor.submit(_optimize_png_worker, png)
+          cmd = [
+            "pngquant",
+            "--quality",
+            "65-80",
+            "--ext",
+            ".png",
+            "--force",
+            str(png),
+          ]
+          future = executor.submit(_run_optimizer_worker, png, cmd, 30)
           futures[future] = ("png", png)
       elif has_optipng:
         # Fallback to optipng if available
@@ -394,15 +344,23 @@ def _process_images(
           optimization_level_opt if isinstance(optimization_level_opt, int) else 7
         )
         for png in png_files:
-          future = executor.submit(
-            _optimize_png_optipng_worker, png, optimization_level
-          )
+          cmd = ["optipng", f"-o{optimization_level}", str(png)]
+          future = executor.submit(_run_optimizer_worker, png, cmd, 60)
           futures[future] = ("png", png)
       elif has_pngquant:
         # Fallback to pngquant if available
         ctx.log("media_optimizer: using pngquant for PNG optimization (lossy)")
         for png in png_files:
-          future = executor.submit(_optimize_png_worker, png)
+          cmd = [
+            "pngquant",
+            "--quality",
+            "65-80",
+            "--ext",
+            ".png",
+            "--force",
+            str(png),
+          ]
+          future = executor.submit(_run_optimizer_worker, png, cmd, 30)
           futures[future] = ("png", png)
       else:
         ctx.log("media_optimizer: no PNG optimization tools available")
@@ -410,7 +368,8 @@ def _process_images(
     # Submit JPEG optimization tasks
     if has_jpegoptim and jpg_files:
       for jpg in jpg_files:
-        future = executor.submit(_optimize_jpg_worker, jpg)
+        cmd = ["jpegoptim", "--max=85", "--strip-all", str(jpg)]
+        future = executor.submit(_run_optimizer_worker, jpg, cmd, 30)
         futures[future] = ("jpg", jpg)
 
     # Process results as they complete with timeout for stuck processes
