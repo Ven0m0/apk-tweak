@@ -266,37 +266,76 @@ def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
     return False
 
 
+def _find_media_files(
+  ctx: Context,
+  extract_dir: Path,
+  include_images: bool = False,
+  include_audio: bool = False,
+) -> dict[str, list[Path]]:
+  """
+  Scan directory for media files in a single pass.
+
+  Args:
+      ctx: Pipeline context.
+      extract_dir: Directory to scan.
+      include_images: Whether to scan for PNG/JPG files.
+      include_audio: Whether to scan for MP3/OGG files.
+
+  Returns:
+      Dict with keys 'png', 'jpg', 'audio' containing lists of paths.
+  """
+  png_list: list[Path] = []
+  jpg_list: list[Path] = []
+  audio_list: list[Path] = []
+
+  if not (include_images or include_audio):
+    return {"png": [], "jpg": [], "audio": []}
+
+  ctx.log(
+    f"media_optimizer: scanning files (images={include_images}, audio={include_audio})"
+  )
+
+  # ⚡ Perf: Single directory traversal for all requested media types
+  audio_exts = (".mp3", ".ogg")
+
+  for root, _, files in os.walk(extract_dir):
+    root_path = Path(root)
+    for file in files:
+      lower_name = file.lower()
+
+      if include_images:
+        if lower_name.endswith(".png"):
+          png_list.append(root_path / file)
+          continue
+        if lower_name.endswith((".jpg", ".jpeg")):
+          jpg_list.append(root_path / file)
+          continue
+
+      if include_audio and lower_name.endswith(audio_exts):
+        audio_list.append(root_path / file)
+
+  return {"png": png_list, "jpg": jpg_list, "audio": audio_list}
+
+
 def _process_images(
-  ctx: Context, extract_dir: Path, tools: dict[str, bool]
+  ctx: Context, png_files: list[Path], jpg_files: list[Path], tools: dict[str, bool]
 ) -> dict[str, int]:
   """
   Process and optimize images in extracted APK.
 
   ⚡ Optimized: Shared process pool for better worker utilization.
   Supports both pngquant (lossy) and optipng (lossless) for PNG optimization.
-  ⚡ Optimized: Improved file scanning with early termination for better performance.
 
   Args:
       ctx: Pipeline context.
-      extract_dir: Directory with extracted APK contents.
+      png_files: List of PNG files.
+      jpg_files: List of JPEG files.
       tools: Tool availability dict.
 
   Returns:
       Stats dict with optimization counts.
   """
   stats = {"png": 0, "jpg": 0}
-
-  # ⚡ Perf: Single directory traversal for all image types
-  png_files = []
-  jpg_files = []
-  for root, _, files in os.walk(extract_dir):
-    root_path = Path(root)
-    for file in files:
-      lower_name = file.lower()
-      if lower_name.endswith(".png"):
-        png_files.append(root_path / file)
-      elif lower_name.endswith((".jpg", ".jpeg")):
-        jpg_files.append(root_path / file)
 
   ctx.log(f"media_optimizer: found {len(png_files)} PNG, {len(jpg_files)} JPEG files")
 
@@ -394,7 +433,9 @@ def _process_images(
   return stats
 
 
-def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> int:
+def _process_audio(
+  ctx: Context, audio_files: list[Path], tools: dict[str, bool]
+) -> int:
   """
   Process and optimize audio files in extracted APK.
 
@@ -402,7 +443,7 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
 
   Args:
       ctx: Pipeline context.
-      extract_dir: Directory with extracted APK contents.
+      audio_files: List of audio files.
       tools: Tool availability dict.
 
   Returns:
@@ -412,14 +453,6 @@ def _process_audio(ctx: Context, extract_dir: Path, tools: dict[str, bool]) -> i
     ctx.log("media_optimizer: ffmpeg not available, skipping audio optimization")
     return 0
 
-  # ⚡ Perf: Single directory traversal for all audio types
-  audio_files = []
-  for root, _, files in os.walk(extract_dir):
-    root_path = Path(root)
-    for file in files:
-      lower_name = file.lower()
-      if lower_name.endswith((".mp3", ".ogg")):
-        audio_files.append(root_path / file)
   ctx.log(f"media_optimizer: found {len(audio_files)} audio files")
 
   if not audio_files:
@@ -549,14 +582,19 @@ def run(ctx: Context) -> None:
   if "media_optimizer" not in ctx.metadata:
     ctx.metadata["media_optimizer"] = {}
 
+  # Find media files
+  media_files = _find_media_files(
+    ctx, extract_dir, include_images=optimize_images, include_audio=optimize_audio
+  )
+
   # Process images
   if optimize_images:
-    image_stats = _process_images(ctx, extract_dir, tools)
+    image_stats = _process_images(ctx, media_files["png"], media_files["jpg"], tools)
     ctx.metadata["media_optimizer"]["images"] = image_stats
 
   # Process audio
   if optimize_audio:
-    audio_count = _process_audio(ctx, extract_dir, tools)
+    audio_count = _process_audio(ctx, media_files["audio"], tools)
     ctx.metadata["media_optimizer"]["audio"] = audio_count
 
   # Filter DPI resources
