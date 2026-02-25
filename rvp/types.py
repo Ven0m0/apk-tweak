@@ -69,6 +69,10 @@ class PipelineOptions(TypedDict, total=False):
   optimize_images: bool
   optimize_audio: bool
   target_dpi: str
+  png_optimizer: str
+  optipng_level: int
+  pngquant_quality: str
+  jpeg_quality: int
 
   # String cleaner options
   clean_unused_strings: bool
