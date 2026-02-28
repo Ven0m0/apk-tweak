@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed
@@ -99,30 +101,36 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
     else:
       return (audio_path, False)
 
-    temp_output = audio_path.with_suffix(audio_path.suffix + ".tmp")
+    fd, temp_output = tempfile.mkstemp(suffix=audio_path.suffix)
+    os.close(fd)
 
-    result = subprocess.run(
-      [
-        "ffmpeg",
-        "-i",
-        str(audio_path),
-        "-codec:a",
-        codec,
-        "-b:a",
-        bitrate,
-        "-y",
-        str(temp_output),
-      ],
-      capture_output=True,
-      text=True,
-      timeout=60,
-      check=False,
-    )
+    try:
+      result = subprocess.run(
+        [
+          "ffmpeg",
+          "-i",
+          str(audio_path),
+          "-codec:a",
+          codec,
+          "-b:a",
+          bitrate,
+          "-y",
+          temp_output,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+      )
 
-    if result.returncode == 0 and temp_output.exists():
-      shutil.move(temp_output, audio_path)
-      return (audio_path, True)
-    return (audio_path, False)
+      if result.returncode == 0 and Path(temp_output).exists():
+        shutil.move(temp_output, audio_path)
+        return (audio_path, True)
+      return (audio_path, False)
+    finally:
+      if Path(temp_output).exists():
+        with contextlib.suppress(OSError):
+          Path(temp_output).unlink()
 
   except (subprocess.TimeoutExpired, Exception):
     return (audio_path, False)
