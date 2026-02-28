@@ -75,9 +75,11 @@ def run_command(
       encoding="utf-8",
       errors="replace",
     ) as proc:
-      if proc.stdout:
-        # Batch log lines for efficiency with larger batch size for performance
-        output_lines = []
+      # Use a background thread to read stdout to prevent blocking the timeout check
+      def _stream_reader() -> None:
+        if not proc.stdout:
+          return
+        output_lines: list[str] = []
         for line in proc.stdout:
           stripped = line.strip()
           if stripped:
@@ -90,20 +92,28 @@ def run_command(
                 ctx.log(
                   f"  {out_line}", level=15
                 )  # Lower log level for subprocess output
-              output_lines = []
+              output_lines.clear()
         # Log remaining lines
         for out_line in output_lines:
           ctx.log(f"  {out_line}", level=15)
 
-    # ⚡ Perf: Use timeout-aware wait
-    try:
-      retcode = proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-      proc.kill()  # Ensure process is terminated
-      proc.wait()  # Clean up zombie process
-      elapsed = time.time() - start_time
-      ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
-      raise
+      import threading
+
+      reader_thread = threading.Thread(target=_stream_reader, daemon=True)
+      reader_thread.start()
+
+      # ⚡ Perf: Use timeout-aware wait
+      try:
+        retcode = proc.wait(timeout=timeout)
+      except subprocess.TimeoutExpired:
+        proc.kill()  # Ensure process is terminated
+        proc.wait()  # Clean up zombie process
+        elapsed = time.time() - start_time
+        ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
+        raise
+      finally:
+        # Ensure thread finishes
+        reader_thread.join(timeout=1.0)
 
     elapsed = time.time() - start_time
     if retcode == 0:
