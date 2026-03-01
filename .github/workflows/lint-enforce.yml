@@ -28,13 +28,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-
-      - name: Install uv
-        run: pip install uv
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -130,12 +127,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-      - name: Install uv
-        run: pip install uv
       - name: Install dependencies
         run: |
           uv sync --extra dev
@@ -149,12 +144,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-      - name: Install uv
-        run: pip install uv
       - name: Install dependencies
         run: |
           uv sync --extra dev
