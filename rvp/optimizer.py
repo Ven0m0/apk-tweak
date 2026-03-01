@@ -155,7 +155,10 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
 
   # ⚡ Perf: Compile patterns into regex for fast matching
   regex_patterns = [fnmatch.translate(p) for p in minify_patterns]
-  combined_regex = re.compile("|".join(regex_patterns))
+  if os.name == "nt":
+    combined_regex = re.compile("|".join(regex_patterns), re.IGNORECASE)
+  else:
+    combined_regex = re.compile("|".join(regex_patterns))
 
   decompiled_dir_str = str(decompiled_dir)
   decompiled_dir_len = len(decompiled_dir_str) + 1
