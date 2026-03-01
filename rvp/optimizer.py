@@ -68,7 +68,8 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
 
   # Compile patterns into regex for fast matching
   regex_patterns = [fnmatch.translate(p) for p in debloat_patterns]
-  combined_regex = re.compile("|".join(regex_patterns))
+  flags = re.IGNORECASE if os.name == "nt" else 0
+  combined_regex = re.compile("|".join(regex_patterns), flags)
 
   decompiled_dir_str = str(decompiled_dir)
   decompiled_dir_len = len(decompiled_dir_str) + 1
