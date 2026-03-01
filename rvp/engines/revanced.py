@@ -120,78 +120,58 @@ def _create_stub_apk(ctx: Context, input_apk: Path, patch_bundles_count: int) ->
   ctx.log(f"revanced: stub mode - copied to {out_apk}")
 
 
-def run(ctx: Context) -> None:
+def _run_cli_mode(ctx: Context, input_apk: Path) -> bool:
   """
-  Execute ReVanced patch engine with multiple approaches.
-
-  Supports:
-  - Binary revanced-cli command (preferred)
-  - JAR-based patching with multiple patch bundles
-  - Custom patches with options and exclusions
-  - APK optimization (debloat, minify, zipalign)
-  - Keystore signing
-  - Exclusive patching mode
+  Run the ReVanced patching using the binary CLI.
 
   Args:
       ctx: Pipeline context.
+      input_apk: Input APK path.
 
-  Options:
-      revanced_patches: List of patches (str or dict with options)
-      revanced_exclude_patches: List of patches to exclude
-      revanced_patch_bundles: List of patch bundle JARs (legacy)
-      revanced_exclusive: Enable exclusive mode
-      revanced_keystore: Dict with path, alias, password
-      revanced_optimize: Enable optimization (default: True)
-      revanced_debloat: Enable debloating (default: True)
-      revanced_minify: Enable minification (default: True)
-
-  Raises:
-      ValueError: If no input APK is available.
+  Returns:
+      True if the CLI approach succeeded, False otherwise.
   """
-  ctx.log("revanced: starting patcher")
-  input_apk = require_input_apk(ctx)
-
-  # Check dependencies
-  if not validate_and_require_dependencies(
-    ctx,
-    ["revanced-cli", "java"],
-    "revanced",
-    "Install with: yay -S revanced-cli-bin jdk17-openjdk",
-    fallback=True,
-  ):
-    _create_stub_apk(ctx, input_apk, 0)
-    return
-
-  # Try binary CLI approach first (luniume-style)
   use_cli = ctx.options.get("revanced_use_cli", True)
-  if use_cli and shutil.which("revanced-cli"):
-    output_apk = ctx.output_dir / f"{input_apk.stem}.revanced.apk"
-    if _run_revanced_cli(ctx, input_apk, output_apk):
-      # CLI succeeded, optionally optimize
-      optimize_enabled = ctx.options.get("revanced_optimize", False)
-      if optimize_enabled:
-        ctx.log("revanced: Starting optimization phase")
-        optimized_apk = ctx.output_dir / f"{input_apk.stem}.revanced-opt.apk"
-        optimize_apk(
-          input_apk=output_apk,
-          output_apk=optimized_apk,
-          ctx=ctx,
-          debloat=ctx.options.get("revanced_debloat", True),
-          minify=ctx.options.get("revanced_minify", True),
-        )
-        ctx.set_current_apk(optimized_apk)
-      else:
-        ctx.set_current_apk(output_apk)
+  if not (use_cli and shutil.which("revanced-cli")):
+    return False
 
-      ctx.metadata["revanced"] = {
-        "method": "cli",
-        "patched_apk": str(ctx.current_apk),
-        "patches": ctx.options.get("revanced_patches", []),
-        "optimized": optimize_enabled,
-      }
-      return
+  output_apk = ctx.output_dir / f"{input_apk.stem}.revanced.apk"
+  if _run_revanced_cli(ctx, input_apk, output_apk):
+    # CLI succeeded, optionally optimize
+    optimize_enabled = ctx.options.get("revanced_optimize", False)
+    if optimize_enabled:
+      ctx.log("revanced: Starting optimization phase")
+      optimized_apk = ctx.output_dir / f"{input_apk.stem}.revanced-opt.apk"
+      optimize_apk(
+        input_apk=output_apk,
+        output_apk=optimized_apk,
+        ctx=ctx,
+        debloat=ctx.options.get("revanced_debloat", True),
+        minify=ctx.options.get("revanced_minify", True),
+      )
+      ctx.set_current_apk(optimized_apk)
+    else:
+      ctx.set_current_apk(output_apk)
 
-  # Fall back to JAR-based multi-bundle approach
+    ctx.metadata["revanced"] = {
+      "method": "cli",
+      "patched_apk": str(ctx.current_apk),
+      "patches": ctx.options.get("revanced_patches", []),
+      "optimized": optimize_enabled,
+    }
+    return True
+
+  return False
+
+
+def _run_jar_mode(ctx: Context, input_apk: Path) -> None:
+  """
+  Run the ReVanced patching using the JAR-based multi-bundle fallback approach.
+
+  Args:
+      ctx: Pipeline context.
+      input_apk: Input APK path.
+  """
   ctx.log("revanced: using JAR-based multi-patch pipeline")
 
   # Get configuration
@@ -291,3 +271,53 @@ def run(ctx: Context) -> None:
     "optimized": optimize_enabled,
     "final_apk": str(ctx.current_apk),
   }
+
+
+def run(ctx: Context) -> None:
+  """
+  Execute ReVanced patch engine with multiple approaches.
+
+  Supports:
+  - Binary revanced-cli command (preferred)
+  - JAR-based patching with multiple patch bundles
+  - Custom patches with options and exclusions
+  - APK optimization (debloat, minify, zipalign)
+  - Keystore signing
+  - Exclusive patching mode
+
+  Args:
+      ctx: Pipeline context.
+
+  Options:
+      revanced_patches: List of patches (str or dict with options)
+      revanced_exclude_patches: List of patches to exclude
+      revanced_patch_bundles: List of patch bundle JARs (legacy)
+      revanced_exclusive: Enable exclusive mode
+      revanced_keystore: Dict with path, alias, password
+      revanced_optimize: Enable optimization (default: True)
+      revanced_debloat: Enable debloating (default: True)
+      revanced_minify: Enable minification (default: True)
+
+  Raises:
+      ValueError: If no input APK is available.
+  """
+  ctx.log("revanced: starting patcher")
+  input_apk = require_input_apk(ctx)
+
+  # Check dependencies
+  if not validate_and_require_dependencies(
+    ctx,
+    ["revanced-cli", "java"],
+    "revanced",
+    "Install with: yay -S revanced-cli-bin jdk17-openjdk",
+    fallback=True,
+  ):
+    _create_stub_apk(ctx, input_apk, 0)
+    return
+
+  # Try binary CLI approach first (luniume-style)
+  if _run_cli_mode(ctx, input_apk):
+    return
+
+  # Fall back to JAR-based multi-bundle approach
+  _run_jar_mode(ctx, input_apk)
