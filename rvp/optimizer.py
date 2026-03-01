@@ -6,7 +6,6 @@ import itertools
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
-from fnmatch import fnmatch
 from pathlib import Path
 
 from .ad_patterns import AD_PATTERNS
@@ -60,40 +59,58 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   removed_count = 0
   removed_size = 0
 
+  import fnmatch
+  import os
+  import re
+
   # ⚡ Perf: Single directory traversal instead of N rglob() calls
   # For 50 patterns + 10k files: 1 traversal vs 50 traversals = 40x speedup
-  seen_paths: set[Path] = set()
+
+  # Compile patterns into regex for fast matching
+  regex_patterns = [fnmatch.translate(p) for p in debloat_patterns]
+  combined_regex = re.compile("|".join(regex_patterns))
+
+  decompiled_dir_str = str(decompiled_dir)
+  decompiled_dir_len = len(decompiled_dir_str) + 1
 
   # Single traversal of entire tree
-  for item_path in decompiled_dir.rglob("*"):
-    # Skip if already removed by parent directory deletion
-    if not item_path.exists() or item_path in seen_paths:
-      continue
+  # topdown=True allows pruning directories so we don't traverse removed ones
+  for root, dirs, files in os.walk(decompiled_dir_str, topdown=True):
+    rel_dir = root[decompiled_dir_len:].replace(os.sep, "/")
 
-    # Get relative path for pattern matching
-    rel_path = str(item_path.relative_to(decompiled_dir))
+    # Check and prune directories
+    # Iterate backwards so we can safely delete from the list
+    for i in range(len(dirs) - 1, -1, -1):
+      d = dirs[i]
+      rel_path = f"{rel_dir}/{d}" if rel_dir else d
 
-    # Check if path matches any pattern
-    matches_pattern = any(fnmatch(rel_path, pattern) for pattern in debloat_patterns)
+      if combined_regex.match(rel_path):
+        item_path = Path(root) / d
+        try:
+          ctx.log(f"optimizer: Removing directory {rel_path}")
+          shutil.rmtree(item_path)
+          removed_count += 1
+          # Size not counted for directories to avoid redundant traversal
+        except OSError as e:
+          ctx.log(f"optimizer: Failed to remove {item_path.name}: {e}")
+        finally:
+          # Remove from dirs so os.walk doesn't descend into it
+          del dirs[i]
 
-    if matches_pattern:
-      seen_paths.add(item_path)
-      try:
-        if item_path.is_file():
+    # Process files
+    for file in files:
+      rel_path = f"{rel_dir}/{file}" if rel_dir else file
+
+      if combined_regex.match(rel_path):
+        item_path = Path(root) / file
+        try:
           size = item_path.stat().st_size
           ctx.log(f"optimizer: Removing {rel_path}")
           item_path.unlink()
           removed_count += 1
           removed_size += size
-        elif item_path.is_dir():
-          # ⚡ Perf: Skip size calculation for directories to avoid double traversal
-          # shutil.rmtree() will traverse the tree internally for deletion
-          ctx.log(f"optimizer: Removing directory {rel_path}")
-          shutil.rmtree(item_path)
-          removed_count += 1
-          # Size not counted for directories to avoid redundant traversal
-      except OSError as e:
-        ctx.log(f"optimizer: Failed to remove {item_path.name}: {e}")
+        except OSError as e:
+          ctx.log(f"optimizer: Failed to remove {item_path.name}: {e}")
 
   ctx.log(
     f"optimizer: Debloat complete - removed {removed_count} items "
@@ -123,28 +140,43 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
       "assets/unused/*",  # Unused assets
     ],
   )
+
+  if not minify_patterns:
+    ctx.log("optimizer: No minify patterns specified, skipping")
+    return
+
   removed_count = 0
   removed_size = 0
 
+  import fnmatch
+  import os
+  import re
+
+  # ⚡ Perf: Compile patterns into regex for fast matching
+  regex_patterns = [fnmatch.translate(p) for p in minify_patterns]
+  combined_regex = re.compile("|".join(regex_patterns))
+
+  decompiled_dir_str = str(decompiled_dir)
+  decompiled_dir_len = len(decompiled_dir_str) + 1
+
   # ⚡ Perf: Single-pass traversal - process and delete files immediately
   # instead of collecting in a list first (saves memory for large APKs)
-  for path in decompiled_dir.rglob("*"):
-    if not path.is_file():
-      continue
+  for root, _, files in os.walk(decompiled_dir_str):
+    rel_dir = root[decompiled_dir_len:].replace(os.sep, "/")
 
-    if any(
-      fnmatch(path.relative_to(decompiled_dir).as_posix(), pattern)
-      for pattern in minify_patterns
-    ):
-      try:
-        size = path.stat().st_size
-        rel_path = path.relative_to(decompiled_dir)
-        ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
-        path.unlink()
-        removed_count += 1
-        removed_size += size
-      except OSError as e:
-        ctx.log(f"optimizer: Failed to remove {path.name}: {e}")
+    for file in files:
+      rel_path = f"{rel_dir}/{file}" if rel_dir else file
+
+      if combined_regex.match(rel_path):
+        path = Path(root) / file
+        try:
+          size = path.stat().st_size
+          ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
+          path.unlink()
+          removed_count += 1
+          removed_size += size
+        except OSError as e:
+          ctx.log(f"optimizer: Failed to remove {path.name}: {e}")
 
   ctx.log(
     "optimizer: Minification complete - removed "
