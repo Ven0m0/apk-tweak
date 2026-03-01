@@ -55,14 +55,14 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   ctx.log("optimizer: Starting debloat process")
   # Get debloat patterns from options
   debloat_patterns = ctx.options.get("debloat_patterns", [])
-  if debloat_patterns:
-    combined_pattern = "|".join(
-      translate(os.path.normcase(p)) for p in debloat_patterns
-    )
-    compiled_regex = re.compile(f"(?:{combined_pattern})")
   if not debloat_patterns:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
+
+  combined_pattern: str = "|".join(
+    translate(os.path.normcase(p)) for p in debloat_patterns
+  )
+  compiled_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
   removed_count = 0
   removed_size = 0
