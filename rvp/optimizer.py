@@ -224,7 +224,7 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
     # Submit all tasks and use as_completed for better progress tracking
     # ⚡ Perf: Iterate generator directly instead of list
     futures = {
-      executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx): smali_file
+      executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
       for smali_file in smali_files
     }
 
