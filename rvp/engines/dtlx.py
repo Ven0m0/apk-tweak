@@ -108,6 +108,47 @@ def _check_dtlx() -> Path | None:
   return Path(dtlx_path) if dtlx_path else None
 
 
+def _run_dtlx_command(
+  ctx: Context,
+  dtlx_path: Path,
+  args: list[str],
+  timeout: int,
+  cwd: Path | None = None,
+) -> tuple[subprocess.CompletedProcess[str] | None, Exception | None]:
+  """
+  Execute DTL-X command with common error handling.
+
+  Args:
+      ctx: Pipeline context.
+      dtlx_path: Path to dtlx.py executable.
+      args: List of arguments to pass to DTL-X.
+      timeout: Timeout in seconds.
+      cwd: Working directory (optional).
+
+  Returns:
+      Tuple of (CompletedProcess, None) on execution (even if returncode != 0),
+      or (None, Exception) on timeout/error.
+  """
+  cmd = [sys.executable, str(dtlx_path)] + args
+  try:
+    proc = subprocess.run(
+      cmd,
+      capture_output=True,
+      text=True,
+      timeout=timeout,
+      cwd=cwd,
+      check=False,
+    )
+    return proc, None
+  except (subprocess.TimeoutExpired, OSError, subprocess.CalledProcessError) as e:
+    # Log here to avoid duplication
+    if isinstance(e, subprocess.TimeoutExpired):
+      ctx.log(f"dtlx: command timed out after {timeout // 60} minutes")
+    else:
+      ctx.log(f"dtlx: command failed: {e}")
+    return None, e
+
+
 def _run_dtlx_analyze(ctx: Context, apk: Path, report_file: Path) -> bool:
   """
   Run DTL-X in analysis mode.
@@ -133,57 +174,52 @@ def _run_dtlx_analyze(ctx: Context, apk: Path, report_file: Path) -> bool:
 
   ctx.log(f"dtlx: analyzing {apk.name}...")
 
-  try:
-    # Run DTL-X to get APK information (decompile without patching)
-    result = subprocess.run(
-      [sys.executable, str(dtlx), str(apk)],
-      capture_output=True,
-      text=True,
-      timeout=300,  # 5 minute timeout
-      check=False,
+  # Run DTL-X to get APK information (decompile without patching)
+  result, error = _run_dtlx_command(ctx, dtlx, [str(apk)], timeout=300)
+
+  if error:
+    # Handle error reporting based on exception type
+    if isinstance(error, subprocess.TimeoutExpired):
+      status = "TIMEOUT"
+      details = "Reason: Analysis exceeded 5 minute timeout\n"
+    else:
+      status = "ERROR"
+      details = f"Error: {error}\n"
+
+    _write_report(report_file, apk.name, status, details)
+    return False
+
+  # Should be unreachable if result is None and error is None, but for type safety:
+  if result is None:
+    return False
+
+  # Generate analysis report
+  report_content = [
+    f"DTL-X Analysis Report for {apk.name}",
+    "=" * 60,
+    "",
+    f"Status: {'SUCCESS' if result.returncode == 0 else 'COMPLETED WITH WARNINGS'}",
+    f"Exit Code: {result.returncode}",
+    "",
+    "STDOUT:",
+    "-" * 60,
+    result.stdout if result.stdout else "(no output)",
+    "",
+  ]
+
+  if result.stderr:
+    report_content.extend(
+      [
+        "STDERR:",
+        "-" * 60,
+        result.stderr,
+        "",
+      ]
     )
 
-    # Generate analysis report
-    report_content = [
-      f"DTL-X Analysis Report for {apk.name}",
-      "=" * 60,
-      "",
-      f"Status: {'SUCCESS' if result.returncode == 0 else 'COMPLETED WITH WARNINGS'}",
-      f"Exit Code: {result.returncode}",
-      "",
-      "STDOUT:",
-      "-" * 60,
-      result.stdout if result.stdout else "(no output)",
-      "",
-    ]
-
-    if result.stderr:
-      report_content.extend(
-        [
-          "STDERR:",
-          "-" * 60,
-          result.stderr,
-          "",
-        ]
-      )
-
-    report_file.write_text("\n".join(report_content), encoding="utf-8")
-    ctx.log(f"dtlx: analysis report saved to {report_file}")
-    return True
-
-  except subprocess.TimeoutExpired:
-    ctx.log("dtlx: analysis timed out after 5 minutes")
-    _write_report(
-      report_file,
-      apk.name,
-      "TIMEOUT",
-      "Reason: Analysis exceeded 5 minute timeout\n",
-    )
-    return False
-  except (OSError, subprocess.CalledProcessError) as e:
-    ctx.log(f"dtlx: analysis failed: {e}")
-    _write_report(report_file, apk.name, "ERROR", f"Error: {e}\n")
-    return False
+  report_file.write_text("\n".join(report_content), encoding="utf-8")
+  ctx.log(f"dtlx: analysis report saved to {report_file}")
+  return True
 
 
 def _build_flags_from_options(options: dict[str, Any] | Mapping[str, Any]) -> list[str]:
@@ -242,15 +278,11 @@ def _run_dtlx_optimize(
     shutil.copy2(apk, work_apk)
 
     # Run DTL-X with optimization flags
-    cmd = [sys.executable, str(dtlx)] + flags + [str(work_apk)]
-    result = subprocess.run(
-      cmd,
-      capture_output=True,
-      text=True,
-      cwd=work_dir,
-      timeout=600,  # 10 minute timeout for optimization
-      check=False,
-    )
+    args = flags + [str(work_apk)]
+    result, error = _run_dtlx_command(ctx, dtlx, args, timeout=600, cwd=work_dir)
+
+    if error or result is None:
+      return False
 
     # DTL-X typically creates output in the same directory
     # Look for the patched APK
@@ -263,16 +295,14 @@ def _run_dtlx_optimize(
       shutil.copy2(patched_files[0], output_apk)
       ctx.log(f"dtlx: optimized APK saved to {output_apk}")
       return True
+
     ctx.log(f"dtlx: optimization failed (exit code: {result.returncode})")
     if result.stderr:
       ctx.log(f"dtlx: error: {result.stderr[:200]}")
     return False
 
-  except subprocess.TimeoutExpired:
-    ctx.log("dtlx: optimization timed out after 10 minutes")
-    return False
-  except (OSError, subprocess.CalledProcessError) as e:
-    ctx.log(f"dtlx: optimization failed: {e}")
+  except OSError as e:
+    ctx.log(f"dtlx: file operation failed: {e}")
     return False
 
 

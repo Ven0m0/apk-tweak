@@ -1,60 +1,131 @@
-"""Tests for DTL-X engine."""
-
 from __future__ import annotations
 
-from typing import Any
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-from rvp.engines.dtlx import DEFAULT_OPTIMIZATION_FLAGS
-from rvp.engines.dtlx import DTLX_FLAGS
-from rvp.engines.dtlx import _build_flags_from_options
+import pytest
 
-
-def test_build_flags_empty_options() -> None:
-  """Test that empty options return default flags."""
-  expected = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
-  assert _build_flags_from_options({}) == expected
-
-
-def test_build_flags_single_option() -> None:
-  """Test that a single known option returns its flag."""
-  # Pick a flag that is not in defaults to be sure
-  # defaults: rmads4, rmtrackers, rmnop, cleanrun
-  # rmads1 is not in defaults
-  options = {"rmads1": True}
-  assert _build_flags_from_options(options) == ["--rmads1"]
+from rvp.context import Context
+from rvp.engines.dtlx import _run_dtlx_analyze
+from rvp.engines.dtlx import _run_dtlx_optimize
 
 
-def test_build_flags_multiple_options() -> None:
-  """Test that multiple known options return their flags."""
-  options = {"rmads1": True, "rmnop": True}
-  flags = _build_flags_from_options(options)
-  assert "--rmads1" in flags
-  assert "--rmnop" in flags
-  assert len(flags) == 2
+@pytest.fixture
+def mock_ctx(tmp_path):
+  ctx = MagicMock(spec=Context)
+  ctx.work_dir = tmp_path / "work"
+  ctx.output_dir = tmp_path / "output"
+  ctx.work_dir.mkdir()
+  ctx.output_dir.mkdir()
+  ctx.log = MagicMock()
+  return ctx
 
 
-def test_build_flags_false_option() -> None:
-  """Test that False options are ignored (and defaults used if result empty)."""
-  # If we pass rmads1=False, flags list is empty, so it falls back to defaults
-  options = {"rmads1": False}
-  expected = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
-  assert _build_flags_from_options(options) == expected
+@pytest.fixture
+def mock_apk(tmp_path):
+  apk = tmp_path / "test.apk"
+  apk.touch()
+  return apk
 
 
-def test_build_flags_mixed_options() -> None:
-  """Test that only True options are included."""
-  # rmads1=True, rmads2=False
-  options = {"rmads1": True, "rmads2": False}
-  assert _build_flags_from_options(options) == ["--rmads1"]
+@patch("rvp.engines.dtlx._check_dtlx")
+@patch("subprocess.run")
+def test_run_dtlx_analyze_success(mock_run, mock_check, mock_ctx, mock_apk):
+  # Setup mocks
+  mock_check.return_value = Path("/usr/bin/dtlx.py")
+  mock_run.return_value = MagicMock(returncode=0, stdout="Analysis success", stderr="")
+
+  report_file = mock_ctx.output_dir / "report.txt"
+
+  # Run function
+  result = _run_dtlx_analyze(mock_ctx, mock_apk, report_file)
+
+  # Verify assertions
+  assert result is True
+  mock_run.assert_called_once()
+  args = mock_run.call_args[0][0]
+  assert args == [sys.executable, "/usr/bin/dtlx.py", str(mock_apk)]
+  assert report_file.exists()
+  assert "Analysis success" in report_file.read_text()
 
 
-def test_build_flags_unknown_option() -> None:
-  """Test that unknown options are ignored."""
-  # unknown=True -> empty flags -> defaults
-  options: dict[str, Any] = {"unknown_flag": True}
-  expected = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
-  assert _build_flags_from_options(options) == expected
+@patch("rvp.engines.dtlx._check_dtlx")
+@patch("subprocess.run")
+def test_run_dtlx_analyze_failure(mock_run, mock_check, mock_ctx, mock_apk):
+  # Setup mocks
+  mock_check.return_value = Path("/usr/bin/dtlx.py")
+  mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Analysis failed")
 
-  # unknown=True, known=True -> known flag only
-  options = {"unknown_flag": True, "rmads1": True}
-  assert _build_flags_from_options(options) == ["--rmads1"]
+  report_file = mock_ctx.output_dir / "report.txt"
+
+  # Run function
+  result = _run_dtlx_analyze(mock_ctx, mock_apk, report_file)
+
+  # Verify assertions
+  # _run_dtlx_analyze returns True when the subprocess completes, even on non-zero exit code.
+  assert result is True
+
+  assert "COMPLETED WITH WARNINGS" in report_file.read_text()
+  assert "Analysis failed" in report_file.read_text()
+
+
+@patch("rvp.engines.dtlx._check_dtlx")
+@patch("subprocess.run")
+def test_run_dtlx_analyze_timeout(mock_run, mock_check, mock_ctx, mock_apk):
+  mock_check.return_value = Path("/usr/bin/dtlx.py")
+  mock_run.side_effect = subprocess.TimeoutExpired(cmd="dtlx", timeout=300)
+
+  report_file = mock_ctx.output_dir / "report.txt"
+
+  result = _run_dtlx_analyze(mock_ctx, mock_apk, report_file)
+
+  assert result is False
+  assert "TIMEOUT" in report_file.read_text()
+
+
+@patch("rvp.engines.dtlx._check_dtlx")
+@patch("subprocess.run")
+@patch("shutil.copy2")
+def test_run_dtlx_optimize_success(mock_copy, mock_run, mock_check, mock_ctx, mock_apk):
+  mock_check.return_value = Path("/usr/bin/dtlx.py")
+  mock_run.return_value = MagicMock(returncode=0, stdout="Optimization done", stderr="")
+
+  # Simulate patched file creation
+  def side_effect_run(*args, **kwargs):
+    work_dir = kwargs.get("cwd")
+    (work_dir / "test_patched.apk").touch()
+    return MagicMock(returncode=0)
+
+  mock_run.side_effect = side_effect_run
+
+  output_apk = mock_ctx.output_dir / "optimized.apk"
+  flags = ["--rmads", "--rmtrackers"]
+
+  result = _run_dtlx_optimize(mock_ctx, mock_apk, output_apk, flags)
+
+  assert result is True
+  mock_run.assert_called_once()
+  # Verify command includes flags and work apk path
+  cmd = mock_run.call_args[0][0]
+  assert cmd[:2] == [sys.executable, "/usr/bin/dtlx.py"]
+  assert cmd[2:4] == flags
+  assert cmd[4].endswith("test.apk")
+
+  mock_copy.assert_called()  # Copied to output
+
+
+@patch("rvp.engines.dtlx._check_dtlx")
+@patch("subprocess.run")
+def test_run_dtlx_optimize_failure(mock_run, mock_check, mock_ctx, mock_apk):
+  mock_check.return_value = Path("/usr/bin/dtlx.py")
+  mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Error")
+
+  output_apk = mock_ctx.output_dir / "optimized.apk"
+  flags = ["--rmads"]
+
+  result = _run_dtlx_optimize(mock_ctx, mock_apk, output_apk, flags)
+
+  assert result is False

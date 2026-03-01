@@ -267,7 +267,9 @@ def run(ctx: Context) -> None:
     ctx.metadata["optimizer"] = {}
 
   # Track optimization results
-  optimization_results = {
+  from typing import Any
+
+  optimization_results: dict[str, Any] = {
     "original_size": apk.stat().st_size,
     "operations_performed": [],
   }

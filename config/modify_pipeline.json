@@ -8,7 +8,7 @@
     "modify_keystore": {
       "path": "signing/keystore.jks",
       "alias": "mykey",
-      "password": "changeme123"
+      "password": "${MODIFY_KEYSTORE_PASSWORD}"
     }
   }
 }

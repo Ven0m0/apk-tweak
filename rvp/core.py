@@ -5,8 +5,10 @@ from __future__ import annotations
 import importlib
 import pkgutil
 import sys
+import types
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from . import engines as engines_pkg
 from . import plugins as plugins_pkg
@@ -26,6 +28,41 @@ class _ModuleCache:
     self._engines: dict[str, EngineFn] | None = None
     self._plugins: list[PluginHandler] | None = None
 
+  @staticmethod
+  def _discover(
+    pkg: types.ModuleType,
+    attr_name: str,
+    item_type: str,
+  ) -> dict[str, Any]:
+    """
+    Dynamically discover modules in a package.
+
+    Args:
+        pkg: The package module to search.
+        attr_name: The expected attribute name (e.g., 'run', 'handle_hook').
+        item_type: The type name for error logging (e.g., 'Engine', 'Plugin').
+
+    Returns:
+        dict[str, Any]: Mapping of module names to the discovered target functions.
+    """
+    discovered: dict[str, Any] = {}
+
+    if hasattr(pkg, "__path__"):
+      for _, name, _ in pkgutil.iter_modules(pkg.__path__):
+        try:
+          full_name = f"{pkg.__name__}.{name}"
+          module = importlib.import_module(full_name)
+          target = getattr(module, attr_name, None)
+          if target is not None and callable(target):
+            discovered[name] = target
+        except (ImportError, AttributeError) as e:
+          print(
+            f"[rvp] WARN: {item_type} '{name}' load fail: {e}",
+            file=sys.stderr,
+          )
+
+    return discovered
+
   def get_engines(self) -> dict[str, EngineFn]:
     """
     Get cached engines or discover them.
@@ -36,24 +73,9 @@ class _ModuleCache:
     if self._engines is not None:
       return self._engines
 
-    engines: dict[str, EngineFn] = {}
-
     # ⚡ Perf: Auto-discovery instead of manual registry
-    if hasattr(engines_pkg, "__path__"):
-      for _, name, _ in pkgutil.iter_modules(engines_pkg.__path__):
-        try:
-          full_name = f"{engines_pkg.__name__}.{name}"
-          module = importlib.import_module(full_name)
-          if hasattr(module, "run") and callable(module.run):
-            engines[name] = module.run
-        except (ImportError, AttributeError) as e:
-          print(
-            f"[rvp] WARN: Engine '{name}' load fail: {e}",
-            file=sys.stderr,
-          )
-
-    self._engines = engines
-    return engines
+    self._engines = self._discover(engines_pkg, "run", "Engine")
+    return self._engines
 
   def get_plugins(self) -> list[PluginHandler]:
     """
@@ -65,22 +87,8 @@ class _ModuleCache:
     if self._plugins is not None:
       return self._plugins
 
-    hook_funcs: list[PluginHandler] = []
-    if hasattr(plugins_pkg, "__path__"):
-      for _, name, _ in pkgutil.iter_modules(plugins_pkg.__path__):
-        try:
-          full_name = f"{plugins_pkg.__name__}.{name}"
-          module = importlib.import_module(full_name)
-          if hasattr(module, "handle_hook") and callable(module.handle_hook):
-            hook_funcs.append(module.handle_hook)
-        except (ImportError, AttributeError) as e:
-          print(
-            f"[rvp] WARN: Plugin '{name}' load fail: {e}",
-            file=sys.stderr,
-          )
-
-    self._plugins = hook_funcs
-    return hook_funcs
+    self._plugins = list(self._discover(plugins_pkg, "handle_hook", "Plugin").values())
+    return self._plugins
 
 
 # Singleton instance

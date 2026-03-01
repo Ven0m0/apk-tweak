@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -38,6 +40,44 @@ except ImportError:
   def _dump_json(data: Any, file_handle: TextIO) -> None:
     """Write JSON using stdlib json (fallback)."""
     json.dump(data, file_handle, indent=2, sort_keys=True)
+
+
+_ENV_VAR_PATTERN = re.compile(r"\${(\w+)(?::-(.*))?}")
+
+
+def _interpolate_env_vars(data: Any) -> Any:
+  """
+  Recursively interpolate environment variables in configuration data.
+
+  Supports:
+  - ${VAR}
+  - ${VAR:-default}
+
+  Args:
+      data: Configuration data (dict, list, or string).
+
+  Returns:
+      Data with environment variables substituted.
+  """
+  if isinstance(data, str):
+
+    def replace(match: re.Match[str]) -> str:
+      var_name = match.group(1)
+      default_value = match.group(2)
+      # If var exists, use it; else use default; else keep original placeholder
+      val = os.getenv(var_name)
+      if val is not None:
+        return val
+      if default_value is not None:
+        return default_value
+      return match.group(0)
+
+    return _ENV_VAR_PATTERN.sub(replace, data)
+  if isinstance(data, dict):
+    return {k: _interpolate_env_vars(v) for k, v in data.items()}
+  if isinstance(data, list):
+    return [_interpolate_env_vars(v) for v in data]
+  return data
 
 
 @dataclass
@@ -223,8 +263,16 @@ class Config:
       raise FileNotFoundError(f"Config file not found: {path}")
 
     with open(path, encoding="utf-8") as f:
-      data = _load_json(f)
-      return cls(**data)
+      raw_data = _load_json(f)
+      data = _interpolate_env_vars(raw_data)
+
+      # ⚡ Robustness: Only pass valid fields to dataclass constructor
+      import dataclasses
+
+      field_names = {f.name for f in dataclasses.fields(cls)}
+      filtered_data = {k: v for k, v in data.items() if k in field_names}
+
+      return cls(**filtered_data)
 
   def save_to_file(self, path: Path) -> None:
     """
