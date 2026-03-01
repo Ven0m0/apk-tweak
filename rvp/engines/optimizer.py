@@ -7,8 +7,10 @@ import re
 import shutil
 import zipfile
 from pathlib import Path
+from typing import Any
 
 from ..context import Context
+from ..utils import repack_apk
 from ..utils import require_input_apk
 
 
@@ -26,47 +28,6 @@ def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
           # Detected a path traversal attempt or invalid path
           raise OSError("Illegal file path in APK archive") from None
         zf.extract(member, extract_dir)
-    return True
-  except (OSError, zipfile.BadZipFile):
-    return False
-
-
-def _repack_apk_optimized(extract_dir: Path, output_apk: Path) -> bool:
-  """Repack APK with optimized settings."""
-  try:
-    # Extensions that are already compressed
-    no_compress_exts = {
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".gif",
-      ".webp",
-      ".mp3",
-      ".ogg",
-      ".mp4",
-      ".so",
-      ".ttf",
-      ".woff",
-      ".woff2",
-      ".gz",
-      ".xz",
-      ".zip",
-    }
-
-    with zipfile.ZipFile(output_apk, "w") as zf:
-      for file_path in extract_dir.rglob("*"):
-        if file_path.is_file():
-          arcname = file_path.relative_to(extract_dir)
-
-          if file_path.suffix.lower() in no_compress_exts:
-            zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
-          else:
-            zf.write(
-              file_path,
-              arcname,
-              compress_type=zipfile.ZIP_DEFLATED,
-              compresslevel=6,
-            )
     return True
   except (OSError, zipfile.BadZipFile):
     return False
@@ -267,7 +228,7 @@ def run(ctx: Context) -> None:
     ctx.metadata["optimizer"] = {}
 
   # Track optimization results
-  optimization_results = {
+  optimization_results: dict[str, Any] = {
     "original_size": apk.stat().st_size,
     "operations_performed": [],
   }
@@ -308,7 +269,7 @@ def run(ctx: Context) -> None:
 
   # Repackage optimized APK
   output_apk = ctx.output_dir / f"{apk.stem}.optimized.apk"
-  if _repack_apk_optimized(extract_dir, output_apk):
+  if repack_apk(ctx, extract_dir, output_apk):
     ctx.set_current_apk(output_apk)
     ctx.log(f"optimizer: optimization complete, continuing with {output_apk.name}")
 

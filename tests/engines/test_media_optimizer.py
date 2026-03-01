@@ -77,7 +77,7 @@ def test_process_images_pngquant(mock_as_completed, mock_executor, mock_context)
         mock_as_completed.return_value = [mock_future]
 
         # Run
-        _process_images(mock_context, extract_dir, tools)
+        _process_images(mock_context, [Path("/tmp/extract/image.png")], [], tools)
 
         # Verify submit call
         mock_submit = mock_executor.return_value.__enter__.return_value.submit
