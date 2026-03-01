@@ -19,6 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Mapping
 
 from ..context import Context
 from ..utils import require_input_apk
@@ -221,7 +222,7 @@ def _run_dtlx_analyze(ctx: Context, apk: Path, report_file: Path) -> bool:
   return True
 
 
-def _build_flags_from_options(options: dict[str, Any]) -> list[str]:
+def _build_flags_from_options(options: dict[str, Any] | Mapping[str, Any]) -> list[str]:
   """
   Build DTL-X command line flags from pipeline options.
 
