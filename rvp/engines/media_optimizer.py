@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed
+from contextlib import nullcontext
 from pathlib import Path
 
 from ..constants import get_optimal_process_workers
 from ..context import Context
 from ..utils import check_dependencies
+from ..utils import repack_apk
 from ..utils import require_input_apk
 
 # Constants
@@ -99,30 +103,35 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
     else:
       return (audio_path, False)
 
-    temp_output = audio_path.with_suffix(audio_path.suffix + ".tmp")
+    fd, temp_path = tempfile.mkstemp(suffix=audio_path.suffix)
+    os.close(fd)
 
-    result = subprocess.run(
-      [
-        "ffmpeg",
-        "-i",
-        str(audio_path),
-        "-codec:a",
-        codec,
-        "-b:a",
-        bitrate,
-        "-y",
-        str(temp_output),
-      ],
-      capture_output=True,
-      text=True,
-      timeout=60,
-      check=False,
-    )
+    try:
+      result = subprocess.run(
+        [
+          "ffmpeg",
+          "-i",
+          str(audio_path),
+          "-codec:a",
+          codec,
+          "-b:a",
+          bitrate,
+          "-y",
+          temp_path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+      )
 
-    if result.returncode == 0 and temp_output.exists():
-      shutil.move(temp_output, audio_path)
-      return (audio_path, True)
-    return (audio_path, False)
+      if result.returncode == 0 and Path(temp_path).exists():
+        shutil.move(temp_path, audio_path)
+        return (audio_path, True)
+      return (audio_path, False)
+    finally:
+      with contextlib.suppress(OSError):
+        Path(temp_path).unlink(missing_ok=True)
 
   except (subprocess.TimeoutExpired, Exception):
     return (audio_path, False)
@@ -147,64 +156,6 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
     return True
   except (OSError, zipfile.BadZipFile) as e:
     ctx.log(f"media_optimizer: extraction failed: {e}")
-    return False
-
-
-def _repackage_apk(ctx: Context, extract_dir: Path, output_apk: Path) -> bool:
-  """
-  Repackage directory contents into APK.
-
-  ⚡ Optimized: Smart compression - level 6 for compressible files, STORED for pre-compressed.
-  ⚡ Optimized: Stream files using a generator to minimize memory usage.
-
-  Args:
-      ctx: Pipeline context.
-      extract_dir: Directory with APK contents.
-      output_apk: Output APK file path.
-
-  Returns:
-      True if repackaging succeeded, False otherwise.
-  """
-  try:
-    # ⚡ Perf: Extensions that are already compressed
-    no_compress_exts = {
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".gif",
-      ".webp",
-      ".mp3",
-      ".ogg",
-      ".mp4",
-      ".so",
-      ".ttf",
-      ".woff",
-      ".woff2",
-    }
-
-    with zipfile.ZipFile(output_apk, "w") as zf:
-      for file_path in extract_dir.rglob("*"):
-        if not file_path.is_file():
-          continue
-
-        arcname = file_path.relative_to(extract_dir)
-
-        # ⚡ Perf: Skip compression for already-compressed files (2-3x faster)
-        # Use level 6 instead of 9 (better speed/size tradeoff, <1% size difference)
-        if file_path.suffix.lower() in no_compress_exts:
-          zf.write(file_path, arcname, compress_type=zipfile.ZIP_STORED)
-        else:
-          zf.write(
-            file_path,
-            arcname,
-            compress_type=zipfile.ZIP_DEFLATED,
-            compresslevel=6,
-          )
-
-    ctx.log(f"media_optimizer: repackaged to {output_apk.name}")
-    return True
-  except (OSError, zipfile.BadZipFile) as e:
-    ctx.log(f"media_optimizer: repackaging failed: {e}")
     return False
 
 
@@ -280,7 +231,11 @@ def _find_media_files(
 
 
 def _process_images(
-  ctx: Context, png_files: list[Path], jpg_files: list[Path], tools: dict[str, bool]
+  ctx: Context,
+  png_files: list[Path],
+  jpg_files: list[Path],
+  tools: dict[str, bool],
+  executor: ProcessPoolExecutor | None = None,
 ) -> dict[str, int]:
   """
   Process and optimize images in extracted APK.
@@ -293,6 +248,7 @@ def _process_images(
       png_files: List of PNG files.
       jpg_files: List of JPEG files.
       tools: Tool availability dict.
+      executor: Optional shared executor; creates its own if not provided.
 
   Returns:
       Stats dict with optimization counts.
@@ -327,7 +283,12 @@ def _process_images(
   # This avoids process creation/teardown overhead and maximizes worker utilization
   ctx.log(f"media_optimizer: optimizing images with {max_workers} shared workers")
 
-  with ProcessPoolExecutor(max_workers=max_workers) as executor:
+  ctx_mgr = (
+    nullcontext(executor)
+    if executor is not None
+    else ProcessPoolExecutor(max_workers=max_workers)
+  )
+  with ctx_mgr as active:
     futures = {}
 
     # Submit PNG optimization tasks based on available tools and preference
@@ -340,7 +301,7 @@ def _process_images(
         )
         for png in png_files:
           cmd = ["optipng", f"-o{optimization_level}", str(png)]
-          future = executor.submit(_run_optimizer_worker, png, cmd, 60)
+          future = active.submit(_run_optimizer_worker, png, cmd, 60)
           futures[future] = ("png", png)
       elif png_optimizer == "pngquant" and has_pngquant:
         ctx.log("media_optimizer: using pngquant for PNG optimization (lossy)")
@@ -354,7 +315,7 @@ def _process_images(
             "--force",
             str(png),
           ]
-          future = executor.submit(_run_optimizer_worker, png, cmd, 30)
+          future = active.submit(_run_optimizer_worker, png, cmd, 30)
           futures[future] = ("png", png)
       elif has_optipng:
         # Fallback to optipng if available
@@ -365,7 +326,7 @@ def _process_images(
         )
         for png in png_files:
           cmd = ["optipng", f"-o{optimization_level}", str(png)]
-          future = executor.submit(_run_optimizer_worker, png, cmd, 60)
+          future = active.submit(_run_optimizer_worker, png, cmd, 60)
           futures[future] = ("png", png)
       elif has_pngquant:
         # Fallback to pngquant if available
@@ -380,7 +341,7 @@ def _process_images(
             "--force",
             str(png),
           ]
-          future = executor.submit(_run_optimizer_worker, png, cmd, 30)
+          future = active.submit(_run_optimizer_worker, png, cmd, 30)
           futures[future] = ("png", png)
       else:
         ctx.log("media_optimizer: no PNG optimization tools available")
@@ -389,17 +350,15 @@ def _process_images(
     if has_jpegoptim and jpg_files:
       for jpg in jpg_files:
         cmd = ["jpegoptim", "--max=85", "--strip-all", str(jpg)]
-        future = executor.submit(_run_optimizer_worker, jpg, cmd, 30)
+        future = active.submit(_run_optimizer_worker, jpg, cmd, 30)
         futures[future] = ("jpg", jpg)
 
     # Process results as they complete with timeout for stuck processes
-    total_timeout = (
-      900 if futures else 1
-    )  # overall timeout to avoid hanging indefinitely
+    total_timeout = 900 if futures else 1
     for future in as_completed(futures, timeout=total_timeout):
       file_type, _ = futures[future]
       try:
-        _, success = future.result(timeout=60)  # 60 second timeout per future
+        _, success = future.result(timeout=60)
         if success:
           stats[file_type] += 1
       except Exception as e:
@@ -413,7 +372,10 @@ def _process_images(
 
 
 def _process_audio(
-  ctx: Context, audio_files: list[Path], tools: dict[str, bool]
+  ctx: Context,
+  audio_files: list[Path],
+  tools: dict[str, bool],
+  executor: ProcessPoolExecutor | None = None,
 ) -> int:
   """
   Process and optimize audio files in extracted APK.
@@ -424,6 +386,7 @@ def _process_audio(
       ctx: Pipeline context.
       audio_files: List of audio files.
       tools: Tool availability dict.
+      executor: Optional shared executor; creates its own if not provided.
 
   Returns:
       Number of optimized audio files.
@@ -437,15 +400,18 @@ def _process_audio(
   if not audio_files:
     return 0
 
-  # ⚡ Perf: Use centralized worker calculation
   max_workers = get_optimal_process_workers()
-
   ctx.log(f"media_optimizer: optimizing audio with {max_workers} workers")
 
   optimized = 0
-  with ProcessPoolExecutor(max_workers=max_workers) as executor:
+  ctx_mgr = (
+    nullcontext(executor)
+    if executor is not None
+    else ProcessPoolExecutor(max_workers=max_workers)
+  )
+  with ctx_mgr as active:
     futures = {
-      executor.submit(_optimize_audio_worker, audio): audio for audio in audio_files
+      active.submit(_optimize_audio_worker, audio): audio for audio in audio_files
     }
     for future in as_completed(futures):
       _, success = future.result()
@@ -566,19 +532,22 @@ def run(ctx: Context) -> None:
     ctx, extract_dir, include_images=optimize_images, include_audio=optimize_audio
   )
 
-  # Process images
-  if optimize_images:
-    image_stats = _process_images(ctx, media_files["png"], media_files["jpg"], tools)
-    ctx.metadata["media_optimizer"]["images"] = image_stats
-
-  # Process audio
-  if optimize_audio:
-    audio_count = _process_audio(ctx, media_files["audio"], tools)
-    ctx.metadata["media_optimizer"]["audio"] = audio_count
+  # ⚡ Perf: Shared executor for images and audio to avoid repeated pool creation
+  if optimize_images or optimize_audio:
+    max_workers = get_optimal_process_workers()
+    ctx.log(f"media_optimizer: initializing shared executor with {max_workers} workers")
+    with ProcessPoolExecutor(max_workers=max_workers) as shared_executor:
+      if optimize_images:
+        image_stats = _process_images(
+          ctx, media_files["png"], media_files["jpg"], tools, shared_executor
+        )
+        ctx.metadata["media_optimizer"]["images"] = image_stats
+      if optimize_audio:
+        audio_count = _process_audio(ctx, media_files["audio"], tools, shared_executor)
+        ctx.metadata["media_optimizer"]["audio"] = audio_count
 
   # Filter DPI resources
   if target_dpi:
-    # Parse target DPI (can be comma-separated)
     if isinstance(target_dpi, str):
       target_dpis = [d.strip() for d in target_dpi.split(",")]
     else:
@@ -589,7 +558,7 @@ def run(ctx: Context) -> None:
 
   # Repackage APK
   output_apk = ctx.output_dir / f"{apk.stem}.optimized.apk"
-  if _repackage_apk(ctx, extract_dir, output_apk):
+  if repack_apk(ctx, extract_dir, output_apk):
     ctx.set_current_apk(output_apk)
     ctx.log(f"media_optimizer: pipeline will continue with {output_apk}")
 
