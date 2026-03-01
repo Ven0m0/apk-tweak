@@ -28,11 +28,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-          cache: 'pip'
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -49,8 +48,7 @@ jobs:
 
       - name: Install Python tools
         run: |
-          pip install --upgrade pip setuptools wheel
-          pip install ruff mypy pytest
+          uv tool install ruff
       - name: Install Node.js tools
         run: |
           npm install -g prettier@latest
@@ -69,7 +67,7 @@ jobs:
 
       - name: Install yamllint & yamlfmt
         run: |
-          pip install yamllint
+          uv tool install yamllint
           go install github.com/google/yamlfmt/cmd/yamlfmt@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
@@ -129,18 +127,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-          cache: 'pip'
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -e ".[dev]"
+          uv sync --extra dev
       - name: Run mypy
         run: |
-          mypy rvp/
+          uv run mypy rvp/
   python-tests:
     name: Python Tests
     runs-on: ubuntu-slim
@@ -148,18 +144,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-          cache: 'pip'
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -e ".[dev]"
+          uv sync --extra dev
       - name: Run pytest
         run: |
-          pytest tests/ -v --tb=short
+          uv run pytest tests/ -v --tb=short
   summary:
     name: Summary
     runs-on: ubuntu-slim
