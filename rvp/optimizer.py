@@ -133,8 +133,8 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   removed_count = 0
   removed_size = 0
   if minify_patterns:
-    combined_pattern = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
-    minify_regex = re.compile(f"(?:{combined_pattern})")
+    combined_pattern: str = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
+    minify_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
   # ⚡ Perf: Single-pass traversal - process and delete files immediately
   # instead of collecting in a list first (saves memory for large APKs)
