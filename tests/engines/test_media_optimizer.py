@@ -79,8 +79,8 @@ def test_process_images_pngquant(mock_as_completed, mock_executor, mock_context)
     # Configure as_completed to yield this future
     mock_as_completed.return_value = [mock_future]
 
-    # Run
-    _process_images(mock_context, [Path("/tmp/extract/image.png")], [], tools)
+    # Run (process images now takes png_files and jpg_files directly)
+    _process_images(mock_context, [extract_dir / "image.png"], [], tools)
 
     # Verify submit call
     mock_submit = mock_executor.return_value.__enter__.return_value.submit

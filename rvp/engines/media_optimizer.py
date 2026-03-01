@@ -238,12 +238,32 @@ def _find_media_files(
   )
 
   # ⚡ Perf: Single directory traversal for all requested media types
+  # Fast-path tuple for endswith check
+  valid_exts_list = []
+  if include_images:
+    valid_exts_list.extend([".png", ".jpg", ".jpeg"])
+  if include_audio:
+    valid_exts_list.extend([".mp3", ".ogg"])
+
+  # Return early if no media types requested (handled by early return above, but safe)
+  if not valid_exts_list:
+    return {"png": png_list, "jpg": jpg_list, "audio": audio_list}
+
+  valid_exts = tuple(valid_exts_list)
   audio_exts = (".mp3", ".ogg")
 
   for root, _, files in os.walk(extract_dir):
-    root_path = Path(root)
+    root_path = None  # Lazy instantiation of Path
+
     for file in files:
       lower_name = file.lower()
+
+      # Fast path rejection
+      if not lower_name.endswith(valid_exts):
+        continue
+
+      if root_path is None:
+        root_path = Path(root)
 
       if include_images:
         if lower_name.endswith(".png"):
