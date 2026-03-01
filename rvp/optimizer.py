@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import itertools
+import os
+import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
-from fnmatch import fnmatch
+from fnmatch import translate
 from pathlib import Path
 
 from .ad_patterns import AD_PATTERNS
@@ -53,6 +55,11 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   ctx.log("optimizer: Starting debloat process")
   # Get debloat patterns from options
   debloat_patterns = ctx.options.get("debloat_patterns", [])
+  if debloat_patterns:
+    combined_pattern = "|".join(
+      translate(os.path.normcase(p)) for p in debloat_patterns
+    )
+    compiled_regex = re.compile(f"(?:{combined_pattern})")
   if not debloat_patterns:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
@@ -74,7 +81,7 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
     rel_path = str(item_path.relative_to(decompiled_dir))
 
     # Check if path matches any pattern
-    matches_pattern = any(fnmatch(rel_path, pattern) for pattern in debloat_patterns)
+    matches_pattern = bool(compiled_regex.match(os.path.normcase(rel_path)))
 
     if matches_pattern:
       seen_paths.add(item_path)
@@ -125,6 +132,9 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   )
   removed_count = 0
   removed_size = 0
+  if minify_patterns:
+    combined_pattern = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
+    minify_regex = re.compile(f"(?:{combined_pattern})")
 
   # ⚡ Perf: Single-pass traversal - process and delete files immediately
   # instead of collecting in a list first (saves memory for large APKs)
@@ -132,9 +142,8 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
     if not path.is_file():
       continue
 
-    if any(
-      fnmatch(path.relative_to(decompiled_dir).as_posix(), pattern)
-      for pattern in minify_patterns
+    if minify_patterns and minify_regex.match(
+      os.path.normcase(path.relative_to(decompiled_dir).as_posix())
     ):
       try:
         size = path.stat().st_size
