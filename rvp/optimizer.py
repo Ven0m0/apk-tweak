@@ -228,7 +228,11 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
       for smali_file in smali_files
     }
 
-    ctx.log(f"optimizer: Scanning {len(futures)} smali files...")
+    ctx.log(
+      "optimizer: "
+      f"Processing {len(futures)} smali files with {optimal_workers} worker "
+      "threads..."
+    )
 
     for future in as_completed(futures):
       if future.result():
