@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import cast
 
 from .context import Context
 
@@ -62,61 +63,59 @@ def run_command(
   start_time = time.time()
 
   try:
-    # ⚡ Perf: Use 8KB buffer instead of line buffering for better performance
-    # Still provides real-time feedback with reduced overhead
-    with subprocess.Popen(
+    # ⚡ Perf: Use subprocess.run with timeout to prevent hangs
+    # Output is captured and logged in batches after completion to maintain code health
+    # while ensuring timeouts are respected.
+    result = subprocess.run(
       cmd,
       stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT,  # Merge stderr into stdout
       text=True,
       cwd=cwd,
       env=env,
-      bufsize=8192,  # 8KB buffer (optimized for performance)
+      timeout=timeout,
+      check=False,  # We handle check manually
       encoding="utf-8",
       errors="replace",
-    ) as proc:
-      if proc.stdout:
-        # Batch log lines for efficiency with larger batch size for performance
-        output_lines = []
-        for line in proc.stdout:
-          stripped = line.strip()
-          if stripped:
-            output_lines.append(stripped)
-            # Log in larger batches to reduce logging overhead while maintaining responsiveness
-            if (
-              len(output_lines) >= 20
-            ):  # Increased from 10 to 20 for better performance
-              for out_line in output_lines:
-                ctx.log(
-                  f"  {out_line}", level=15
-                )  # Lower log level for subprocess output
-              output_lines = []
-        # Log remaining lines
-        for out_line in output_lines:
-          ctx.log(f"  {out_line}", level=15)
+    )
 
-    # ⚡ Perf: Use timeout-aware wait
-    try:
-      retcode = proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-      proc.kill()  # Ensure process is terminated
-      proc.wait()  # Clean up zombie process
-      elapsed = time.time() - start_time
-      ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
-      raise
+    # Log output in batches
+    if result.stdout:
+      output_lines = []
+      for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if stripped:
+          output_lines.append(stripped)
+          if len(output_lines) >= 20:
+            for out_line in output_lines:
+              ctx.log(f"  {out_line}", level=15)
+            output_lines = []
+      # Log remaining lines
+      for out_line in output_lines:
+        ctx.log(f"  {out_line}", level=15)
 
     elapsed = time.time() - start_time
-    if retcode == 0:
+    if result.returncode == 0:
       ctx.log(f"CMD SUCCESS in {elapsed:.2f}s: {cmd[0]}")
     else:
-      ctx.log(f"CMD FAILED with code {retcode} in {elapsed:.2f}s: {cmd[0]}")
+      ctx.log(f"CMD FAILED with code {result.returncode} in {elapsed:.2f}s: {cmd[0]}")
 
-    if check and retcode != 0:
-      raise subprocess.CalledProcessError(retcode, cmd)
+    if check and result.returncode != 0:
+      raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout)
 
-    return subprocess.CompletedProcess(cmd, retcode)
+    return result
 
-  except subprocess.TimeoutExpired:
+  except subprocess.TimeoutExpired as e:
+    elapsed = time.time() - start_time
+    ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
+
+    # Log any partial output captured before timeout
+    if e.stdout:
+      for line in cast(str, e.stdout).splitlines():
+        stripped = line.strip()
+        if stripped:
+          ctx.log(f"  {stripped}", level=15)
+
     # Re-raise timeout exceptions
     raise
   except (OSError, ValueError) as e:
@@ -124,6 +123,7 @@ def run_command(
     ctx.log(f"ERR: Command failed after {elapsed:.2f}s: {e}")
     if check:
       raise
+    # Create a dummy completed process for the error case
     return subprocess.CompletedProcess(cmd, 1)
 
 
@@ -230,7 +230,7 @@ def build_tool_command(
     cmd = [tool_name]
   else:
     tools = ctx.options.get("tools", {})
-    jar_path = Path(tools.get(jar_key, default_jar))
+    jar_path = Path(str(tools.get(jar_key, default_jar)))
     cmd = ["java", "-jar", str(jar_path)]
 
   if base_args:

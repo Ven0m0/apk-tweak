@@ -29,5 +29,6 @@ def mock_context(tmp_path: Path) -> Context:
     work_dir=work_dir,
     input_apk=input_apk,
     output_dir=output_dir,
-    engines=["test_engine"],
+    engines=[],
+    options={},
   )

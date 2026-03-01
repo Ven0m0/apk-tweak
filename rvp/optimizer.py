@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -201,12 +202,15 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   ctx.log("optimizer: Starting regex-based ad patching")
 
   # Find all smali files
-  smali_files = list(decompiled_dir.rglob("*.smali"))
-  if not smali_files:
+  smali_files_gen = decompiled_dir.rglob("*.smali")
+
+  # Check if any smali files exist without materializing the full list
+  try:
+    first_file = next(smali_files_gen)
+    smali_files = itertools.chain([first_file], smali_files_gen)
+  except StopIteration:
     ctx.log("optimizer: No smali files found")
     return
-
-  ctx.log(f"optimizer: Scanning {len(smali_files)} smali files...")
 
   total_patched = 0
 
@@ -218,10 +222,17 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   # Use ThreadPool for performance (I/O bound with CPU-heavy regex)
   with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
     # Submit all tasks and use as_completed for better progress tracking
+    # ⚡ Perf: Iterate generator directly instead of list
     futures = {
-      executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx): smali_file
+      executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
       for smali_file in smali_files
     }
+
+    ctx.log(
+      "optimizer: "
+      f"Processing {len(futures)} smali files with {optimal_workers} worker "
+      "threads..."
+    )
 
     for future in as_completed(futures):
       if future.result():
