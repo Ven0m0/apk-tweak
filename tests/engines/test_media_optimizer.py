@@ -57,7 +57,7 @@ def test_run_optimizer_worker_timeout(mock_run):
   assert success is False
 
 
-@patch("rvp.engines.media_optimizer.ProcessPoolExecutor")
+@patch("rvp.engines.media_optimizer.ThreadPoolExecutor")
 @patch("rvp.engines.media_optimizer.as_completed")
 def test_process_images_pngquant(mock_as_completed, mock_executor, mock_context):
   # Setup

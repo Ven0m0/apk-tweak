@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import itertools
+import os
+import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -55,6 +57,11 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   if not debloat_patterns:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
+
+  combined_pattern: str = "|".join(
+    translate(os.path.normcase(p)) for p in debloat_patterns
+  )
+  compiled_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
   removed_count = 0
   removed_size = 0
@@ -148,6 +155,9 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
 
   removed_count = 0
   removed_size = 0
+  if minify_patterns:
+    combined_pattern: str = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
+    minify_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
   import fnmatch
   import os
