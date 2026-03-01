@@ -132,13 +132,12 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
     if not path.is_file():
       continue
 
-    if any(
-      fnmatch(path.relative_to(decompiled_dir).as_posix(), pattern)
-      for pattern in minify_patterns
-    ):
+    rel_path = path.relative_to(decompiled_dir)
+    rel_path_posix = rel_path.as_posix()
+
+    if any(fnmatch(rel_path_posix, pattern) for pattern in minify_patterns):
       try:
         size = path.stat().st_size
-        rel_path = path.relative_to(decompiled_dir)
         ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
         path.unlink()
         removed_count += 1
