@@ -49,3 +49,31 @@ def test_run_command_failure_no_check(mock_context):
   cmd = ["false"]
   result = run_command(cmd, mock_context, check=False)
   assert result.returncode != 0
+
+
+def test_require_input_apk_success(mock_context):
+  """Test require_input_apk successfully returns the APK."""
+  from pathlib import Path
+
+  from rvp.utils import require_input_apk
+
+  # Test with current_apk set
+  mock_context.current_apk = Path("current.apk")
+  mock_context.input_apk = Path("input.apk")
+  assert require_input_apk(mock_context) == Path("current.apk")
+
+  # Test with current_apk missing, but input_apk set
+  mock_context.current_apk = None
+  mock_context.input_apk = Path("input.apk")
+  assert require_input_apk(mock_context) == Path("input.apk")
+
+
+def test_require_input_apk_missing(mock_context):
+  """Test require_input_apk raises ValueError when no APK is found."""
+  from rvp.utils import require_input_apk
+
+  mock_context.current_apk = None
+  mock_context.input_apk = None
+
+  with pytest.raises(ValueError, match="No input APK found in context"):
+    require_input_apk(mock_context)
