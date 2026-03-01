@@ -147,7 +147,6 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
     ):
       try:
         size = path.stat().st_size
-        rel_path = path.relative_to(decompiled_dir)
         ctx.log(f"optimizer: Removing {rel_path} ({size} bytes)")
         path.unlink()
         removed_count += 1
