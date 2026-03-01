@@ -65,12 +65,8 @@ def test_run_dtlx_analyze_failure(mock_run, mock_check, mock_ctx, mock_apk):
   result = _run_dtlx_analyze(mock_ctx, mock_apk, report_file)
 
   # Verify assertions
-  assert (
-    result is True
-  )  # Note: _run_dtlx_analyze returns True even if returncode != 0, as long as it ran. Wait, checking code...
-  # Actually code says: return True. But sets Status in report.
-  # "Status: {'SUCCESS' if result.returncode == 0 else 'COMPLETED WITH WARNINGS'}"
-  # So it returns True unless exception occurs.
+  # _run_dtlx_analyze returns True when the subprocess completes, even on non-zero exit code.
+  assert result is True
 
   assert "COMPLETED WITH WARNINGS" in report_file.read_text()
   assert "Analysis failed" in report_file.read_text()
