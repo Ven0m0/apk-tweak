@@ -12,15 +12,15 @@ Critical instructions for AI agents (Claude, Copilot, Gemini) working with this 
 
 ### Priority Files (@ prefix for reference)
 
-| File | Purpose |
-|------|---------|
-| @rvp/core.py | Pipeline orchestration, auto-discovery |
-| @rvp/context.py | Runtime state container |
-| @rvp/types.py | TypedDict definitions |
-| @rvp/cli.py | CLI argument parsing |
-| @rvp/utils.py | Subprocess execution, file ops |
-| @rvp/engines/*.py | Engine implementations |
-| @pyproject.toml | Dependencies, tool config |
+| File               | Purpose                                |
+| ------------------ | -------------------------------------- |
+| @rvp/core.py       | Pipeline orchestration, auto-discovery |
+| @rvp/context.py    | Runtime state container                |
+| @rvp/types.py      | TypedDict definitions                  |
+| @rvp/cli.py        | CLI argument parsing                   |
+| @rvp/utils.py      | Subprocess execution, file ops         |
+| @rvp/engines/\*.py | Engine implementations                 |
+| @pyproject.toml    | Dependencies, tool config              |
 
 ### Critical Commands
 
@@ -53,12 +53,14 @@ Input APK → Engine 1 → Engine 2 → ... → Output APK
 ### Core Concepts
 
 **Context (@rvp/context.py)**: Runtime state object passed to all engines
+
 - `ctx.current_apk`: Path to current APK (updated by each engine)
 - `ctx.options`: PipelineOptions TypedDict
 - `ctx.log(msg)`: Logging method
 - `ctx.metadata`: Dict for storing engine results
 
 **Engine Pattern** (see @rvp/engines/revanced.py for example):
+
 ```python
 def run(ctx: Context) -> None:
     """Engine entry point. MUST update ctx.current_apk on success."""
@@ -151,9 +153,11 @@ apk-tweak/
 **Branch naming**: `feat/`, `fix/`, `chore/`, `docs/`
 
 **Commit style**: `type(scope): description`
+
 - Examples: `feat(revanced): add multi-patch support`, `fix(cli): handle missing key`
 
 **Pre-commit checklist**:
+
 - [ ] Code formatted (`uv run ruff format .`)
 - [ ] Linting passed (`uv run ruff check . --fix`)
 - [ ] Type check passed (`uv run mypy rvp/`)
