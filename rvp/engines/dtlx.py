@@ -17,9 +17,9 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
-from typing import Mapping
 
 from ..context import Context
 from ..utils import require_input_apk
