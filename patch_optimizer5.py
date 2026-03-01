@@ -1,21 +1,11 @@
-import re
+"""
+Deprecated optimizer patching script.
 
-with open("rvp/optimizer.py") as f:
-  content = f.read()
+This file previously contained a one-off helper that rewrote ``rvp/optimizer.py``
+using regular-expression substitutions. It is intentionally left non-functional
+to avoid long-term maintenance noise and confusion about supported tooling.
 
-# For debloat
-content = re.sub(
-  r"rel_dir = root\[decompiled_dir_len:\]",
-  r'rel_dir = root[decompiled_dir_len:].replace(os.sep, "/")',
-  content,
-)
-
-# For minify
-content = re.sub(
-  r'minify_patterns = ctx\.options\.get\(\n    "minify_patterns",\n    \[\n      "res/drawable-xxxhdpi/\*",  # Extra high DPI \(often unnecessary\)\n      "res/raw/\*\.mp3",  # Large audio files\n      "res/raw/\*\.wav",\n      "assets/unused/\*",  # Unused assets\n    \],\n  \)',
-  r'minify_patterns = ctx.options.get(\n    "minify_patterns",\n    [\n      "res/drawable-xxxhdpi/*",  # Extra high DPI (often unnecessary)\n      "res/raw/*.mp3",  # Large audio files\n      "res/raw/*.wav",\n      "assets/unused/*",  # Unused assets\n    ],\n  )\n\n  if not minify_patterns:\n    ctx.log("optimizer: No minify patterns specified, skipping")\n    return',
-  content,
-)
-
-with open("rvp/optimizer.py", "w") as f:
-  f.write(content)
+If you need to change optimizer behavior, update ``rvp/optimizer.py`` directly
+or add a properly documented tool under ``tools/`` instead of reactivating this
+script.
+"""
