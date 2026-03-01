@@ -8,12 +8,12 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from contextlib import nullcontext
 from pathlib import Path
 
-from ..constants import get_optimal_process_workers
+from ..constants import get_optimal_thread_workers
 from ..context import Context
 from ..utils import check_dependencies
 from ..utils import repack_apk
@@ -235,7 +235,7 @@ def _process_images(
   png_files: list[Path],
   jpg_files: list[Path],
   tools: dict[str, bool],
-  executor: ProcessPoolExecutor | None = None,
+  executor: ThreadPoolExecutor | None = None,
 ) -> dict[str, int]:
   """
   Process and optimize images in extracted APK.
@@ -277,7 +277,7 @@ def _process_images(
     return stats
 
   # ⚡ Perf: Use centralized worker calculation
-  max_workers = get_optimal_process_workers()
+  max_workers = get_optimal_thread_workers()
 
   # ⚡ Perf: Use single shared process pool for both PNG and JPEG optimization
   # This avoids process creation/teardown overhead and maximizes worker utilization
@@ -286,7 +286,7 @@ def _process_images(
   ctx_mgr = (
     nullcontext(executor)
     if executor is not None
-    else ProcessPoolExecutor(max_workers=max_workers)
+    else ThreadPoolExecutor(max_workers=max_workers)
   )
   with ctx_mgr as active:
     futures = {}
@@ -375,12 +375,12 @@ def _process_audio(
   ctx: Context,
   audio_files: list[Path],
   tools: dict[str, bool],
-  executor: ProcessPoolExecutor | None = None,
+  executor: ThreadPoolExecutor | None = None,
 ) -> int:
   """
   Process and optimize audio files in extracted APK.
 
-  ⚡ Optimized: Parallel processing with ProcessPoolExecutor (4x speedup on 4 cores).
+  ⚡ Optimized: Parallel processing with ThreadPoolExecutor (4x speedup on 4 cores).
 
   Args:
       ctx: Pipeline context.
@@ -400,14 +400,14 @@ def _process_audio(
   if not audio_files:
     return 0
 
-  max_workers = get_optimal_process_workers()
+  max_workers = get_optimal_thread_workers()
   ctx.log(f"media_optimizer: optimizing audio with {max_workers} workers")
 
   optimized = 0
   ctx_mgr = (
     nullcontext(executor)
     if executor is not None
-    else ProcessPoolExecutor(max_workers=max_workers)
+    else ThreadPoolExecutor(max_workers=max_workers)
   )
   with ctx_mgr as active:
     futures = {
@@ -534,9 +534,9 @@ def run(ctx: Context) -> None:
 
   # ⚡ Perf: Shared executor for images and audio to avoid repeated pool creation
   if optimize_images or optimize_audio:
-    max_workers = get_optimal_process_workers()
+    max_workers = get_optimal_thread_workers()
     ctx.log(f"media_optimizer: initializing shared executor with {max_workers} workers")
-    with ProcessPoolExecutor(max_workers=max_workers) as shared_executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as shared_executor:
       if optimize_images:
         image_stats = _process_images(
           ctx, media_files["png"], media_files["jpg"], tools, shared_executor
