@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import pkgutil
 import sys
+import time
 import types
 from collections.abc import Callable
 from pathlib import Path
@@ -73,7 +75,6 @@ class _ModuleCache:
     if self._engines is not None:
       return self._engines
 
-    # ⚡ Perf: Auto-discovery instead of manual registry
     self._engines = self._discover(engines_pkg, "run", "Engine")
     return self._engines
 
@@ -128,8 +129,7 @@ def dispatch_hooks(ctx: Context, stage: str, handlers: list[PluginHandler]) -> N
     try:
       handler(ctx, stage)
     except (RuntimeError, ValueError, OSError) as e:
-      # ERROR level = 40
-      ctx.log(f"Plugin hook error at '{stage}': {e}", level=40)
+      ctx.log(f"Plugin hook error at '{stage}': {e}", level=logging.ERROR)
 
 
 def run_pipeline(
@@ -174,22 +174,17 @@ def run_pipeline(
   ctx.log(f"Starting pipeline for: {input_apk}")
   ctx.set_current_apk(input_apk)
 
-  # Pre-load all engines and plugins to avoid repeated lookups
-  all_engines = get_engines()  # Dynamic discovery
+  all_engines = get_engines()
   plugin_handlers = load_plugins()
-
-  # Record start time for performance tracking
-  import time
 
   start_time = time.time()
 
   dispatch_hooks(ctx, "pre_pipeline", plugin_handlers)
 
-  # Track engine execution times
   engine_times = {}
   for name in engines:
     if name not in all_engines:
-      ctx.log(f"⚠️ Skipping unknown engine: {name}")
+      ctx.log(f"Skipping unknown engine: {name}")
       continue
 
     engine_start = time.time()
@@ -199,7 +194,7 @@ def run_pipeline(
     try:
       all_engines[name](ctx)
     except (OSError, ValueError, RuntimeError) as e:
-      ctx.log(f"❌ Engine {name} failed: {e}")
+      ctx.log(f"Engine '{name}' failed: {e}")
       raise RuntimeError(f"Engine {name} failed") from e
     finally:
       engine_time = time.time() - engine_start
@@ -213,7 +208,6 @@ def run_pipeline(
   total_time = time.time() - start_time
   ctx.log(f"Pipeline finished in {total_time:.2f}s. Final APK: {ctx.current_apk}")
 
-  # Store performance metrics in context
   ctx.metadata["performance"] = {"total_time": total_time, "engine_times": engine_times}
 
   return ctx

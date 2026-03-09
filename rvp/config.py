@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 
-# ⚡ Perf: Use orjson (~6x faster) with fallback to stdlib json
 try:
   from typing import Any
   from typing import TextIO
@@ -266,7 +265,6 @@ class Config:
       raw_data = _load_json(f)
       data = _interpolate_env_vars(raw_data)
 
-      # ⚡ Robustness: Only pass valid fields to dataclass constructor
       import dataclasses
 
       field_names = {f.name for f in dataclasses.fields(cls)}

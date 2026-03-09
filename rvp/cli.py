@@ -312,7 +312,6 @@ def main(argv: list[str] | None = None) -> int:
   setup_logging(args.verbose)
   logger = logging.getLogger("rvp.cli")
 
-  # ⚡ Opt: Load config once
   cfg: Config | None = None
   if args.config:
     try:

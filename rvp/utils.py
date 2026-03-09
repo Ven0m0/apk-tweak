@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import time
 import zipfile
 from pathlib import Path
 from typing import cast
@@ -37,8 +38,6 @@ def run_command(
   """
   Execute a subprocess with real-time logging to context.
 
-  ⚡ Perf: Optimized buffering (8KB chunks) reduces overhead by ~10-15%.
-
   Args:
       cmd: Command list (e.g., ["java", "-jar", ...]).
       ctx: Pipeline context for logging.
@@ -58,15 +57,9 @@ def run_command(
   if timeout:
     ctx.log(f"  Timeout: {timeout}s")
 
-  # Import time here for performance
-  import time
-
   start_time = time.time()
 
   try:
-    # ⚡ Perf: Use subprocess.run with timeout to prevent hangs
-    # Output is captured and logged in batches after completion to maintain code health
-    # while ensuring timeouts are respected.
     result = subprocess.run(
       cmd,
       stdout=subprocess.PIPE,
@@ -80,7 +73,6 @@ def run_command(
       errors="replace",
     )
 
-    # Log output in batches
     if result.stdout:
       output_lines = []
       for line in result.stdout.splitlines():
@@ -91,7 +83,6 @@ def run_command(
             for out_line in output_lines:
               ctx.log(f"  {out_line}", level=15)
             output_lines = []
-      # Log remaining lines
       for out_line in output_lines:
         ctx.log(f"  {out_line}", level=15)
 
@@ -110,21 +101,18 @@ def run_command(
     elapsed = time.time() - start_time
     ctx.log(f"ERR: Command timed out after {elapsed:.2f}s ({timeout}s limit)")
 
-    # Log any partial output captured before timeout
     if e.stdout:
       for line in cast(str, e.stdout).splitlines():
         stripped = line.strip()
         if stripped:
           ctx.log(f"  {stripped}", level=15)
 
-    # Re-raise timeout exceptions
     raise
   except (OSError, ValueError) as e:
     elapsed = time.time() - start_time
     ctx.log(f"ERR: Command failed after {elapsed:.2f}s: {e}")
     if check:
       raise
-    # Create a dummy completed process for the error case
     return subprocess.CompletedProcess(cmd, 1)
 
 
@@ -203,7 +191,6 @@ def find_latest_apk(directory: Path) -> Path | None:
   if not apk_files:
     return None
 
-  # Return the most recently modified APK
   return max(apk_files, key=lambda p: p.stat().st_mtime)
 
 

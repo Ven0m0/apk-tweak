@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import itertools
 import os
 import re
@@ -45,8 +46,6 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
   """
   Remove bloatware from decompiled APK.
 
-  ⚡ Optimized: O(n) single-pass traversal (40x faster for large APKs).
-
   Args:
       decompiled_dir: Directory containing decompiled APK.
       ctx: Pipeline context for logging and options.
@@ -58,22 +57,9 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
     ctx.log("optimizer: No debloat patterns specified, skipping")
     return
 
-  combined_pattern: str = "|".join(
-    translate(os.path.normcase(p)) for p in debloat_patterns
-  )
-  compiled_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
-
   removed_count = 0
   removed_size = 0
 
-  import fnmatch
-  import os
-  import re
-
-  # ⚡ Perf: Single directory traversal instead of N rglob() calls
-  # For 50 patterns + 10k files: 1 traversal vs 50 traversals = 40x speedup
-
-  # Compile patterns into regex for fast matching
   regex_patterns = [fnmatch.translate(p) for p in debloat_patterns]
   flags = re.IGNORECASE if os.name == "nt" else 0
   combined_regex = re.compile("|".join(regex_patterns), flags)
@@ -130,8 +116,6 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   """
   Minify APK resources (remove unused resources).
 
-  ⚡ Optimized: O(n) single-pass traversal for memory efficiency.
-
   Args:
       decompiled_dir: Directory containing decompiled APK.
       ctx: Pipeline context for logging.
@@ -155,15 +139,7 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
 
   removed_count = 0
   removed_size = 0
-  if minify_patterns:
-    combined_pattern: str = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
-    minify_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
-  import fnmatch
-  import os
-  import re
-
-  # ⚡ Perf: Compile patterns into regex for fast matching
   regex_patterns = [fnmatch.translate(p) for p in minify_patterns]
   if os.name == "nt":
     combined_regex = re.compile("|".join(regex_patterns), re.IGNORECASE)
@@ -173,8 +149,6 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   decompiled_dir_str = str(decompiled_dir)
   decompiled_dir_len = len(decompiled_dir_str) + 1
 
-  # ⚡ Perf: Single-pass traversal - process and delete files immediately
-  # instead of collecting in a list first (saves memory for large APKs)
   for root, _, files in os.walk(decompiled_dir_str):
     rel_dir = root[decompiled_dir_len:].replace(os.sep, "/")
 
@@ -204,8 +178,6 @@ def _apply_patch_to_file(
   """
   Apply ad-blocking patches to a single smali file.
 
-  ⚡ Perf: Simple file reading - mmap removed as regex requires full string anyway.
-
   Args:
       file_path: Path to smali file to patch.
       patterns: List of (pattern, replacement, description) tuples.
@@ -215,13 +187,9 @@ def _apply_patch_to_file(
       True if file was modified, False otherwise.
   """
   try:
-    # ⚡ Perf: Direct file reading (mmap doesn't help since regex needs full string)
-    # Python's regex engine requires string objects, so we need to load content anyway
     content = file_path.read_text(encoding="utf-8", errors="ignore")
     original_content = content
 
-    # ⚡ Perf: Use pre-compiled patterns (50-70% faster)
-    # Patterns are compiled once at module load in ad_patterns.py
     for compiled_pattern, replacement, _ in patterns:
       content = compiled_pattern.sub(replacement, content)
 
@@ -238,8 +206,6 @@ def _apply_patch_to_file(
 def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
   """
   Apply regex-based ad patching to smali files.
-
-  ⚡ Optimized: Tuned thread pool size based on CPU count.
 
   Args:
       decompiled_dir: Directory containing decompiled APK.
@@ -260,15 +226,12 @@ def patch_ads(decompiled_dir: Path, ctx: Context) -> None:
 
   total_patched = 0
 
-  # ⚡ Perf: Use centralized worker calculation
   optimal_workers = get_optimal_thread_workers()
 
   ctx.log(f"optimizer: Using {optimal_workers} worker threads")
 
   # Use ThreadPool for performance (I/O bound with CPU-heavy regex)
   with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-    # Submit all tasks and use as_completed for better progress tracking
-    # ⚡ Perf: Iterate generator directly instead of list
     futures = {
       executor.submit(_apply_patch_to_file, smali_file, AD_PATTERNS, ctx)
       for smali_file in smali_files

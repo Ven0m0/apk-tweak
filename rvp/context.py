@@ -33,7 +33,6 @@ class Context:
   input_apk: Path
   output_dir: Path
   engines: list[str]
-  # ⚡ Type: Now using PipelineOptions TypedDict for type safety
   options: PipelineOptions = field(default_factory=dict)  # type: ignore[assignment]
 
   # State

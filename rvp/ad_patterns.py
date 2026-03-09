@@ -13,8 +13,6 @@ from re import Pattern
 # Type alias for pattern tuples: (compiled_pattern, replacement, description)
 AdPattern = tuple[Pattern[str], str, str]
 
-# ⚡ Perf: Pre-compile regex patterns at module load time
-# This prevents re-compilation on every file iteration (50-70% speedup)
 _RAW_PATTERNS: list[tuple[str, str, str]] = [
   (
     r'"(com.google.android.play.core.appupdate.protocol.'
@@ -235,7 +233,6 @@ _RAW_PATTERNS: list[tuple[str, str, str]] = [
   ),
 ]
 
-# ⚡ Compile patterns once at module load
 AD_PATTERNS: list[AdPattern] = [
   (re.compile(pattern, re.MULTILINE), replacement, description)
   for pattern, replacement, description in _RAW_PATTERNS

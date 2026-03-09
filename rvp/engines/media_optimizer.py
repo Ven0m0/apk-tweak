@@ -188,8 +188,6 @@ def _find_media_files(
     f"media_optimizer: scanning files (images={include_images}, audio={include_audio})"
   )
 
-  # ⚡ Perf: Single directory traversal for all requested media types
-  # Fast-path tuple for endswith check
   valid_exts_list = []
   if include_images:
     valid_exts_list.extend([".png", ".jpg", ".jpeg"])
@@ -240,7 +238,6 @@ def _process_images(
   """
   Process and optimize images in extracted APK.
 
-  ⚡ Optimized: Shared process pool for better worker utilization.
   Supports both pngquant (lossy) and optipng (lossless) for PNG optimization.
 
   Args:
@@ -276,11 +273,8 @@ def _process_images(
     )
     return stats
 
-  # ⚡ Perf: Use centralized worker calculation
   max_workers = get_optimal_thread_workers()
 
-  # ⚡ Perf: Use single shared process pool for both PNG and JPEG optimization
-  # This avoids process creation/teardown overhead and maximizes worker utilization
   ctx.log(f"media_optimizer: optimizing images with {max_workers} shared workers")
 
   ctx_mgr = (
@@ -380,7 +374,7 @@ def _process_audio(
   """
   Process and optimize audio files in extracted APK.
 
-  ⚡ Optimized: Parallel processing with ThreadPoolExecutor (4x speedup on 4 cores).
+  Parallel processing with ThreadPoolExecutor.
 
   Args:
       ctx: Pipeline context.
@@ -532,7 +526,6 @@ def run(ctx: Context) -> None:
     ctx, extract_dir, include_images=optimize_images, include_audio=optimize_audio
   )
 
-  # ⚡ Perf: Shared executor for images and audio to avoid repeated pool creation
   if optimize_images or optimize_audio:
     max_workers = get_optimal_thread_workers()
     ctx.log(f"media_optimizer: initializing shared executor with {max_workers} workers")
