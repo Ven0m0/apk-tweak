@@ -35,7 +35,6 @@ def _scrub_command(cmd: list[str]) -> str:
     "--keystore-password",
     "--keystore-entry-password",
     "--password",
-    "-p",
     "--token",
     "--key",
   }
