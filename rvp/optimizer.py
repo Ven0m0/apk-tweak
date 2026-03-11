@@ -156,7 +156,9 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
   removed_count = 0
   removed_size = 0
   if minify_patterns:
-    combined_pattern: str = "|".join(translate(os.path.normcase(p)) for p in minify_patterns)
+    combined_pattern: str = "|".join(
+      translate(os.path.normcase(p)) for p in minify_patterns
+    )
     minify_regex: re.Pattern[str] = re.compile(f"(?:{combined_pattern})")
 
   import fnmatch

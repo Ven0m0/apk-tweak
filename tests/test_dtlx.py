@@ -133,16 +133,19 @@ def test_run_dtlx_optimize_failure(mock_run, mock_check, mock_ctx, mock_apk):
 
   assert result is False
 
+
 def test_build_flags_from_options_defaults():
   options = {}
   flags = _build_flags_from_options(options)
   expected_flags = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
   assert flags == expected_flags
 
+
 def test_build_flags_from_options_specific():
   options = {"rmads1": True, "sslbypass": True}
   flags = _build_flags_from_options(options)
   assert flags == [DTLX_FLAGS["rmads1"], DTLX_FLAGS["sslbypass"]]
+
 
 def test_build_flags_from_options_falsy():
   options = {"rmads1": False, "sslbypass": False, "rmtrackers": 0, "rmnop": None}
@@ -150,7 +153,13 @@ def test_build_flags_from_options_falsy():
   expected_flags = [DTLX_FLAGS[f] for f in DEFAULT_OPTIMIZATION_FLAGS]
   assert flags == expected_flags
 
+
 def test_build_flags_from_options_mixed():
-  options = {"rmads2": True, "unknown_flag": True, "sslbypass": False, "rmtrackers": True}
+  options = {
+    "rmads2": True,
+    "unknown_flag": True,
+    "sslbypass": False,
+    "rmtrackers": True,
+  }
   flags = _build_flags_from_options(options)
   assert flags == [DTLX_FLAGS["rmads2"], DTLX_FLAGS["rmtrackers"]]

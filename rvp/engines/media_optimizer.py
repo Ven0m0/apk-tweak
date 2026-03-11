@@ -151,7 +151,16 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
   """
   try:
     with zipfile.ZipFile(apk, "r") as zf:
-      zf.extractall(extract_dir)
+      base_path = extract_dir.resolve()
+      for member in zf.infolist():
+        member_path = (extract_dir / member.filename).resolve()
+        try:
+          # Ensure the target path is within the extraction directory
+          member_path.relative_to(base_path)
+        except ValueError:
+          # Detected a path traversal attempt or invalid path
+          raise OSError("Illegal file path in APK archive") from None
+        zf.extract(member, extract_dir)
     ctx.log(f"media_optimizer: extracted {apk.name} to {extract_dir}")
     return True
   except (OSError, zipfile.BadZipFile) as e:
