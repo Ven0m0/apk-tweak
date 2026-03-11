@@ -198,9 +198,6 @@ def _find_media_files(
 
   valid_exts = png_exts + jpg_exts + audio_exts
 
-  if not valid_exts:
-    return {"png": png_list, "jpg": jpg_list, "audio": audio_list}
-
   for root, _, files in os.walk(extract_dir):
     root_path = None  # Lazy instantiation of Path
 
