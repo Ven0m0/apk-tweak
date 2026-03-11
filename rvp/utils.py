@@ -26,6 +26,49 @@ def require_input_apk(ctx: Context) -> Path:
   return apk
 
 
+def _scrub_command(cmd: list[str]) -> str:
+  """
+  Scrub sensitive arguments from command list for safe logging.
+  Replaces values of known sensitive flags with '***'.
+  """
+  sensitive_flags = {
+    "--keystore-password",
+    "--keystore-entry-password",
+    "--password",
+    "--token",
+    "--key",
+  }
+
+  scrubbed = []
+  skip_next = False
+
+  for arg in cmd:
+    arg_str = str(arg)
+
+    if skip_next:
+      scrubbed.append("***")
+      skip_next = False
+      if arg_str not in sensitive_flags and "=" not in arg_str and not arg_str.startswith("-p"):
+        continue
+
+    # Check if the argument is a sensitive flag
+    if arg_str in sensitive_flags:
+      scrubbed.append(arg_str)
+      skip_next = True
+      continue
+
+    # Check for flag=value format
+    if "=" in arg_str:
+      key, _ = arg_str.split("=", 1)
+      if key in sensitive_flags:
+        scrubbed.append(f"{key}=***")
+        continue
+
+    scrubbed.append(arg_str)
+
+  return " ".join(scrubbed)
+
+
 def run_command(
   cmd: list[str],
   ctx: Context,
@@ -54,7 +97,7 @@ def run_command(
       subprocess.CalledProcessError: If check=True and command fails.
       subprocess.TimeoutExpired: If command exceeds timeout.
   """
-  ctx.log(f"EXEC: {' '.join(str(x) for x in cmd)}")
+  ctx.log(f"EXEC: {_scrub_command(cmd)}")
   if timeout:
     ctx.log(f"  Timeout: {timeout}s")
 
