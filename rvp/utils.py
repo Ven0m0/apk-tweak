@@ -147,6 +147,7 @@ def clone_repository(
   target_dir: Path,
   ctx: Context,
   timeout: int = TIMEOUT_CLONE,
+  commit: str | None = None,
 ) -> bool:
   """
   Clone git repository with error handling.
@@ -156,6 +157,7 @@ def clone_repository(
       target_dir: Directory to clone into.
       ctx: Pipeline context for logging.
       timeout: Clone timeout in seconds.
+      commit: Optional commit hash to checkout after cloning.
 
   Returns:
       True if successful, False otherwise.
@@ -173,16 +175,28 @@ def clone_repository(
       timeout=timeout,
       check=True,
     )
+
+    if commit:
+      ctx.log(f"Checking out commit: {commit}")
+      subprocess.run(
+        ["git", "checkout", commit],
+        cwd=target_dir,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=True,
+      )
+
     ctx.log(f"Repository cloned successfully to {target_dir}")
     return True
   except subprocess.TimeoutExpired:
-    ctx.log(f"ERR: Clone timed out after {timeout}s")
+    ctx.log(f"ERR: Git operation timed out after {timeout}s")
     return False
   except subprocess.CalledProcessError as e:
-    ctx.log(f"ERR: Clone failed: {e.stderr or e.stdout}")
+    ctx.log(f"ERR: Git operation failed: {e.stderr or e.stdout}")
     return False
   except OSError as e:
-    ctx.log(f"ERR: Clone error: {e}")
+    ctx.log(f"ERR: Git error: {e}")
     return False
 
 

@@ -15,6 +15,7 @@ from ..utils import validate_and_require_dependencies
 
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
+WHATSAPP_PATCHER_COMMIT = "3282dbb"
 WHATSAPP_FEATURES = [
   "Signature Verifier Bypass",
   "Enable all AB tests",
@@ -69,7 +70,9 @@ def run(ctx: Context) -> None:
     patcher_dir = Path(cast(str, patcher_path))
   else:
     patcher_dir = ctx.work_dir / "whatsapp-patcher"
-    if not clone_repository(WHATSAPP_PATCHER_REPO, patcher_dir, ctx):
+    if not clone_repository(
+      WHATSAPP_PATCHER_REPO, patcher_dir, ctx, commit=WHATSAPP_PATCHER_COMMIT
+    ):
       ctx.log("whatsapp: failed to obtain patcher")
       return
 
@@ -79,7 +82,7 @@ def run(ctx: Context) -> None:
       ctx.log("whatsapp: installing Python dependencies")
       subprocess.run(
         [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
-        check=False,
+        check=True,
       )
 
   # Prepare output
