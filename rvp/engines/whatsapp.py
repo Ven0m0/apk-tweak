@@ -124,16 +124,16 @@ def run(ctx: Context) -> None:
   ctx.log(f"whatsapp: features: {', '.join(WHATSAPP_FEATURES)}")
 
   try:
-    result = subprocess.run(
+    subprocess.run(
       cmd,
       capture_output=True,
       text=True,
       cwd=patcher_dir,
       timeout=timeout,
-      check=False,
+      check=True,
     )
 
-    if result.returncode == 0 and output_apk.exists():
+    if output_apk.exists():
       ctx.set_current_apk(output_apk)
       ctx.log(f"whatsapp: success → {output_apk}")
 
@@ -144,15 +144,17 @@ def run(ctx: Context) -> None:
         "ab_tests_enabled": ctx.options.get("whatsapp_ab_tests", True),
       }
     else:
-      ctx.log(f"whatsapp: patching failed (exit code: {result.returncode})")
-      if result.stderr:
-        ctx.log(f"whatsapp: stderr: {result.stderr[:500]}")
-      if result.stdout:
-        ctx.log(f"whatsapp: stdout: {result.stdout[:500]}")
+      ctx.log("whatsapp: patching finished but output APK not found")
 
   except subprocess.TimeoutExpired:
     ctx.log(f"whatsapp: patching timed out after {timeout} seconds")
-  except (OSError, subprocess.CalledProcessError) as e:
+  except subprocess.CalledProcessError as e:
+    ctx.log(f"whatsapp: patching failed (exit code: {e.returncode})")
+    if e.stderr:
+      ctx.log(f"whatsapp: stderr: {e.stderr[:500]}")
+    if e.stdout:
+      ctx.log(f"whatsapp: stdout: {e.stdout[:500]}")
+  except OSError as e:
     ctx.log(f"whatsapp: patching error: {e}")
   finally:
     # Cleanup temp directory if using default
