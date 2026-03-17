@@ -80,10 +80,8 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
       d_path_str = str(d_path)
       if dir_regex.match(d_path_str) or dir_regex.match(d_path_str + os.sep):
         try:
-          # Efficiently count files inside before removing
-          count = sum(1 for _, _, files in os.walk(d_path) for _ in files)
           shutil.rmtree(d_path)
-          removed_count += count
+          removed_count += 1
           del dirs[i]  # Stop recursing into this dir
         except OSError:
           continue
