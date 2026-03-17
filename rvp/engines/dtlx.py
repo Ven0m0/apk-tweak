@@ -137,7 +137,7 @@ def _run_dtlx_command(
       text=True,
       timeout=timeout,
       cwd=cwd,
-      check=False,
+      check=True,
     )
     return proc, None
   except (subprocess.TimeoutExpired, OSError, subprocess.CalledProcessError) as e:
