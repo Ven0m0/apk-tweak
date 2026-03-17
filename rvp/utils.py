@@ -35,6 +35,7 @@ def _scrub_command(cmd: list[str]) -> str:
     "--keystore-password",
     "--keystore-entry-password",
     "--password",
+    "-p",
     "--token",
     "--key",
   }
@@ -48,7 +49,11 @@ def _scrub_command(cmd: list[str]) -> str:
     if skip_next:
       scrubbed.append("***")
       skip_next = False
-      if arg_str not in sensitive_flags and "=" not in arg_str and not arg_str.startswith("-p"):
+      if (
+        arg_str not in sensitive_flags
+        and "=" not in arg_str
+        and not arg_str.startswith("-p")
+      ):
         continue
 
     # Check if the argument is a sensitive flag
