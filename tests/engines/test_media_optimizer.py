@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -35,8 +36,6 @@ def test_run_optimizer_worker_success(mock_run):
 
 @patch("rvp.engines.media_optimizer.subprocess.run")
 def test_run_optimizer_worker_failure(mock_run):
-  import subprocess
-
   mock_run.side_effect = subprocess.CalledProcessError(1, ["test"])
   path = Path("test.png")
   command = ["echo", "hello"]
