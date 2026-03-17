@@ -35,6 +35,7 @@ def _scrub_command(cmd: list[str]) -> str:
     "--keystore-password",
     "--keystore-entry-password",
     "--password",
+    "-p",
     "--token",
     "--key",
   }
@@ -48,11 +49,10 @@ def _scrub_command(cmd: list[str]) -> str:
     if skip_next:
       scrubbed.append("***")
       skip_next = False
-      if arg_str not in sensitive_flags and "=" not in arg_str and not arg_str.startswith("-p"):
-        continue
+      continue
 
     # Check if the argument is a sensitive flag
-    if arg_str in sensitive_flags:
+    if arg_str in sensitive_flags or arg_str == "-p":
       scrubbed.append(arg_str)
       skip_next = True
       continue
@@ -110,23 +110,32 @@ def run_command(
     # ⚡ Perf: Use subprocess.run with timeout to prevent hangs
     # Output is captured and logged in batches after completion to maintain code health
     # while ensuring timeouts are respected.
-    result = subprocess.run(
-      cmd,
-      stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT,  # Merge stderr into stdout
-      text=True,
-      cwd=cwd,
-      env=env,
-      timeout=timeout,
-      check=False,  # We handle check manually
-      encoding="utf-8",
-      errors="replace",
-    )
+    error: subprocess.CalledProcessError | None = None
+    try:
+      result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,  # Merge stderr into stdout
+        text=True,
+        cwd=cwd,
+        env=env,
+        timeout=timeout,
+        check=check,
+        encoding="utf-8",
+        errors="replace",
+      )
+      output = result.stdout
+      returncode = result.returncode
+    except subprocess.CalledProcessError as e:
+      output = e.stdout
+      returncode = e.returncode
+      error = e
+      result = subprocess.CompletedProcess(cmd, returncode, stdout=output)
 
     # Log output in batches
-    if result.stdout:
+    if output:
       output_lines = []
-      for line in result.stdout.splitlines():
+      for line in output.splitlines():
         stripped = line.strip()
         if stripped:
           output_lines.append(stripped)
@@ -139,13 +148,13 @@ def run_command(
         ctx.log(f"  {out_line}", level=15)
 
     elapsed = time.time() - start_time
-    if result.returncode == 0:
+    if returncode == 0:
       ctx.log(f"CMD SUCCESS in {elapsed:.2f}s: {cmd[0]}")
     else:
-      ctx.log(f"CMD FAILED with code {result.returncode} in {elapsed:.2f}s: {cmd[0]}")
+      ctx.log(f"CMD FAILED with code {returncode} in {elapsed:.2f}s: {cmd[0]}")
 
-    if check and result.returncode != 0:
-      raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout)
+    if isinstance(error, subprocess.CalledProcessError):
+      raise error
 
     return result
 
