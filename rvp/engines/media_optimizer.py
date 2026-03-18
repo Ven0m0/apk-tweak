@@ -79,7 +79,7 @@ def _run_optimizer_worker(
       check=True,
     )
     return (path, True)
-  except (subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception):
+  except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
     return (path, False)
 
 
