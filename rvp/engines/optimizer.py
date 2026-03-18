@@ -143,7 +143,7 @@ def _strip_native_libraries(ctx: Context, extract_dir: Path) -> int:
             f"optimizer: strip exited with code {result.returncode} "
             f"for {so_file.name}"
           )
-      except (OSError, Exception) as e:
+      except (OSError, subprocess.CalledProcessError) as e:
         ctx.log(f"optimizer: failed to strip {so_file.name}: {e}")
 
   if stripped_count > 0:
