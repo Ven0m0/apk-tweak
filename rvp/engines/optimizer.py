@@ -131,8 +131,18 @@ def _strip_native_libraries(ctx: Context, extract_dir: Path) -> int:
         # --strip-debug removes only debug symbols, which is safer than --strip-all for some APKs
         # but --strip-unneeded is often better for production.
         # ReVanced usually strips everything unneeded.
-        run_command(["strip", "--strip-unneeded", str(so_file)], ctx, check=False)
-        stripped_count += 1
+        result = run_command(
+          ["strip", "--strip-unneeded", str(so_file)],
+          ctx,
+          check=False,
+        )
+        if result.returncode == 0:
+          stripped_count += 1
+        else:
+          ctx.log(
+            f"optimizer: strip exited with code {result.returncode} "
+            f"for {so_file.name}"
+          )
       except (OSError, Exception) as e:
         ctx.log(f"optimizer: failed to strip {so_file.name}: {e}")
 
