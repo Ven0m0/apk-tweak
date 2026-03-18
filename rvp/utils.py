@@ -40,21 +40,31 @@ def _scrub_command(cmd: list[str]) -> str:
     "--key",
   }
 
-  scrubbed = []
+  scrubbed: list[str] = []
   skip_next = False
 
   for arg in cmd:
     arg_str = str(arg)
 
     if skip_next:
-      scrubbed.append("***")
-      skip_next = False
-      continue
+      # If the "value" looks like another option, do not consume it as a
+      # value; re-process it as a flag so it can be scrubbed correctly.
+      if arg_str.startswith("-") or "=" in arg_str:
+        skip_next = False
+      else:
+        scrubbed.append("***")
+        skip_next = False
+        continue
 
     # Check if the argument is a sensitive flag
-    if arg_str in sensitive_flags or arg_str == "-p":
+    if arg_str in sensitive_flags:
       scrubbed.append(arg_str)
       skip_next = True
+      continue
+
+    # Handle combined short-form values like -pSECRET
+    if arg_str.startswith("-p") and arg_str != "-p":
+      scrubbed.append("-p***")
       continue
 
     # Check for flag=value format
