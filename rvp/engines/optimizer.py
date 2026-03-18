@@ -12,6 +12,7 @@ from typing import Any
 from ..context import Context
 from ..utils import repack_apk
 from ..utils import require_input_apk
+from ..utils import run_command
 
 
 def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
@@ -38,12 +39,13 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
   removed_count = 0
 
   # Patterns that indicate a directory (and all contents) should be removed
+  # Using more precise patterns to avoid accidental deletions
   dir_patterns = [
     r".*proguard.*",
     r".*debug.*",
     r".*Debug.*",
-    r".*/tests?/.*",
-    r".*/test.*",
+    r".*/tests?(/.*|$)",
+    r"^tests?(/.*|$)",
   ]
 
   # Patterns for individual files
@@ -54,8 +56,8 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
     r".*mapping\.txt$",
     r".*debug.*",
     r".*Debug.*",
-    r".*/tests?/.*",
-    r".*/test.*",
+    r".*/tests?(/.*|$)",
+    r"^tests?(/.*|$)",
   ]
 
   # Compile regexes
@@ -66,41 +68,88 @@ def _remove_debug_symbols(ctx: Context, extract_dir: Path) -> int:
   file_regex = re.compile(file_combined, re.IGNORECASE)
 
   # Use os.walk for efficiency
+  extract_dir_str = str(extract_dir)
+  extract_dir_len = len(extract_dir_str) + 1
+
   # We convert to str for os.walk but convert back to Path for operations to satisfy linters
-  for root, dirs, files in os.walk(extract_dir, topdown=True):
+  for root, dirs, files in os.walk(extract_dir_str, topdown=True):
     root_path = Path(root)
+    rel_dir = root[extract_dir_len:].replace(os.sep, "/")
 
     # Iterate backwards to allow safely modifying dirs list
     for i in range(len(dirs) - 1, -1, -1):
       d_name = dirs[i]
-      d_path = root_path / d_name
+      rel_path = f"{rel_dir}/{d_name}" if rel_dir else d_name
 
       # Check against dir regex
-      # We check both str(d_path) and str(d_path) + sep to cover various pattern styles
-      d_path_str = str(d_path)
-      if dir_regex.match(d_path_str) or dir_regex.match(d_path_str + os.sep):
+      if dir_regex.match(rel_path) or dir_regex.match(rel_path + "/"):
         try:
-          # Efficiently count files inside before removing
-          count = sum(1 for _, _, files in os.walk(d_path) for _ in files)
+          d_path = root_path / d_name
           shutil.rmtree(d_path)
-          removed_count += count
+          removed_count += 1
           del dirs[i]  # Stop recursing into this dir
         except OSError:
           continue
 
     for f_name in files:
-      f_path = root_path / f_name
-      if file_regex.match(str(f_path)):
+      rel_path = f"{rel_dir}/{f_name}" if rel_dir else f_name
+      if file_regex.match(rel_path):
         try:
+          f_path = root_path / f_name
           f_path.unlink()
           removed_count += 1
         except OSError:
           continue
 
   if removed_count > 0:
-    ctx.log(f"optimizer: removed {removed_count} debug/symbol files")
+    ctx.log(
+      f"optimizer: removed {removed_count} debug/symbol items (dirs count as 1 each)"
+    )
+
+  # Also strip native libraries if they exist
+  removed_count += _strip_native_libraries(ctx, extract_dir)
 
   return removed_count
+
+
+def _strip_native_libraries(ctx: Context, extract_dir: Path) -> int:
+  """Strip debug symbols from native libraries (.so files)."""
+  stripped_count = 0
+  lib_dir = extract_dir / "lib"
+  if not lib_dir.exists():
+    return 0
+
+  # Check if 'strip' is available
+  if not shutil.which("strip"):
+    ctx.log("optimizer: 'strip' tool not found, skipping native library stripping")
+    return 0
+
+  # Find all .so files
+  for so_file in lib_dir.rglob("*.so"):
+    if so_file.is_file():
+      try:
+        # --strip-debug removes only debug symbols, which is safer than --strip-all for some APKs
+        # but --strip-unneeded is often better for production.
+        # ReVanced usually strips everything unneeded.
+        result = run_command(
+          ["strip", "--strip-unneeded", str(so_file)],
+          ctx,
+          check=False,
+        )
+        if result.returncode == 0:
+          stripped_count += 1
+        else:
+          ctx.log(
+            f"optimizer: strip exited with code {result.returncode} "
+            f"for {so_file.name}"
+          )
+      except (OSError, subprocess.CalledProcessError) as e:
+        ctx.log(f"optimizer: failed to strip {so_file.name}: {e}")
+
+  if stripped_count > 0:
+    ctx.log(f"optimizer: stripped {stripped_count} native libraries")
+
+  return stripped_count
 
 
 def _minimize_manifest(ctx: Context, extract_dir: Path) -> bool:

@@ -71,15 +71,15 @@ def _run_optimizer_worker(
       Tuple of (path, success).
   """
   try:
-    result = subprocess.run(
+    subprocess.run(
       command,
       capture_output=True,
       text=True,
       timeout=timeout,
-      check=False,
+      check=True,
     )
-    return (path, result.returncode == 0)
-  except (subprocess.TimeoutExpired, Exception):
+    return (path, True)
+  except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
     return (path, False)
 
 
@@ -107,7 +107,7 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
     os.close(fd)
 
     try:
-      result = subprocess.run(
+      subprocess.run(
         [
           "ffmpeg",
           "-i",
@@ -122,12 +122,14 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
         capture_output=True,
         text=True,
         timeout=60,
-        check=False,
+        check=True,
       )
 
-      if result.returncode == 0 and Path(temp_path).exists():
+      if Path(temp_path).exists():
         shutil.move(temp_path, audio_path)
         return (audio_path, True)
+      return (audio_path, False)
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
       return (audio_path, False)
     finally:
       with contextlib.suppress(OSError):
