@@ -24,7 +24,13 @@ jobs:
         run: |
           uv sync --extra dev
 
-      - name: Install system dependencies (Java, pngquant, jpegoptim, ffmpeg)
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install system dependencies (pngquant, jpegoptim, ffmpeg)
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk pngquant jpegoptim ffmpeg
+          sudo apt-get install -y pngquant jpegoptim ffmpeg
