@@ -1,0 +1,27 @@
+---
+name: Copilot Setup Steps
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Install system dependencies (Java, pngquant, jpegoptim, ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk pngquant jpegoptim ffmpeg
