@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -140,8 +141,7 @@ def _strip_native_libraries(ctx: Context, extract_dir: Path) -> int:
           stripped_count += 1
         else:
           ctx.log(
-            f"optimizer: strip exited with code {result.returncode} "
-            f"for {so_file.name}"
+            f"optimizer: strip exited with code {result.returncode} for {so_file.name}"
           )
       except (OSError, subprocess.CalledProcessError) as e:
         ctx.log(f"optimizer: failed to strip {so_file.name}: {e}")
