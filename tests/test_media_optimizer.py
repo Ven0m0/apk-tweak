@@ -99,7 +99,7 @@ def test_process_audio_integration(tmp_path):
     # Mock ffmpeg call. Also need to mock shutil.move or ensure tmp file exists
     # _optimize_audio_worker calls ffmpeg to create .tmp file, then shutil.move
 
-    def mock_run(*args, **kwargs):
+    def mock_run(*args, **_kwargs):
       # Create the expected output file
       # In _optimize_audio_worker:
       # temp_output = audio_path.with_suffix(audio_path.suffix + ".tmp")
