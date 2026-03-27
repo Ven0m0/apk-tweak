@@ -202,7 +202,7 @@ def _optimize_resources(ctx: Context, extract_dir: Path) -> int:
   for root, _, files in os.walk(res_dir):
     for name in files:
       if name == ".DS_Store" or name.endswith("~"):
-        file_path = os.path.join(root, name)  # noqa: PTH118
+        file_path = str(Path(root) / name)
         try:
           os.unlink(file_path)  # noqa: PTH108
           removed_count += 1
