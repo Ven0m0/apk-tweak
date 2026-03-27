@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -140,8 +141,7 @@ def _strip_native_libraries(ctx: Context, extract_dir: Path) -> int:
           stripped_count += 1
         else:
           ctx.log(
-            f"optimizer: strip exited with code {result.returncode} "
-            f"for {so_file.name}"
+            f"optimizer: strip exited with code {result.returncode} for {so_file.name}"
           )
       except (OSError, subprocess.CalledProcessError) as e:
         ctx.log(f"optimizer: failed to strip {so_file.name}: {e}")
@@ -202,7 +202,7 @@ def _optimize_resources(ctx: Context, extract_dir: Path) -> int:
   for root, _, files in os.walk(res_dir):
     for name in files:
       if name == ".DS_Store" or name.endswith("~"):
-        file_path = os.path.join(root, name)  # noqa: PTH118
+        file_path = str(Path(root) / name)
         try:
           os.unlink(file_path)  # noqa: PTH108
           removed_count += 1

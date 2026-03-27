@@ -48,7 +48,9 @@ def test_run_optimizer_worker_failure(mock_run):
 
 @patch("rvp.engines.media_optimizer.subprocess.run")
 def test_run_optimizer_worker_timeout(mock_run):
-  mock_run.side_effect = TimeoutError
+  import subprocess
+
+  mock_run.side_effect = subprocess.TimeoutExpired(["echo", "hello"], 30)
   path = Path("test.png")
   command = ["echo", "hello"]
 

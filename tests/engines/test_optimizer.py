@@ -110,7 +110,9 @@ def test_strip_native_libraries(mock_ctx: MagicMock, tmp_path: Path) -> None:
 
   with (
     patch("shutil.which", return_value="/usr/bin/strip"),
-    patch("rvp.engines.optimizer.run_command") as mock_run,
+    patch(
+      "rvp.engines.optimizer.run_command", return_value=MagicMock(returncode=0)
+    ) as mock_run,
   ):
     count = _strip_native_libraries(mock_ctx, extract_dir)
 
