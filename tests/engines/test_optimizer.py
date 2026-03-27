@@ -114,6 +114,7 @@ def test_strip_native_libraries(mock_ctx: MagicMock, tmp_path: Path) -> None:
       "rvp.engines.optimizer.run_command", return_value=MagicMock(returncode=0)
     ) as mock_run,
   ):
+    mock_run.return_value.returncode = 0
     count = _strip_native_libraries(mock_ctx, extract_dir)
 
     assert count == 1

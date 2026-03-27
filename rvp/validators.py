@@ -59,5 +59,4 @@ def validate_engine_names(
   Returns:
       list[str]: List of unknown engine names (for warnings).
   """
-  unknown = [name for name in engines if name not in available]
-  return unknown
+  return [name for name in engines if name not in available]
