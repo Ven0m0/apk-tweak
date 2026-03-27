@@ -97,7 +97,7 @@ def test_run_dtlx_optimize_success(mock_copy, mock_run, mock_check, mock_ctx, mo
   mock_run.return_value = MagicMock(returncode=0, stdout="Optimization done", stderr="")
 
   # Simulate patched file creation
-  def side_effect_run(*args, **kwargs):
+  def side_effect_run(*_args, **kwargs):
     work_dir = kwargs.get("cwd")
     (work_dir / "test_patched.apk").touch()
     return MagicMock(returncode=0)
