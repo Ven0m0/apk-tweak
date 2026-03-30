@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import NamedTuple
@@ -85,8 +86,24 @@ def _analyze_apk_strings(decompiled_dir: Path, ctx: Context) -> dict[str, String
   # Reserved strings that should never be removed
   reserved = {"app_name", "app_name_suffixed"}
 
-  # Find strings.xml files
-  strings_files = list(decompiled_dir.rglob("strings.xml"))
+  # Find strings.xml and files that might reference strings (XML and smali)
+  strings_files: list[Path] = []
+  source_files: list[Path] = []
+
+  for root, dirs, files in os.walk(decompiled_dir, topdown=True):
+    root_path = Path(root)
+    # Prune drawable directories early as they don't contain string references
+    # and can contain thousands of files.
+    # Avoid pruning the root directory if it happens to contain 'drawable' in its name.
+    if root_path != decompiled_dir and "drawable" in root_path.name:
+      dirs[:] = []
+      continue
+
+    for file in files:
+      if file == "strings.xml":
+        strings_files.append(root_path / file)
+      elif file.endswith((".xml", ".smali")):
+        source_files.append(root_path / file)
 
   # Extract all defined strings
   for strings_file in strings_files:
@@ -100,16 +117,6 @@ def _analyze_apk_strings(decompiled_dir: Path, ctx: Context) -> dict[str, String
       ctx.log(f"string_cleaner: found {len(file_strings)} strings in {rel_path}")
     except (OSError, UnicodeDecodeError) as e:
       ctx.log(f"string_cleaner: error reading {strings_file.name}: {e}")
-
-  # Find files that might reference strings (XML and smali)
-  source_files = [
-    path
-    for path in decompiled_dir.rglob("*")
-    if path.is_file()
-    and path.suffix in {".xml", ".smali"}
-    and "drawable" not in path.parent.name
-    and path.name != "strings.xml"
-  ]
 
   ctx.log(f"string_cleaner: scanning {len(source_files)} source files")
 

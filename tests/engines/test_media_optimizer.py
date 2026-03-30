@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -29,13 +30,13 @@ def test_run_optimizer_worker_success(mock_run):
   assert result_path == path
   assert success is True
   mock_run.assert_called_once_with(
-    command, capture_output=True, text=True, timeout=30, check=False
+    command, capture_output=True, text=True, timeout=30, check=True
   )
 
 
 @patch("rvp.engines.media_optimizer.subprocess.run")
 def test_run_optimizer_worker_failure(mock_run):
-  mock_run.return_value.returncode = 1
+  mock_run.side_effect = subprocess.CalledProcessError(1, ["test"])
   path = Path("test.png")
   command = ["echo", "hello"]
 
@@ -47,7 +48,9 @@ def test_run_optimizer_worker_failure(mock_run):
 
 @patch("rvp.engines.media_optimizer.subprocess.run")
 def test_run_optimizer_worker_timeout(mock_run):
-  mock_run.side_effect = TimeoutError
+  import subprocess
+
+  mock_run.side_effect = subprocess.TimeoutExpired(["echo", "hello"], 30)
   path = Path("test.png")
   command = ["echo", "hello"]
 
