@@ -15,7 +15,6 @@ from ..utils import validate_and_require_dependencies
 
 # Constants
 WHATSAPP_PATCHER_REPO = "https://github.com/Schwartzblat/WhatsAppPatcher"
-WHATSAPP_PATCHER_COMMIT = "3282dbb"
 WHATSAPP_FEATURES = [
   "Signature Verifier Bypass",
   "Enable all AB tests",
@@ -70,9 +69,7 @@ def run(ctx: Context) -> None:
     patcher_dir = Path(cast(str, patcher_path))
   else:
     patcher_dir = ctx.work_dir / "whatsapp-patcher"
-    if not clone_repository(
-      WHATSAPP_PATCHER_REPO, patcher_dir, ctx, commit=WHATSAPP_PATCHER_COMMIT
-    ):
+    if not clone_repository(WHATSAPP_PATCHER_REPO, patcher_dir, ctx):
       ctx.log("whatsapp: failed to obtain patcher")
       return
 
@@ -82,7 +79,7 @@ def run(ctx: Context) -> None:
       ctx.log("whatsapp: installing Python dependencies")
       subprocess.run(
         [sys.executable, "-m", "pip", "install", "-q", "-r", str(req_file)],
-        check=True,
+        check=False,
       )
 
   # Prepare output
@@ -124,16 +121,16 @@ def run(ctx: Context) -> None:
   ctx.log(f"whatsapp: features: {', '.join(WHATSAPP_FEATURES)}")
 
   try:
-    subprocess.run(
+    result = subprocess.run(
       cmd,
       capture_output=True,
       text=True,
       cwd=patcher_dir,
       timeout=timeout,
-      check=True,
+      check=False,
     )
 
-    if output_apk.exists():
+    if result.returncode == 0 and output_apk.exists():
       ctx.set_current_apk(output_apk)
       ctx.log(f"whatsapp: success → {output_apk}")
 
@@ -144,17 +141,15 @@ def run(ctx: Context) -> None:
         "ab_tests_enabled": ctx.options.get("whatsapp_ab_tests", True),
       }
     else:
-      ctx.log("whatsapp: patching finished but output APK not found")
+      ctx.log(f"whatsapp: patching failed (exit code: {result.returncode})")
+      if result.stderr:
+        ctx.log(f"whatsapp: stderr: {result.stderr[:500]}")
+      if result.stdout:
+        ctx.log(f"whatsapp: stdout: {result.stdout[:500]}")
 
   except subprocess.TimeoutExpired:
     ctx.log(f"whatsapp: patching timed out after {timeout} seconds")
-  except subprocess.CalledProcessError as e:
-    ctx.log(f"whatsapp: patching failed (exit code: {e.returncode})")
-    if e.stderr:
-      ctx.log(f"whatsapp: stderr: {e.stderr[:500]}")
-    if e.stdout:
-      ctx.log(f"whatsapp: stdout: {e.stdout[:500]}")
-  except OSError as e:
+  except (OSError, subprocess.CalledProcessError) as e:
     ctx.log(f"whatsapp: patching error: {e}")
   finally:
     # Cleanup temp directory if using default

@@ -126,9 +126,8 @@ def _run_dtlx_command(
       cwd: Working directory (optional).
 
   Returns:
-      Tuple of (CompletedProcess, None) on successful execution, or
-      (None, Exception) on timeout, non-zero exit (CalledProcessError),
-      or other execution error.
+      Tuple of (CompletedProcess, None) on execution (even if returncode != 0),
+      or (None, Exception) on timeout/error.
   """
   cmd = [sys.executable, str(dtlx_path)] + args
   try:
@@ -138,7 +137,7 @@ def _run_dtlx_command(
       text=True,
       timeout=timeout,
       cwd=cwd,
-      check=True,
+      check=False,
     )
     return proc, None
   except (subprocess.TimeoutExpired, OSError, subprocess.CalledProcessError) as e:

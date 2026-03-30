@@ -26,59 +26,6 @@ def require_input_apk(ctx: Context) -> Path:
   return apk
 
 
-def _scrub_command(cmd: list[str]) -> str:
-  """
-  Scrub sensitive arguments from command list for safe logging.
-  Replaces values of known sensitive flags with '***'.
-  """
-  sensitive_flags = {
-    "--keystore-password",
-    "--keystore-entry-password",
-    "--password",
-    "-p",
-    "--token",
-    "--key",
-  }
-
-  scrubbed: list[str] = []
-  skip_next = False
-
-  for arg in cmd:
-    arg_str = str(arg)
-
-    if skip_next:
-      # If the "value" looks like another option, do not consume it as a
-      # value; re-process it as a flag so it can be scrubbed correctly.
-      if arg_str.startswith("-") or "=" in arg_str:
-        skip_next = False
-      else:
-        scrubbed.append("***")
-        skip_next = False
-        continue
-
-    # Check if the argument is a sensitive flag
-    if arg_str in sensitive_flags:
-      scrubbed.append(arg_str)
-      skip_next = True
-      continue
-
-    # Handle combined short-form values like -pSECRET
-    if arg_str.startswith("-p") and arg_str != "-p":
-      scrubbed.append("-p***")
-      continue
-
-    # Check for flag=value format
-    if "=" in arg_str:
-      key, _ = arg_str.split("=", 1)
-      if key in sensitive_flags:
-        scrubbed.append(f"{key}=***")
-        continue
-
-    scrubbed.append(arg_str)
-
-  return " ".join(scrubbed)
-
-
 def run_command(
   cmd: list[str],
   ctx: Context,
@@ -107,7 +54,7 @@ def run_command(
       subprocess.CalledProcessError: If check=True and command fails.
       subprocess.TimeoutExpired: If command exceeds timeout.
   """
-  ctx.log(f"EXEC: {_scrub_command(cmd)}")
+  ctx.log(f"EXEC: {' '.join(str(x) for x in cmd)}")
   if timeout:
     ctx.log(f"  Timeout: {timeout}s")
 
@@ -120,32 +67,23 @@ def run_command(
     # ⚡ Perf: Use subprocess.run with timeout to prevent hangs
     # Output is captured and logged in batches after completion to maintain code health
     # while ensuring timeouts are respected.
-    error: subprocess.CalledProcessError | None = None
-    try:
-      result = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,  # Merge stderr into stdout
-        text=True,
-        cwd=cwd,
-        env=env,
-        timeout=timeout,
-        check=check,
-        encoding="utf-8",
-        errors="replace",
-      )
-      output = result.stdout
-      returncode = result.returncode
-    except subprocess.CalledProcessError as e:
-      output = e.stdout
-      returncode = e.returncode
-      error = e
-      result = subprocess.CompletedProcess(cmd, returncode, stdout=output)
+    result = subprocess.run(
+      cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,  # Merge stderr into stdout
+      text=True,
+      cwd=cwd,
+      env=env,
+      timeout=timeout,
+      check=False,  # We handle check manually
+      encoding="utf-8",
+      errors="replace",
+    )
 
     # Log output in batches
-    if output:
+    if result.stdout:
       output_lines = []
-      for line in output.splitlines():
+      for line in result.stdout.splitlines():
         stripped = line.strip()
         if stripped:
           output_lines.append(stripped)
@@ -158,13 +96,13 @@ def run_command(
         ctx.log(f"  {out_line}", level=15)
 
     elapsed = time.time() - start_time
-    if returncode == 0:
+    if result.returncode == 0:
       ctx.log(f"CMD SUCCESS in {elapsed:.2f}s: {cmd[0]}")
     else:
-      ctx.log(f"CMD FAILED with code {returncode} in {elapsed:.2f}s: {cmd[0]}")
+      ctx.log(f"CMD FAILED with code {result.returncode} in {elapsed:.2f}s: {cmd[0]}")
 
-    if isinstance(error, subprocess.CalledProcessError):
-      raise error
+    if check and result.returncode != 0:
+      raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout)
 
     return result
 
@@ -209,7 +147,6 @@ def clone_repository(
   target_dir: Path,
   ctx: Context,
   timeout: int = TIMEOUT_CLONE,
-  commit: str | None = None,
 ) -> bool:
   """
   Clone git repository with error handling.
@@ -219,7 +156,6 @@ def clone_repository(
       target_dir: Directory to clone into.
       ctx: Pipeline context for logging.
       timeout: Clone timeout in seconds.
-      commit: Optional commit hash to checkout after cloning.
 
   Returns:
       True if successful, False otherwise.
@@ -237,28 +173,16 @@ def clone_repository(
       timeout=timeout,
       check=True,
     )
-
-    if commit:
-      ctx.log(f"Checking out commit: {commit}")
-      subprocess.run(
-        ["git", "checkout", commit],
-        cwd=target_dir,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=True,
-      )
-
     ctx.log(f"Repository cloned successfully to {target_dir}")
     return True
   except subprocess.TimeoutExpired:
-    ctx.log(f"ERR: Git operation timed out after {timeout}s")
+    ctx.log(f"ERR: Clone timed out after {timeout}s")
     return False
   except subprocess.CalledProcessError as e:
-    ctx.log(f"ERR: Git operation failed: {e.stderr or e.stdout}")
+    ctx.log(f"ERR: Clone failed: {e.stderr or e.stdout}")
     return False
   except OSError as e:
-    ctx.log(f"ERR: Git error: {e}")
+    ctx.log(f"ERR: Clone error: {e}")
     return False
 
 

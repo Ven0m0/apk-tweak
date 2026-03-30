@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 import itertools
 import os
 import re
@@ -61,6 +60,8 @@ def debloat_apk(decompiled_dir: Path, ctx: Context) -> None:
 
   removed_count = 0
   removed_size = 0
+
+  import fnmatch
 
   # ⚡ Perf: Single directory traversal instead of N rglob() calls
   # For 50 patterns + 10k files: 1 traversal vs 50 traversals = 40x speedup
@@ -147,6 +148,7 @@ def minify_resources(decompiled_dir: Path, ctx: Context) -> None:
 
   removed_count = 0
   removed_size = 0
+  import fnmatch
 
   # ⚡ Perf: Compile patterns into regex for fast matching
   regex_patterns = [fnmatch.translate(p) for p in minify_patterns]

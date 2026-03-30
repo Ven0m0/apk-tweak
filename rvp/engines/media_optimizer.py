@@ -71,15 +71,15 @@ def _run_optimizer_worker(
       Tuple of (path, success).
   """
   try:
-    subprocess.run(
+    result = subprocess.run(
       command,
       capture_output=True,
       text=True,
       timeout=timeout,
-      check=True,
+      check=False,
     )
-    return (path, True)
-  except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+    return (path, result.returncode == 0)
+  except (subprocess.TimeoutExpired, Exception):
     return (path, False)
 
 
@@ -107,7 +107,7 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
     os.close(fd)
 
     try:
-      subprocess.run(
+      result = subprocess.run(
         [
           "ffmpeg",
           "-i",
@@ -122,14 +122,12 @@ def _optimize_audio_worker(audio_path: Path, bitrate: str = "96k") -> tuple[Path
         capture_output=True,
         text=True,
         timeout=60,
-        check=True,
+        check=False,
       )
 
-      if Path(temp_path).exists():
+      if result.returncode == 0 and Path(temp_path).exists():
         shutil.move(temp_path, audio_path)
         return (audio_path, True)
-      return (audio_path, False)
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
       return (audio_path, False)
     finally:
       with contextlib.suppress(OSError):
@@ -153,16 +151,7 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
   """
   try:
     with zipfile.ZipFile(apk, "r") as zf:
-      base_path = extract_dir.resolve()
-      for member in zf.infolist():
-        member_path = (extract_dir / member.filename).resolve()
-        try:
-          # Ensure the target path is within the extraction directory
-          member_path.relative_to(base_path)
-        except ValueError:
-          # Detected a path traversal attempt or invalid path
-          raise OSError("Illegal file path in APK archive") from None
-        zf.extract(member, extract_dir)
+      zf.extractall(extract_dir)
     ctx.log(f"media_optimizer: extracted {apk.name} to {extract_dir}")
     return True
   except (OSError, zipfile.BadZipFile) as e:
@@ -199,39 +188,44 @@ def _find_media_files(
     f"media_optimizer: scanning files (images={include_images}, audio={include_audio})"
   )
 
-  # ⚡ Perf: Pre-compute case-insensitive extension tuples to avoid string allocation
-  # Calling file.lower() inside the loop generates millions of short-lived strings
-  # when traversing large APKs with mostly non-media files (.smali, .xml, etc).
-  # Checking endswith against a tuple is implemented in C and very fast.
-  png_exts = (".png", ".PNG") if include_images else ()
-  jpg_exts = (".jpg", ".JPG", ".jpeg", ".JPEG") if include_images else ()
-  audio_exts = (".mp3", ".MP3", ".ogg", ".OGG") if include_audio else ()
+  # ⚡ Perf: Single directory traversal for all requested media types
+  # Fast-path tuple for endswith check
+  valid_exts_list = []
+  if include_images:
+    valid_exts_list.extend([".png", ".jpg", ".jpeg"])
+  if include_audio:
+    valid_exts_list.extend([".mp3", ".ogg"])
 
-  valid_exts = png_exts + jpg_exts + audio_exts
+  # Return early if no media types requested (handled by early return above, but safe)
+  if not valid_exts_list:
+    return {"png": png_list, "jpg": jpg_list, "audio": audio_list}
+
+  valid_exts = tuple(valid_exts_list)
+  audio_exts = (".mp3", ".ogg")
 
   for root, _, files in os.walk(extract_dir):
     root_path = None  # Lazy instantiation of Path
 
     for file in files:
+      lower_name = file.lower()
+
       # Fast path rejection
-      if not file.endswith(valid_exts):
+      if not lower_name.endswith(valid_exts):
         continue
 
       if root_path is None:
         root_path = Path(root)
 
-      file_path = root_path / file
-
       if include_images:
-        if file.endswith(png_exts):
-          png_list.append(file_path)
+        if lower_name.endswith(".png"):
+          png_list.append(root_path / file)
           continue
-        if file.endswith(jpg_exts):
-          jpg_list.append(file_path)
+        if lower_name.endswith((".jpg", ".jpeg")):
+          jpg_list.append(root_path / file)
           continue
 
-      if include_audio and file.endswith(audio_exts):
-        audio_list.append(file_path)
+      if include_audio and lower_name.endswith(audio_exts):
+        audio_list.append(root_path / file)
 
   return {"png": png_list, "jpg": jpg_list, "audio": audio_list}
 

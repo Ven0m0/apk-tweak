@@ -114,7 +114,7 @@ def _analyze_apk_strings(decompiled_dir: Path, ctx: Context) -> dict[str, String
       continue
 
     for file in files:
-      if file.endswith((".xml", ".smali")) and file != "strings.xml":
+      if (file.endswith(".xml") or file.endswith(".smali")) and file != "strings.xml":
         source_files.append(root_path / file)
 
   ctx.log(f"string_cleaner: scanning {len(source_files)} source files")
