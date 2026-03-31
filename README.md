@@ -3,6 +3,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
+[![Maintainability](https://qlty.sh/gh/Ven0m0/projects/apk-tweak/maintainability.svg)](https://qlty.sh/gh/Ven0m0/projects/apk-tweak)
 
 Extensible pipeline for APK modifications using ReVanced, Magisk modules,
 LSPatch, DTL-X, and media optimization.
