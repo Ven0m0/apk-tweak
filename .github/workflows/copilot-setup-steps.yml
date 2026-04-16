@@ -1,37 +1,42 @@
 name: Copilot Setup Steps
-
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
 
 permissions:
   contents: read
+env:
+  DEBIAN_FRONTEND: noninteractive 
+  DEBCONF_NOWARNINGS: yes
 
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8
         with:
           python-version: "3.13"
-          with:
-            enable-cache: true
-            cache-dependency-glob: |
-              uv.lock
-              pyproject.toml
-
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
       - name: Install Python dependencies
         run: uv sync --all-extras --all-packages --all-groups --link-mode symlink --frozen 2>/dev/null || true
-
+      - name: Preinstall uv tools
+        run: |
+          uv tool install basedpyright; uv tool install ty; uv tool install ruff
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
-
       - name: Install system dependencies (pngquant, jpegoptim, ffmpeg)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pngquant jpegoptim ffmpeg
+          sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -yqq --no-install-recommends pngquant jpegoptim ffmpeg ripgrep >/dev/null
