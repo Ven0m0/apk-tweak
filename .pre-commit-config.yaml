@@ -1,5 +1,5 @@
 repos:
     - repo: https://github.com/DetachHead/basedpyright-prek-mirror
-      rev: 1.39.0
+      rev: 1.39.2
       hooks:
           - id: basedpyright
