@@ -17,8 +17,24 @@ from ..utils import run_command
 
 
 def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
-  """Extract APK to directory for processing."""
+  """
+  Extract APK to directory for processing.
+
+  ⚡ Perf: Uses 'unzip' CLI if available, otherwise falls back to validated extractall().
+  """
   try:
+    # Use unzip command if available for maximum performance
+    if shutil.which("unzip"):
+      subprocess.run(
+        ["unzip", "-q", str(apk_path), "-d", str(extract_dir)],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=300,
+      )
+      return True
+
+    # Fallback to python zipfile.extractall() with validation
     with zipfile.ZipFile(apk_path, "r") as zf:
       base_path = extract_dir.resolve()
       for member in zf.infolist():
@@ -26,12 +42,14 @@ def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
         try:
           # Ensure the target path is within the extraction directory
           member_path.relative_to(base_path)
-        except ValueError:
+        except (ValueError, RuntimeError):
           # Detected a path traversal attempt or invalid path
-          raise OSError("Illegal file path in APK archive") from None
-        zf.extract(member, extract_dir)
+          raise OSError(f"Illegal file path in APK archive: {member.filename}") from None
+
+      zf.extractall(extract_dir)
+
     return True
-  except (OSError, zipfile.BadZipFile):
+  except (OSError, zipfile.BadZipFile, subprocess.SubprocessError):
     return False
 
 
