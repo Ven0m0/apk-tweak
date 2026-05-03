@@ -26,7 +26,7 @@ def _extract_apk_structure(apk_path: Path, extract_dir: Path) -> bool:
     # Use unzip command if available for maximum performance
     if shutil.which("unzip"):
       subprocess.run(
-        ["unzip", "-q", str(apk_path), "-d", str(extract_dir)],
+        ["unzip", "-o", "-q", str(apk_path), "-d", str(extract_dir)],
         capture_output=True,
         text=True,
         check=True,
