@@ -5,6 +5,8 @@ Regex patterns adapted from ApkPatcher for removing ads and bypassing
 licensing checks in smali files.
 """
 
+from __future__ import annotations
+
 import re
 from re import Pattern
 
