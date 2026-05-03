@@ -158,7 +158,7 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
     # Use unzip command if available for maximum performance
     if shutil.which("unzip"):
       subprocess.run(
-        ["unzip", "-q", str(apk), "-d", str(extract_dir)],
+        ["unzip", "-o", "-q", str(apk), "-d", str(extract_dir)],
         capture_output=True,
         text=True,
         check=True,
