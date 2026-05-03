@@ -143,6 +143,9 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
   """
   Extract APK contents to directory.
 
+  ⚡ Perf: Uses 'unzip' CLI if available, otherwise falls back to validated extractall().
+  Both methods are significantly faster than a manual extraction loop.
+
   Args:
       ctx: Pipeline context.
       apk: APK file to extract.
@@ -152,6 +155,18 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
       True if extraction succeeded, False otherwise.
   """
   try:
+    # Use unzip command if available for maximum performance
+    if shutil.which("unzip"):
+      from ..utils import run_command
+
+      run_command(
+        ["unzip", "-q", str(apk), "-d", str(extract_dir)],
+        ctx=ctx,
+        timeout=300,
+      )
+      return True
+
+    # Fallback to python zipfile.extractall() with validation
     with zipfile.ZipFile(apk, "r") as zf:
       base_path = extract_dir.resolve()
       for member in zf.infolist():
@@ -159,13 +174,17 @@ def _extract_apk(ctx: Context, apk: Path, extract_dir: Path) -> bool:
         try:
           # Ensure the target path is within the extraction directory
           member_path.relative_to(base_path)
-        except ValueError:
+        except (ValueError, RuntimeError):
           # Detected a path traversal attempt or invalid path
-          raise OSError("Illegal file path in APK archive") from None
-        zf.extract(member, extract_dir)
+          raise OSError(
+            f"Illegal file path in APK archive: {member.filename}"
+          ) from None
+
+      zf.extractall(extract_dir)
+
     ctx.log(f"media_optimizer: extracted {apk.name} to {extract_dir}")
     return True
-  except (OSError, zipfile.BadZipFile) as e:
+  except (OSError, zipfile.BadZipFile, subprocess.SubprocessError) as e:
     ctx.log(f"media_optimizer: extraction failed: {e}")
     return False
 

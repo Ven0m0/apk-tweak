@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
@@ -97,20 +97,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 1
 
       - name: Set up Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
       # ⚡ Perf: Cache Gradle dependencies (saves 30-60s per run)
       - name: Cache Gradle dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -121,7 +121,7 @@ jobs:
 
       - name: Cache AAPT tool
         id: cache-aapt
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: build-tools
           key: aapt-r33.0.2
@@ -129,7 +129,7 @@ jobs:
       # ⚡ Perf: Cache LSPatch JAR to avoid re-download (saves ~5-10s per run)
       - name: Cache LSPatch JAR
         id: cache-lspatch
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: lspatch-cache
           key: lspatch-jar-${{ github.sha }}
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload Release
         id: upload_release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             *-lspatched.apk
