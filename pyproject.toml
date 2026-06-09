@@ -31,7 +31,7 @@ packages = ["rvp"]
 dev = [
   "pytest>=9.0.0,<10.0.0",
   "mypy>=2.1.0,<2.2.0",
-  "ruff>=0.15.13,<0.16.0",
+  "ruff>=0.15.16,<0.16.0",
   "pip-audit>=2.7.0,<3.0.0",
 ]
 
@@ -153,6 +153,6 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.13",
+    "ruff>=0.15.16",
 ]
 
