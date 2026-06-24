@@ -1,3 +1,13 @@
+# ⚠️ Archived / Merged
+
+**APK Tweak has been merged into [ReVanced-auto](https://github.com/Ven0m0/ReVanced-auto).**
+
+All engine features (media optimizer, APK optimizer, string cleaner, DTL-X, LSPatch, RKPairip, WhatsApp patcher) and the plugin system have been ported into ReVanced-auto as optional per-app build stages.
+
+This repository is no longer actively maintained. Please use [ReVanced-auto](https://github.com/Ven0m0/ReVanced-auto) for new work and bug reports.
+
+---
+
 # APK Tweak - ReVanced Pipeline (RVP)
 >[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
@@ -242,7 +252,7 @@ apk-tweak/
 Ensure all checks pass:
 
 ```bash
-ruff check . && mypy rvp/ --strict && pytest tests/
+ruff check . && ruff format . && mypy rvp/ --strict && pytest tests/
 ```
 
 ## License
